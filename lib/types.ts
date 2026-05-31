@@ -36,6 +36,19 @@ export type WeatherOverviewData = {
   stats: WeatherStat[];
 };
 
+export type WeatherMetric = {
+  id: string;
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  tone: "blue" | "amber" | "green" | "red";
+};
+
+export type RainfallDay = {
+  day: string;
+  amount: number;
+};
+
 export type EvacuationCenter = {
   id: string;
   name: string;

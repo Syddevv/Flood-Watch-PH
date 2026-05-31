@@ -10,6 +10,7 @@ import { FloodMap } from "@/components/flood-map";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
+import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
 import {
   ACTIVE_ALERTS,
   EMERGENCY_HOTLINES,
@@ -28,7 +29,7 @@ import type { Theme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
-  pageMode?: "dashboard" | "flood-map";
+  pageMode?: "dashboard" | "flood-map" | "weather-monitoring";
 };
 
 export function DashboardShell({
@@ -48,11 +49,17 @@ export function DashboardShell({
     }
   });
   const [activeItem, setActiveItem] = useState(
-    pageMode === "flood-map" ? "flood-map" : "dashboard",
+    pageMode === "flood-map"
+      ? "flood-map"
+      : pageMode === "weather-monitoring"
+        ? "weather-monitoring"
+        : "dashboard",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const isFloodMapView = pageMode === "flood-map";
+  const isWeatherMonitoringView = pageMode === "weather-monitoring";
+  const isContentOnlyView = isFloodMapView || isWeatherMonitoringView;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -78,6 +85,11 @@ export function DashboardShell({
       return;
     }
 
+    if (id === "weather-monitoring") {
+      router.push("/weather-monitoring");
+      return;
+    }
+
     setActiveItem(id);
     setSheetOpen(false);
   };
@@ -96,7 +108,7 @@ export function DashboardShell({
         <div
           className={cn(
             "grid h-[calc(100vh-var(--header-height))] min-h-0 bg-[var(--color-background)]",
-            isFloodMapView
+            isContentOnlyView
               ? "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
               : "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_var(--panel-width)]",
           )}
@@ -112,20 +124,24 @@ export function DashboardShell({
           <main
             className={cn(
               "relative h-full min-h-0 overflow-hidden md:col-start-2",
-              isFloodMapView && "md:col-end-4",
+              isContentOnlyView && "md:col-end-4",
             )}
           >
-            <div className="h-full min-h-0 w-full">
-              <FloodMap
-                theme={theme}
-                markers={MAP_MARKERS}
-                polygons={FLOOD_POLYGONS}
-                legend={FLOOD_LEGEND}
-              />
-            </div>
+            {isWeatherMonitoringView ? (
+              <WeatherMonitoringContent />
+            ) : (
+              <div className="h-full min-h-0 w-full">
+                <FloodMap
+                  theme={theme}
+                  markers={MAP_MARKERS}
+                  polygons={FLOOD_POLYGONS}
+                  legend={FLOOD_LEGEND}
+                />
+              </div>
+            )}
 
             <div className="pointer-events-none absolute inset-x-0 bottom-[5.35rem] z-[500] flex items-end justify-between px-4 md:hidden">
-              {!isFloodMapView ? (
+              {!isContentOnlyView ? (
                 <button
                   type="button"
                   onClick={() => setSheetOpen(true)}
@@ -148,7 +164,7 @@ export function DashboardShell({
             </div>
           </main>
 
-          {!isFloodMapView ? (
+          {!isContentOnlyView ? (
             <RightInfoPanel
               alerts={ACTIVE_ALERTS}
               weather={WEATHER_OVERVIEW}
@@ -169,7 +185,7 @@ export function DashboardShell({
       />
 
       <MobileLiveInfoSheet
-        open={!isFloodMapView && sheetOpen}
+        open={!isContentOnlyView && sheetOpen}
         onOpenChange={setSheetOpen}
         alerts={ACTIVE_ALERTS}
         weather={WEATHER_OVERVIEW}
