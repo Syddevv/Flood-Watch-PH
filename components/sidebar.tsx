@@ -67,7 +67,7 @@ export function Sidebar({
                         onClose();
                       }}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left text-[0.9rem] font-medium transition",
+                        "flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left text-[0.82rem] font-medium transition",
                         active
                           ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
                           : "text-[color:color-mix(in_srgb,var(--color-foreground)_82%,var(--color-muted-foreground))] hover:bg-[var(--color-panel)] hover:text-[color:color-mix(in_srgb,var(--color-foreground)_92%,var(--color-muted-foreground))]",
@@ -84,18 +84,18 @@ export function Sidebar({
 
           <div className="border-t border-[var(--color-border)] px-2.5 py-3">
             <div className="rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-danger)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] p-3.5 shadow-[var(--shadow-soft)]">
-              <div className="flex items-center gap-2 text-[0.88rem] font-semibold text-[var(--color-danger)]">
+              <div className="flex items-center gap-2 text-[0.8rem] font-semibold text-[var(--color-danger)]">
                 <SignalIcon className="h-3.5 w-3.5" />
                 <span>{SIGNAL_CARD.title}</span>
               </div>
-              <p className="mt-2 text-[0.81rem] leading-6 text-[var(--color-muted-foreground)]">
+              <p className="mt-2 text-[0.72rem] leading-5.5 text-[var(--color-muted-foreground)]">
                 {SIGNAL_CARD.description}
               </p>
             </div>
 
             <button
               type="button"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-[0.9rem] font-medium text-[var(--color-muted-foreground)] transition hover:bg-[var(--color-panel)] hover:text-[var(--color-foreground)]"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-[0.8rem] font-medium text-[var(--color-muted-foreground)] transition hover:bg-[var(--color-panel)] hover:text-[var(--color-foreground)]"
             >
               <PanelLeftClose className="h-3.5 w-3.5" />
               <span>Collapse</span>

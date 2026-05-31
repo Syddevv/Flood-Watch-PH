@@ -21,7 +21,7 @@ export function ThemeToggle({
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
       onClick={onToggle}
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
+        "flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
         className,
       )}
     >

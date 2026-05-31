@@ -78,18 +78,18 @@ export function AppHeader({
 
         <button
           type="button"
-          className="flex h-10 items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-4 text-[0.84rem] font-semibold text-[var(--color-danger)] shadow-[var(--shadow-soft)]"
+          className="flex h-9 items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-3.5 text-[0.78rem] font-semibold text-[var(--color-danger)]"
         >
           <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
-          <AlertTriangle className="hidden h-[14px] w-[14px] sm:block" />
+          <AlertTriangle className="hidden h-[13px] w-[13px] sm:block" />
           <span>{ACTIVE_ALERTS_LABEL}</span>
         </button>
 
         <button
           type="button"
-          className="hidden h-10 items-center gap-2 rounded-full bg-[var(--color-primary)] px-4.5 text-[0.82rem] font-semibold text-white shadow-[0_12px_26px_rgba(37,99,235,0.28)] transition hover:brightness-105 lg:flex"
+          className="hidden h-9 items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-4 text-[0.78rem] font-semibold text-white transition hover:brightness-105 lg:flex"
         >
-          <Plus className="h-[14px] w-[14px]" />
+          <Plus className="h-[13px] w-[13px]" />
           <span>{REPORT_LABEL}</span>
         </button>
 

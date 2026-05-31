@@ -121,18 +121,18 @@ export function FloodMapClient({
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
-      <div className="pointer-events-auto absolute bottom-4 left-4 z-[450] w-[132px] rounded-[18px] border border-[var(--color-border)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] p-3.5 shadow-[var(--shadow-floating)] backdrop-blur-sm">
-        <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
+      <div className="pointer-events-auto absolute bottom-4 left-4 z-[450] w-[142px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-3 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md">
+        <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
           FLOOD RISK
         </div>
-        <div className="mt-2.5 space-y-1.5">
+        <div className="mt-2 space-y-1.25">
           {legend.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 text-[0.84rem] text-[var(--color-foreground)]"
+              className="flex items-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]"
             >
               <span
-                className="h-3 w-3 rounded-full"
+                className="h-2.75 w-2.75 rounded-full"
                 style={{ backgroundColor: severityColorMap[item.severity] }}
               />
               <span>{item.label}</span>
