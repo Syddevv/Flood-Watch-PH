@@ -1,26 +1,176 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --header-height: 64px;
+  --sidebar-width: 230px;
+  --panel-width: 340px;
+  --radius-card: 20px;
+  --color-primary: #2563eb;
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-surface: #ffffff;
+  --color-panel: #f1f5f9;
+  --color-sidebar: #ffffff;
+  --color-border: #e2e8f0;
+  --color-muted-foreground: #64748b;
+  --color-section-heading: #2563eb;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-high: #f97316;
+  --color-danger: #ef4444;
+  --color-primary-soft: #dbeafe;
+  --color-map-shell: #d9e5ef;
+  --severity-safe-bg: rgba(34, 197, 94, 0.08);
+  --severity-safe-border: rgba(34, 197, 94, 0.28);
+  --severity-moderate-bg: rgba(245, 158, 11, 0.08);
+  --severity-moderate-border: rgba(245, 158, 11, 0.38);
+  --severity-high-bg: rgba(249, 115, 22, 0.08);
+  --severity-high-border: rgba(249, 115, 22, 0.38);
+  --severity-severe-bg: rgba(239, 68, 68, 0.08);
+  --severity-severe-border: rgba(239, 68, 68, 0.32);
+  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-floating: 0 20px 40px rgba(15, 23, 42, 0.14);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root.dark,
+[data-theme="dark"] {
+  --color-primary: #3b82f6;
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
+  --color-surface: #1e293b;
+  --color-panel: #243244;
+  --color-sidebar: #182235;
+  --color-border: #334155;
+  --color-muted-foreground: #94a3b8;
+  --color-section-heading: #93c5fd;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-high: #fb923c;
+  --color-danger: #ef4444;
+  --color-primary-soft: rgba(59, 130, 246, 0.18);
+  --color-map-shell: #243040;
+  --severity-safe-bg: rgba(34, 197, 94, 0.08);
+  --severity-safe-border: rgba(34, 197, 94, 0.22);
+  --severity-moderate-bg: rgba(245, 158, 11, 0.08);
+  --severity-moderate-border: rgba(245, 158, 11, 0.26);
+  --severity-high-bg: rgba(249, 115, 22, 0.08);
+  --severity-high-border: rgba(249, 115, 22, 0.28);
+  --severity-severe-bg: rgba(239, 68, 68, 0.08);
+  --severity-severe-border: rgba(239, 68, 68, 0.24);
+  --shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.24);
+  --shadow-floating: 0 22px 48px rgba(2, 6, 23, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  background: var(--color-map-shell);
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+.floodwatch-leaflet.is-dark .leaflet-tile-pane {
+  filter: brightness(0.58) saturate(0.62) hue-rotate(166deg) contrast(0.92);
+}
+
+.floodwatch-leaflet .leaflet-control-attribution {
+  border-radius: 8px 0 0 0;
+  background: color-mix(in srgb, var(--color-sidebar) 84%, transparent);
+  color: var(--color-muted-foreground);
+  backdrop-filter: blur(10px);
+}
+
+.floodwatch-leaflet .leaflet-control-attribution a {
+  color: var(--color-primary);
+}
+
+.floodwatch-marker-shell {
+  background: transparent;
+  border: 0;
+}
+
+.floodwatch-marker {
+  display: flex;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background: var(--marker-color);
+  box-shadow:
+    0 0 0 4px var(--marker-ring),
+    0 10px 20px rgba(15, 23, 42, 0.26);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.map-floating-controls {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-floating-controls button {
+  display: flex;
+  height: 38px;
+  width: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-sidebar) 92%, transparent);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 767px) {
+  .map-floating-controls {
+    right: 12px;
+    top: 18px;
+  }
+
+  .map-floating-controls button {
+    height: 44px;
+    width: 44px;
+    border-radius: 15px;
+  }
 }
