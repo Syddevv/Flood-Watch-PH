@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, SquareStack } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
@@ -24,8 +25,16 @@ import {
   WEATHER_OVERVIEW,
 } from "@/lib/constants";
 import type { Theme } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-export function DashboardShell() {
+type DashboardShellProps = {
+  pageMode?: "dashboard" | "flood-map";
+};
+
+export function DashboardShell({
+  pageMode = "dashboard",
+}: DashboardShellProps) {
+  const router = useRouter();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") {
       return "light";
@@ -38,9 +47,12 @@ export function DashboardShell() {
       return "light";
     }
   });
-  const [activeItem, setActiveItem] = useState("dashboard");
+  const [activeItem, setActiveItem] = useState(
+    pageMode === "flood-map" ? "flood-map" : "dashboard",
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const isFloodMapView = pageMode === "flood-map";
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -55,6 +67,21 @@ export function DashboardShell() {
     });
   };
 
+  const handleSelect = (id: string) => {
+    if (id === "dashboard") {
+      router.push("/");
+      return;
+    }
+
+    if (id === "flood-map") {
+      router.push("/flood-map");
+      return;
+    }
+
+    setActiveItem(id);
+    setSheetOpen(false);
+  };
+
   return (
     <div className="h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
       <AppHeader
@@ -67,17 +94,27 @@ export function DashboardShell() {
         className="pt-[var(--header-height)]"
       >
         <div
-          className="grid h-[calc(100vh-var(--header-height))] min-h-0 bg-[var(--color-background)] md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_var(--panel-width)]"
+          className={cn(
+            "grid h-[calc(100vh-var(--header-height))] min-h-0 bg-[var(--color-background)]",
+            isFloodMapView
+              ? "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
+              : "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_var(--panel-width)]",
+          )}
         >
           <Sidebar
             items={NAV_ITEMS}
             activeItem={activeItem}
-            onSelect={setActiveItem}
+            onSelect={handleSelect}
             open={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
           />
 
-          <main className="relative h-full min-h-0 overflow-hidden md:col-start-2">
+          <main
+            className={cn(
+              "relative h-full min-h-0 overflow-hidden md:col-start-2",
+              isFloodMapView && "md:col-end-4",
+            )}
+          >
             <div className="h-full min-h-0 w-full">
               <FloodMap
                 theme={theme}
@@ -88,14 +125,18 @@ export function DashboardShell() {
             </div>
 
             <div className="pointer-events-none absolute inset-x-0 bottom-[5.35rem] z-[500] flex items-end justify-between px-4 md:hidden">
-              <button
-                type="button"
-                onClick={() => setSheetOpen(true)}
-                className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(37,99,235,0.38)]"
-              >
-                <SquareStack className="h-4 w-4" />
-                <span>Live Info</span>
-              </button>
+              {!isFloodMapView ? (
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen(true)}
+                  className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(37,99,235,0.38)]"
+                >
+                  <SquareStack className="h-4 w-4" />
+                  <span>Live Info</span>
+                </button>
+              ) : (
+                <div />
+              )}
 
               <button
                 type="button"
@@ -107,26 +148,28 @@ export function DashboardShell() {
             </div>
           </main>
 
-          <RightInfoPanel
-            alerts={ACTIVE_ALERTS}
-          weather={WEATHER_OVERVIEW}
-          centers={EVACUATION_CENTERS}
-          hotlines={EMERGENCY_HOTLINES}
-          hotlineNotice={HOTLINE_NOTICE}
-          timestamp={LIVE_TIMESTAMP}
-          className="hidden md:flex"
-        />
+          {!isFloodMapView ? (
+            <RightInfoPanel
+              alerts={ACTIVE_ALERTS}
+              weather={WEATHER_OVERVIEW}
+              centers={EVACUATION_CENTERS}
+              hotlines={EMERGENCY_HOTLINES}
+              hotlineNotice={HOTLINE_NOTICE}
+              timestamp={LIVE_TIMESTAMP}
+              className="hidden md:flex"
+            />
+          ) : null}
         </div>
       </div>
 
       <BottomNavigation
         items={NAV_ITEMS}
         activeItem={activeItem}
-        onSelect={setActiveItem}
+        onSelect={handleSelect}
       />
 
       <MobileLiveInfoSheet
-        open={sheetOpen}
+        open={!isFloodMapView && sheetOpen}
         onOpenChange={setSheetOpen}
         alerts={ACTIVE_ALERTS}
         weather={WEATHER_OVERVIEW}
