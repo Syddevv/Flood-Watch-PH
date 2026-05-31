@@ -57,6 +57,19 @@ export type EvacuationCenter = {
   coordinates: [number, number];
 };
 
+export type EvacuationDirectoryCenter = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  risk: AlertSeverity;
+  distanceKm: number;
+  travelMinutesCar: number;
+  travelMinutesWalk: number;
+  description: string;
+  source: string;
+};
+
 export type EmergencyHotline = {
   id: string;
   name: string;

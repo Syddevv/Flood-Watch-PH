@@ -7,6 +7,7 @@ import { Plus, SquareStack } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { FloodMap } from "@/components/flood-map";
+import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
@@ -29,7 +30,7 @@ import type { Theme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
-  pageMode?: "dashboard" | "flood-map" | "weather-monitoring";
+  pageMode?: "dashboard" | "flood-map" | "weather-monitoring" | "evacuation-centers";
 };
 
 export function DashboardShell({
@@ -53,13 +54,17 @@ export function DashboardShell({
       ? "flood-map"
       : pageMode === "weather-monitoring"
         ? "weather-monitoring"
+        : pageMode === "evacuation-centers"
+          ? "evacuation-centers"
         : "dashboard",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const isFloodMapView = pageMode === "flood-map";
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
-  const isContentOnlyView = isFloodMapView || isWeatherMonitoringView;
+  const isEvacuationCentersView = pageMode === "evacuation-centers";
+  const isContentOnlyView =
+    isFloodMapView || isWeatherMonitoringView || isEvacuationCentersView;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -87,6 +92,11 @@ export function DashboardShell({
 
     if (id === "weather-monitoring") {
       router.push("/weather-monitoring");
+      return;
+    }
+
+    if (id === "evacuation-centers") {
+      router.push("/evacuation-centers");
       return;
     }
 
@@ -129,6 +139,8 @@ export function DashboardShell({
           >
             {isWeatherMonitoringView ? (
               <WeatherMonitoringContent />
+            ) : isEvacuationCentersView ? (
+              <EvacuationCentersContent />
             ) : (
               <div className="h-full min-h-0 w-full">
                 <FloodMap
