@@ -11,9 +11,11 @@ import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
 import {
   ACTIVE_ALERTS,
+  EMERGENCY_HOTLINES,
   EVACUATION_CENTERS,
   FLOOD_LEGEND,
   FLOOD_POLYGONS,
+  HOTLINE_NOTICE,
   LIVE_TIMESTAMP,
   MAP_MARKERS,
   NAV_ITEMS,
@@ -107,11 +109,13 @@ export function DashboardShell() {
 
           <RightInfoPanel
             alerts={ACTIVE_ALERTS}
-            weather={WEATHER_OVERVIEW}
-            centers={EVACUATION_CENTERS}
-            timestamp={LIVE_TIMESTAMP}
-            className="hidden md:flex"
-          />
+          weather={WEATHER_OVERVIEW}
+          centers={EVACUATION_CENTERS}
+          hotlines={EMERGENCY_HOTLINES}
+          hotlineNotice={HOTLINE_NOTICE}
+          timestamp={LIVE_TIMESTAMP}
+          className="hidden md:flex"
+        />
         </div>
       </div>
 
@@ -127,6 +131,8 @@ export function DashboardShell() {
         alerts={ACTIVE_ALERTS}
         weather={WEATHER_OVERVIEW}
         centers={EVACUATION_CENTERS}
+        hotlines={EMERGENCY_HOTLINES}
+        hotlineNotice={HOTLINE_NOTICE}
         timestamp={LIVE_TIMESTAMP}
       />
     </div>

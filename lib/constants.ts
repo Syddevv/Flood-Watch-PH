@@ -2,17 +2,22 @@ import {
   AlertCircle,
   Building2,
   CloudRain,
+  Flame,
   Gauge,
   Home,
   Info,
   Map,
+  Shield,
   PhoneCall,
   ShieldAlert,
+  Stethoscope,
+  LifeBuoy,
   Waves,
   Wind,
 } from "lucide-react";
 
 import type {
+  EmergencyHotline,
   EvacuationCenter,
   FloodAlert,
   LegendItem,
@@ -107,6 +112,36 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     coordinates: [14.5764, 121.0851],
   },
 ];
+
+export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
+  {
+    id: "hotline-police",
+    name: "Police",
+    number: "117",
+    icon: Shield,
+  },
+  {
+    id: "hotline-fire",
+    name: "Fire Department",
+    number: "160",
+    icon: Flame,
+  },
+  {
+    id: "hotline-rescue",
+    name: "Rescue Team",
+    number: "911",
+    icon: LifeBuoy,
+  },
+  {
+    id: "hotline-medical",
+    name: "Medical Emergency",
+    number: "143",
+    icon: Stethoscope,
+  },
+];
+
+export const HOTLINE_NOTICE =
+  "Data is for public awareness and should be verified with official authorities such as PAGASA, NDRRMC, and your local DRRMO.";
 
 export const MAP_MARKERS: MapMarker[] = [
   {

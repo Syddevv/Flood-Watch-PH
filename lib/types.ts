@@ -44,6 +44,13 @@ export type EvacuationCenter = {
   coordinates: [number, number];
 };
 
+export type EmergencyHotline = {
+  id: string;
+  name: string;
+  number: string;
+  icon: LucideIcon;
+};
+
 export type MarkerCategory = "alert" | "center" | "hotline";
 
 export type MapMarker = {

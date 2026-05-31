@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 
 import { RightInfoPanel } from "@/components/right-info-panel";
 import type {
+  EmergencyHotline,
   EvacuationCenter,
   FloodAlert,
   WeatherOverviewData,
@@ -16,6 +17,8 @@ type MobileLiveInfoSheetProps = {
   alerts: FloodAlert[];
   weather: WeatherOverviewData;
   centers: EvacuationCenter[];
+  hotlines: EmergencyHotline[];
+  hotlineNotice: string;
   timestamp: string;
 };
 
@@ -25,6 +28,8 @@ export function MobileLiveInfoSheet({
   alerts,
   weather,
   centers,
+  hotlines,
+  hotlineNotice,
   timestamp,
 }: MobileLiveInfoSheetProps) {
   return (
@@ -60,6 +65,8 @@ export function MobileLiveInfoSheet({
             alerts={alerts}
             weather={weather}
             centers={centers}
+            hotlines={hotlines}
+            hotlineNotice={hotlineNotice}
             timestamp={timestamp}
             className="border-l-0"
           />
