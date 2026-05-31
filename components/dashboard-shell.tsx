@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { FloodMap } from "@/components/flood-map";
 import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
+import { IncidentReportsContent } from "@/components/incident-reports-content";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
@@ -30,7 +31,12 @@ import type { Theme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
-  pageMode?: "dashboard" | "flood-map" | "weather-monitoring" | "evacuation-centers";
+  pageMode?:
+    | "dashboard"
+    | "flood-map"
+    | "weather-monitoring"
+    | "evacuation-centers"
+    | "incident-reports";
 };
 
 export function DashboardShell({
@@ -56,6 +62,8 @@ export function DashboardShell({
         ? "weather-monitoring"
         : pageMode === "evacuation-centers"
           ? "evacuation-centers"
+          : pageMode === "incident-reports"
+            ? "incident-reports"
         : "dashboard",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,8 +71,12 @@ export function DashboardShell({
   const isFloodMapView = pageMode === "flood-map";
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
   const isEvacuationCentersView = pageMode === "evacuation-centers";
+  const isIncidentReportsView = pageMode === "incident-reports";
   const isContentOnlyView =
-    isFloodMapView || isWeatherMonitoringView || isEvacuationCentersView;
+    isFloodMapView ||
+    isWeatherMonitoringView ||
+    isEvacuationCentersView ||
+    isIncidentReportsView;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -97,6 +109,11 @@ export function DashboardShell({
 
     if (id === "evacuation-centers") {
       router.push("/evacuation-centers");
+      return;
+    }
+
+    if (id === "incident-reports") {
+      router.push("/incident-reports");
       return;
     }
 
@@ -141,6 +158,8 @@ export function DashboardShell({
               <WeatherMonitoringContent />
             ) : isEvacuationCentersView ? (
               <EvacuationCentersContent />
+            ) : isIncidentReportsView ? (
+              <IncidentReportsContent />
             ) : (
               <div className="h-full min-h-0 w-full">
                 <FloodMap

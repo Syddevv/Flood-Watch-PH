@@ -2,25 +2,30 @@ import {
   AlertCircle,
   Building2,
   CloudRain,
+  Flag,
   Flame,
   Gauge,
   Home,
   Info,
+  MapPin,
   Map,
   Shield,
   PhoneCall,
   ShieldAlert,
   Stethoscope,
   LifeBuoy,
+  Users,
   Waves,
   Wind,
 } from "lucide-react";
 
 import type {
+  CommunityActivityStat,
   EmergencyHotline,
   EvacuationCenter,
   EvacuationDirectoryCenter,
   FloodAlert,
+  IncidentReport,
   LegendItem,
   MapMarker,
   NavItem,
@@ -206,6 +211,70 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
 
 export const HOTLINE_NOTICE =
   "Data is for public awareness and should be verified with official authorities such as PAGASA, NDRRMC, and your local DRRMO.";
+
+export const COMMUNITY_ACTIVITY_STATS: CommunityActivityStat[] = [
+  { id: "reports", label: "Reports Today", value: "47", icon: Flag },
+  { id: "hazards", label: "Active Hazard Areas", value: "8", icon: MapPin },
+  { id: "contributors", label: "Active Contributors", value: "21", icon: Users },
+];
+
+export const TRENDING_AREAS = ["Marikina", "Pasig", "Quezon City"];
+
+export const INCIDENT_REPORTS: IncidentReport[] = [
+  {
+    id: "report-tumana",
+    location: "Tumana Bridge, Marikina",
+    coordinatesLabel: "14.6380, 121.1150",
+    category: "Flooding",
+    severity: "severe",
+    status: "Verified by Community",
+    description:
+      "Water level has risen significantly. Residents are being evacuated from low-lying areas near the bridge. Heavy flow observed at the bridge entrance.",
+    reportedAgo: "5 mins ago",
+    confirmations: 28,
+    reporter: "MMDA Field Unit",
+    sourceUnit: "MMDA Field Unit",
+    waterLevel: "1.5m (Chest Deep)",
+    photos: [
+      { id: "p1", label: "Report image 1", accent: "from-sky-100 to-slate-100" },
+      { id: "p2", label: "Report image 2", accent: "from-slate-100 to-blue-100" },
+    ],
+  },
+  {
+    id: "report-raymundo",
+    location: "C. Raymundo Ave, Pasig",
+    coordinatesLabel: "14.5760, 121.0870",
+    category: "Flooding",
+    severity: "high",
+    status: "Verified by Community",
+    description:
+      "Floodwater is spreading across the lower section of the avenue. Vehicles are moving slowly and side streets are partially submerged.",
+    reportedAgo: "12 mins ago",
+    confirmations: 18,
+    reporter: "Pasig Rescue",
+    sourceUnit: "Pasig Rescue",
+    waterLevel: "0.9m (Waist Deep)",
+    photos: [
+      { id: "p1", label: "Street flooding overview", accent: "from-blue-100 to-slate-100" },
+    ],
+  },
+  {
+    id: "report-fti",
+    location: "FTI Complex, Taguig",
+    coordinatesLabel: "14.5150, 121.0850",
+    category: "Road impassable",
+    severity: "high",
+    status: "Verified by Community",
+    description:
+      "Main access road completely submerged. Alternative routes being used. No vehicle passage possible. Structural concerns at complex entrance.",
+    reportedAgo: "24 mins ago",
+    confirmations: 7,
+    reporter: "Anonymous",
+    sourceUnit: "Anonymous",
+    note: "Road impassable",
+    photos: [{ id: "p1", label: "FTI entrance", accent: "from-zinc-100 to-slate-200" }],
+  },
+];
 
 export const MAP_MARKERS: MapMarker[] = [
   {

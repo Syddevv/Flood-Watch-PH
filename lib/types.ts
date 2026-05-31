@@ -77,6 +77,36 @@ export type EmergencyHotline = {
   icon: LucideIcon;
 };
 
+export type IncidentReportPhoto = {
+  id: string;
+  label: string;
+  accent: string;
+};
+
+export type IncidentReport = {
+  id: string;
+  location: string;
+  coordinatesLabel: string;
+  category: string;
+  severity: AlertSeverity;
+  status: string;
+  description: string;
+  reportedAgo: string;
+  confirmations: number;
+  reporter: string;
+  sourceUnit: string;
+  waterLevel?: string;
+  note?: string;
+  photos: IncidentReportPhoto[];
+};
+
+export type CommunityActivityStat = {
+  id: string;
+  label: string;
+  value: string;
+  icon: LucideIcon;
+};
+
 export type MarkerCategory = "alert" | "center" | "hotline";
 
 export type MapMarker = {
