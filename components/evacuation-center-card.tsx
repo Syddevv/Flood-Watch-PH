@@ -11,7 +11,7 @@ export function EvacuationCenterCard({
     <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-[var(--shadow-soft)]">
       <div className="flex items-start justify-between gap-2.5">
         <div>
-          <h3 className="text-[0.95rem] font-semibold text-[var(--color-foreground)]">
+          <h3 className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
             {center.name}
           </h3>
           <div className="mt-1 flex items-center gap-1.5 text-[0.78rem] text-[var(--color-muted-foreground)]">

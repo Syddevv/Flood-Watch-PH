@@ -26,9 +26,9 @@ export function ThemeToggle({
       )}
     >
       {theme === "light" ? (
-        <Moon className="h-4.5 w-4.5" />
+        <Moon className="h-4 w-4" />
       ) : (
-        <SunMedium className="h-4.5 w-4.5" />
+        <SunMedium className="h-4 w-4" />
       )}
     </button>
   );

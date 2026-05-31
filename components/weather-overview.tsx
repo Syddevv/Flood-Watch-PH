@@ -7,7 +7,7 @@ export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
     <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-mono text-[2.15rem] font-semibold leading-none text-[var(--color-foreground)]">
+          <div className="font-mono text-[2.25rem] font-semibold leading-none text-[var(--color-foreground)]">
             {weather.temperature}
           </div>
           <p className="mt-1.5 text-[1rem] font-medium text-[var(--color-muted-foreground)]">
@@ -32,7 +32,7 @@ export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
                 className="mx-auto h-4 w-4 text-[var(--color-primary)]"
                 strokeWidth={2.1}
               />
-              <div className="mt-1.5 font-mono text-[1.16rem] font-semibold text-[var(--color-foreground)]">
+              <div className="mt-1.5 font-mono text-[1.2rem] font-semibold text-[var(--color-foreground)]">
                 {stat.value}
               </div>
               <div className="mt-0.5 text-[0.66rem] text-[var(--color-muted-foreground)]">

@@ -39,7 +39,7 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
           <span
             className={cn("mt-0.5 h-2 w-2 rounded-full", dotClasses[alert.severity])}
           />
-          <h3 className="text-[0.95rem] font-semibold leading-6 tracking-[-0.02em] text-[var(--color-foreground)]">
+          <h3 className="text-[0.96rem] font-semibold leading-6 tracking-[-0.02em] text-[var(--color-foreground)]">
             {alert.title}
           </h3>
         </div>
@@ -53,15 +53,19 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
         </span>
       </div>
 
-      <div className="mt-3.5 flex items-center gap-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-        <MapPin className="h-3.5 w-3.5 shrink-0" />
-        <span className="font-semibold text-[0.92rem] text-[var(--color-foreground)]">
-          {alert.location}
-        </span>
-        <span>Water level</span>
-        <span className="font-mono text-[0.98rem] font-semibold text-[var(--color-foreground)]">
-          {alert.waterLevel}
-        </span>
+      <div className="mt-3.5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-semibold text-[0.92rem] text-[var(--color-foreground)]">
+            {alert.location}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span>Water level</span>
+          <span className="font-mono text-[0.98rem] font-semibold text-[var(--color-foreground)]">
+            {alert.waterLevel}
+          </span>
+        </div>
       </div>
 
       <p className="mt-3 text-[0.82rem] leading-6.5 text-[var(--color-muted-foreground)]">

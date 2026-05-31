@@ -121,15 +121,15 @@ export function FloodMapClient({
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
-      <div className="pointer-events-auto absolute bottom-3 left-3 z-[450] w-[122px] rounded-[18px] border border-[var(--color-border)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_88%,transparent)] p-3 shadow-[var(--shadow-floating)] backdrop-blur-sm">
+      <div className="pointer-events-auto absolute bottom-4 left-4 z-[450] w-[132px] rounded-[18px] border border-[var(--color-border)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] p-3.5 shadow-[var(--shadow-floating)] backdrop-blur-sm">
         <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
           FLOOD RISK
         </div>
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-1.5">
           {legend.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-2 text-sm text-[var(--color-foreground)]"
+              className="flex items-center gap-2 text-[0.84rem] text-[var(--color-foreground)]"
             >
               <span
                 className="h-3 w-3 rounded-full"

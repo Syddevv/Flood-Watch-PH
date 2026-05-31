@@ -30,23 +30,23 @@ export function AppHeader({
   onOpenSidebar,
 }: AppHeaderProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-[1000] flex h-[var(--header-height)] items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-sidebar)] px-4 sm:px-5 md:px-5.5">
+    <header className="fixed inset-x-0 top-0 z-[1000] flex h-[var(--header-height)] items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-sidebar)] px-4 sm:px-5 md:px-6">
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           aria-label="Open navigation"
           onClick={onOpenSidebar}
-          className="flex h-9.5 w-9.5 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
         >
           <Menu className="h-4 w-4" />
         </button>
         <div className="hidden md:flex md:items-center md:gap-2.5">
           <BrandMark />
           <div>
-            <div className="text-[1.02rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+            <div className="text-[1.06rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
               FloodWatch PH
             </div>
-            <div className="text-[0.68rem] leading-none text-[var(--color-muted-foreground)]">
+            <div className="text-[0.72rem] leading-none text-[var(--color-muted-foreground)]">
               {HEADER_SUBTITLE}
             </div>
           </div>
@@ -56,13 +56,13 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="mx-4 hidden min-w-0 max-w-[520px] flex-1 md:block">
-        <label className="flex h-9.5 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+      <div className="mx-5 hidden min-w-0 max-w-[640px] flex-1 md:block">
+        <label className="flex h-10 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
           <Search className="h-[15px] w-[15px] text-[var(--color-muted-foreground)]" />
           <input
             type="search"
             placeholder={SEARCH_PLACEHOLDER}
-            className="w-full bg-transparent text-[0.94rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+            className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
           />
         </label>
       </div>
@@ -71,14 +71,14 @@ export function AppHeader({
         <button
           type="button"
           aria-label="Search"
-          className="flex h-9.5 w-9.5 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
         >
           <Search className="h-4 w-4" />
         </button>
 
         <button
           type="button"
-          className="flex h-9.5 items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-3 text-[0.86rem] font-semibold text-[var(--color-danger)] shadow-[var(--shadow-soft)]"
+          className="flex h-10 items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-4 text-[0.84rem] font-semibold text-[var(--color-danger)] shadow-[var(--shadow-soft)]"
         >
           <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
           <AlertTriangle className="hidden h-[14px] w-[14px] sm:block" />
@@ -87,7 +87,7 @@ export function AppHeader({
 
         <button
           type="button"
-          className="hidden h-9.5 items-center gap-2 rounded-full bg-[var(--color-primary)] px-4 text-[0.82rem] font-semibold text-white shadow-[0_12px_26px_rgba(37,99,235,0.28)] transition hover:brightness-105 lg:flex"
+          className="hidden h-10 items-center gap-2 rounded-full bg-[var(--color-primary)] px-4.5 text-[0.82rem] font-semibold text-white shadow-[0_12px_26px_rgba(37,99,235,0.28)] transition hover:brightness-105 lg:flex"
         >
           <Plus className="h-[14px] w-[14px]" />
           <span>{REPORT_LABEL}</span>

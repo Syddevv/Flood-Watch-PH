@@ -28,10 +28,10 @@ export function RightInfoPanel({
     <aside
       className={`flex h-full min-h-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-sidebar)] ${className ?? ""}`}
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4 md:px-4.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4 md:px-5">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-[1.1rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+            <h2 className="text-[1.16rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
               Live Information
             </h2>
             <div className="flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
@@ -40,7 +40,7 @@ export function RightInfoPanel({
             </div>
           </div>
 
-          <div className="mt-5 text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
+          <div className="mt-5 text-[0.73rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
             ACTIVE FLOOD ALERTS
           </div>
           <div className="mt-3 space-y-3">
