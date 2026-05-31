@@ -2,7 +2,8 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { Crosshair, Layers3, LocateFixed, Satellite } from "lucide-react";
+import { useState } from "react";
+import { Crosshair, Layers3, LocateFixed, Map, Satellite } from "lucide-react";
 import L from "leaflet";
 import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
 
@@ -11,6 +12,14 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_CENTER: [number, number] = [14.6176, 121.0325];
 const DEFAULT_ZOOM = 10;
+const STREET_TILES = {
+  url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: "&copy; OpenStreetMap",
+};
+const SATELLITE_TILES = {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Tiles &copy; Esri",
+};
 
 const severityColorMap = {
   safe: "#22c55e",
@@ -38,7 +47,15 @@ function iconForMarker(marker: MapMarker) {
   });
 }
 
-function MapZoomControls() {
+type MapZoomControlsProps = {
+  satelliteMode: boolean;
+  onToggleSatellite: () => void;
+};
+
+function MapZoomControls({
+  satelliteMode,
+  onToggleSatellite,
+}: MapZoomControlsProps) {
   const map = useMap();
 
   return (
@@ -59,8 +76,18 @@ function MapZoomControls() {
       <button type="button" aria-label="Map layers">
         <Layers3 className="h-4.5 w-4.5" />
       </button>
-      <button type="button" aria-label="Satellite mode">
-        <Satellite className="h-4.5 w-4.5" />
+      <button
+        type="button"
+        aria-label={satelliteMode ? "Disable satellite mode" : "Enable satellite mode"}
+        aria-pressed={satelliteMode}
+        onClick={onToggleSatellite}
+        className={satelliteMode ? "is-active" : ""}
+      >
+        {satelliteMode ? (
+          <Map className="h-4.5 w-4.5" />
+        ) : (
+          <Satellite className="h-4.5 w-4.5" />
+        )}
       </button>
     </div>
   );
@@ -79,6 +106,9 @@ export function FloodMapClient({
   polygons,
   legend,
 }: FloodMapClientProps) {
+  const [satelliteMode, setSatelliteMode] = useState(false);
+  const tileConfig = satelliteMode ? SATELLITE_TILES : STREET_TILES;
+
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden">
       <MapContainer
@@ -86,12 +116,13 @@ export function FloodMapClient({
         zoom={DEFAULT_ZOOM}
         zoomControl={false}
         attributionControl
-        className={cn("floodwatch-leaflet h-full w-full", theme === "dark" && "is-dark")}
+        className={cn(
+          "floodwatch-leaflet h-full w-full",
+          theme === "dark" && !satelliteMode && "is-dark",
+          satelliteMode && "is-satellite",
+        )}
       >
-        <TileLayer
-          attribution='&copy; OpenStreetMap'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <TileLayer attribution={tileConfig.attribution} url={tileConfig.url} />
 
         {polygons.map((polygon) => (
           <Polygon
@@ -116,7 +147,10 @@ export function FloodMapClient({
           />
         ))}
 
-        <MapZoomControls />
+        <MapZoomControls
+          satelliteMode={satelliteMode}
+          onToggleSatellite={() => setSatelliteMode((current) => !current)}
+        />
       </MapContainer>
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
