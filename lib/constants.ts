@@ -219,6 +219,8 @@ export const COMMUNITY_ACTIVITY_STATS: CommunityActivityStat[] = [
 ];
 
 export const TRENDING_AREAS = ["Marikina", "Pasig", "Quezon City"];
+export const COMMUNITY_VERIFICATION_THRESHOLD = 3;
+export const RESOLVED_CONFIRMATION_THRESHOLD = 5;
 
 export const INCIDENT_REPORTS: IncidentReport[] = [
   {
@@ -231,7 +233,9 @@ export const INCIDENT_REPORTS: IncidentReport[] = [
     description:
       "Water level has risen significantly. Residents are being evacuated from low-lying areas near the bridge. Heavy flow observed at the bridge entrance.",
     reportedAgo: "5 mins ago",
+    reportedMinutesAgo: 5,
     confirmations: 28,
+    resolvedConfirmations: 1,
     reporter: "MMDA Field Unit",
     sourceUnit: "MMDA Field Unit",
     waterLevel: "1.5m (Chest Deep)",
@@ -250,7 +254,9 @@ export const INCIDENT_REPORTS: IncidentReport[] = [
     description:
       "Floodwater is spreading across the lower section of the avenue. Vehicles are moving slowly and side streets are partially submerged.",
     reportedAgo: "12 mins ago",
+    reportedMinutesAgo: 12,
     confirmations: 18,
+    resolvedConfirmations: 2,
     reporter: "Pasig Rescue",
     sourceUnit: "Pasig Rescue",
     waterLevel: "0.9m (Waist Deep)",
@@ -264,15 +270,37 @@ export const INCIDENT_REPORTS: IncidentReport[] = [
     coordinatesLabel: "14.5150, 121.0850",
     category: "Road impassable",
     severity: "high",
-    status: "Verified by Community",
+    status: "Reported",
     description:
       "Main access road completely submerged. Alternative routes being used. No vehicle passage possible. Structural concerns at complex entrance.",
     reportedAgo: "24 mins ago",
-    confirmations: 7,
+    reportedMinutesAgo: 24,
+    confirmations: 2,
+    resolvedConfirmations: 0,
     reporter: "Anonymous",
     sourceUnit: "Anonymous",
     note: "Road impassable",
     photos: [{ id: "p1", label: "FTI entrance", accent: "from-zinc-100 to-slate-200" }],
+  },
+  {
+    id: "report-manggahan",
+    location: "Manggahan Floodway Service Road, Pasig",
+    coordinatesLabel: "14.5933, 121.1078",
+    category: "Flooding",
+    severity: "moderate",
+    status: "Resolved by Community",
+    description:
+      "Floodwater has receded and traffic has resumed in both directions. Community members report that the road is now passable with minor puddling.",
+    reportedAgo: "46 mins ago",
+    reportedMinutesAgo: 46,
+    confirmations: 9,
+    resolvedConfirmations: 5,
+    resolvedAgo: "Resolved 12 mins ago",
+    resolvedMinutesAgo: 12,
+    reporter: "Barangay Watch",
+    sourceUnit: "Barangay Watch",
+    waterLevel: "Road clear",
+    photos: [{ id: "p1", label: "Service road update", accent: "from-emerald-50 to-slate-100" }],
   },
 ];
 

@@ -83,16 +83,25 @@ export type IncidentReportPhoto = {
   accent: string;
 };
 
+export type IncidentReportStatus =
+  | "Reported"
+  | "Verified by Community"
+  | "Resolved by Community";
+
 export type IncidentReport = {
   id: string;
   location: string;
   coordinatesLabel: string;
   category: string;
   severity: AlertSeverity;
-  status: string;
+  status: IncidentReportStatus;
   description: string;
   reportedAgo: string;
+  reportedMinutesAgo: number;
   confirmations: number;
+  resolvedConfirmations: number;
+  resolvedAgo?: string;
+  resolvedMinutesAgo?: number;
   reporter: string;
   sourceUnit: string;
   waterLevel?: string;
