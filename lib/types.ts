@@ -75,6 +75,7 @@ export type EmergencyHotline = {
   name: string;
   number: string;
   icon: LucideIcon;
+  coverage?: string;
 };
 
 export type IncidentReportPhoto = {

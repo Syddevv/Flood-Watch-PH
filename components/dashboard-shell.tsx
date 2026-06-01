@@ -6,6 +6,7 @@ import { Plus, SquareStack } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { EmergencyHotlinesContent } from "@/components/emergency-hotlines-content";
 import { FloodMap } from "@/components/flood-map";
 import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
 import { IncidentReportsContent } from "@/components/incident-reports-content";
@@ -36,7 +37,8 @@ type DashboardShellProps = {
     | "flood-map"
     | "weather-monitoring"
     | "evacuation-centers"
-    | "incident-reports";
+    | "incident-reports"
+    | "emergency-hotlines";
 };
 
 export function DashboardShell({
@@ -60,10 +62,12 @@ export function DashboardShell({
       ? "flood-map"
       : pageMode === "weather-monitoring"
         ? "weather-monitoring"
-        : pageMode === "evacuation-centers"
-          ? "evacuation-centers"
+          : pageMode === "evacuation-centers"
+            ? "evacuation-centers"
           : pageMode === "incident-reports"
             ? "incident-reports"
+          : pageMode === "emergency-hotlines"
+            ? "emergency-hotlines"
         : "dashboard",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,11 +76,13 @@ export function DashboardShell({
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
   const isEvacuationCentersView = pageMode === "evacuation-centers";
   const isIncidentReportsView = pageMode === "incident-reports";
+  const isEmergencyHotlinesView = pageMode === "emergency-hotlines";
   const isContentOnlyView =
     isFloodMapView ||
     isWeatherMonitoringView ||
     isEvacuationCentersView ||
-    isIncidentReportsView;
+    isIncidentReportsView ||
+    isEmergencyHotlinesView;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -114,6 +120,11 @@ export function DashboardShell({
 
     if (id === "incident-reports") {
       router.push("/incident-reports");
+      return;
+    }
+
+    if (id === "emergency-hotlines") {
+      router.push("/emergency-hotlines");
       return;
     }
 
@@ -160,6 +171,8 @@ export function DashboardShell({
               <EvacuationCentersContent />
             ) : isIncidentReportsView ? (
               <IncidentReportsContent />
+            ) : isEmergencyHotlinesView ? (
+              <EmergencyHotlinesContent />
             ) : (
               <div className="h-full min-h-0 w-full">
                 <FloodMap
