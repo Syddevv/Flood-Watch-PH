@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, SquareStack } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
+import { AboutContent } from "@/components/about-content";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { EmergencyHotlinesContent } from "@/components/emergency-hotlines-content";
 import { FloodMap } from "@/components/flood-map";
@@ -38,7 +39,8 @@ type DashboardShellProps = {
     | "weather-monitoring"
     | "evacuation-centers"
     | "incident-reports"
-    | "emergency-hotlines";
+    | "emergency-hotlines"
+    | "about";
 };
 
 export function DashboardShell({
@@ -68,6 +70,8 @@ export function DashboardShell({
             ? "incident-reports"
           : pageMode === "emergency-hotlines"
             ? "emergency-hotlines"
+          : pageMode === "about"
+            ? "about"
         : "dashboard",
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -77,12 +81,14 @@ export function DashboardShell({
   const isEvacuationCentersView = pageMode === "evacuation-centers";
   const isIncidentReportsView = pageMode === "incident-reports";
   const isEmergencyHotlinesView = pageMode === "emergency-hotlines";
+  const isAboutView = pageMode === "about";
   const isContentOnlyView =
     isFloodMapView ||
     isWeatherMonitoringView ||
     isEvacuationCentersView ||
     isIncidentReportsView ||
-    isEmergencyHotlinesView;
+    isEmergencyHotlinesView ||
+    isAboutView;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -125,6 +131,11 @@ export function DashboardShell({
 
     if (id === "emergency-hotlines") {
       router.push("/emergency-hotlines");
+      return;
+    }
+
+    if (id === "about") {
+      router.push("/about");
       return;
     }
 
@@ -173,6 +184,8 @@ export function DashboardShell({
               <IncidentReportsContent />
             ) : isEmergencyHotlinesView ? (
               <EmergencyHotlinesContent />
+            ) : isAboutView ? (
+              <AboutContent />
             ) : (
               <div className="h-full min-h-0 w-full">
                 <FloodMap
