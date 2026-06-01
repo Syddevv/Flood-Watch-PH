@@ -7,6 +7,7 @@ import {
   Gauge,
   Home,
   Info,
+  LifeBuoy,
   Map,
   MapPin,
   Phone,
@@ -14,7 +15,6 @@ import {
   PhoneCall,
   ShieldAlert,
   Stethoscope,
-  LifeBuoy,
   Users,
   Waves,
   Wind,
@@ -188,8 +188,13 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
     id: "hotline-ndrrmc",
     name: "NDRRMC Operations Center",
     number: "(02) 8911-1406",
-    icon: Phone,
+    icon: Shield,
     coverage: "National",
+    category: "Emergency Response",
+    filterTags: ["National", "Rescue"],
+    serviceDescription:
+      "National disaster response coordination, emergency escalation, and incident reporting.",
+    statusBadges: ["Available 24/7", "National Service"],
   },
   {
     id: "hotline-mmda",
@@ -197,27 +202,59 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
     number: "136",
     icon: Phone,
     coverage: "Metro Manila",
+    category: "Flood & Weather Monitoring",
+    filterTags: ["Flood & Weather", "Traffic"],
+    serviceDescription:
+      "Flood monitoring, drainage concerns, and flooded road reports across major NCR routes.",
+    statusBadges: ["Available 24/7", "Metro Manila Service"],
   },
   {
     id: "hotline-red-cross",
     name: "Philippine Red Cross",
     number: "143",
-    icon: Phone,
+    icon: Stethoscope,
     coverage: "National",
+    category: "Medical & Health",
+    filterTags: ["National", "Medical", "Rescue"],
+    serviceDescription:
+      "Emergency medical assistance, ambulance support, blood services, and humanitarian response.",
+    statusBadges: ["Available 24/7", "Emergency Hotline"],
   },
   {
     id: "hotline-pagasa",
     name: "PAGASA Weather",
     number: "(02) 8927-1335",
-    icon: Phone,
+    icon: CloudRain,
     coverage: "National",
+    category: "Flood & Weather Monitoring",
+    filterTags: ["National", "Flood & Weather"],
+    serviceDescription:
+      "Weather advisories, rainfall warnings, flood outlooks, and storm updates.",
+    statusBadges: ["Available 24/7", "National Service"],
   },
   {
     id: "hotline-coast-guard",
     name: "Coast Guard",
     number: "(02) 8527-8481",
-    icon: Phone,
+    icon: LifeBuoy,
     coverage: "National",
+    category: "Maritime & Water Rescue",
+    filterTags: ["National", "Rescue"],
+    serviceDescription:
+      "Maritime rescue, coastal emergency response, and water search coordination.",
+    statusBadges: ["Available 24/7", "National Service"],
+  },
+  {
+    id: "hotline-doh",
+    name: "Department of Health",
+    number: "(02) 8651-7800",
+    icon: Stethoscope,
+    coverage: "National",
+    category: "Medical & Health",
+    filterTags: ["National", "Medical"],
+    serviceDescription:
+      "Health emergency coordination, hospital referral guidance, and public health support.",
+    statusBadges: ["Available 24/7", "National Service"],
   },
   {
     id: "hotline-marikina",
@@ -225,6 +262,11 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
     number: "(02) 8646-2436",
     icon: Phone,
     coverage: "Marikina City",
+    category: "Local DRRM Offices",
+    filterTags: ["Local Government", "Rescue"],
+    serviceDescription:
+      "Local flood response, evacuation assistance, rescue dispatch, and barangay coordination.",
+    statusBadges: ["Available 24/7", "Local Government"],
   },
   {
     id: "hotline-pasig",
@@ -232,6 +274,11 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
     number: "(02) 8643-0000",
     icon: Phone,
     coverage: "Pasig City",
+    category: "Local DRRM Offices",
+    filterTags: ["Local Government", "Rescue"],
+    serviceDescription:
+      "Urban rescue operations, emergency transport, and flood-related assistance in Pasig.",
+    statusBadges: ["Available 24/7", "Local Government"],
   },
   {
     id: "hotline-qc",
@@ -239,6 +286,23 @@ export const EMERGENCY_HOTLINES: EmergencyHotline[] = [
     number: "122",
     icon: Phone,
     coverage: "Quezon City",
+    category: "Local DRRM Offices",
+    filterTags: ["Local Government", "Rescue"],
+    serviceDescription:
+      "City disaster response, incident dispatch, evacuation support, and emergency coordination.",
+    statusBadges: ["Available 24/7", "Local Government"],
+  },
+  {
+    id: "hotline-meralco",
+    name: "Meralco Emergency",
+    number: "16211",
+    icon: PhoneCall,
+    coverage: "NCR",
+    category: "Utilities",
+    filterTags: ["Utilities"],
+    serviceDescription:
+      "Power outage reporting, electrical hazards, and damaged line concerns during severe weather.",
+    statusBadges: ["Emergency Hotline", "Utility Service"],
   },
 ];
 

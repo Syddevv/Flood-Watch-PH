@@ -76,6 +76,25 @@ export type EmergencyHotline = {
   number: string;
   icon: LucideIcon;
   coverage?: string;
+  category:
+    | "Emergency Response"
+    | "Flood & Weather Monitoring"
+    | "Medical & Health"
+    | "Maritime & Water Rescue"
+    | "Local DRRM Offices"
+    | "Traffic"
+    | "Utilities";
+  filterTags: Array<
+    | "National"
+    | "Local Government"
+    | "Flood & Weather"
+    | "Medical"
+    | "Rescue"
+    | "Traffic"
+    | "Utilities"
+  >;
+  serviceDescription: string;
+  statusBadges: string[];
 };
 
 export type IncidentReportPhoto = {
