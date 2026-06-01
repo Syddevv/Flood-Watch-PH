@@ -78,7 +78,7 @@ export function AppHeader({
 
         <button
           type="button"
-          className="flex h-9 items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-3.5 text-[0.78rem] font-semibold text-[var(--color-danger)]"
+          className="flex h-8.5 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-2.5 text-[0.66rem] font-semibold text-[var(--color-danger)] sm:h-9 sm:gap-1.5 sm:px-3.5 sm:text-[0.78rem]"
         >
           <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
           <AlertTriangle className="hidden h-[13px] w-[13px] sm:block" />
