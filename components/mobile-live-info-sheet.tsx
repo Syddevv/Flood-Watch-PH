@@ -32,22 +32,20 @@ export function MobileLiveInfoSheet({
   hotlineNotice,
   timestamp,
 }: MobileLiveInfoSheetProps) {
+  if (!open) {
+    return null;
+  }
+
   return (
     <>
       <div
         aria-hidden="true"
-        className={cn(
-          "fixed inset-0 z-[980] bg-slate-950/38 transition md:hidden",
-          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
-        )}
+        className="fixed inset-0 z-[980] bg-slate-950/38 transition md:hidden"
         onClick={() => onOpenChange(false)}
       />
       <section
         aria-label="Live information"
-        className={cn(
-          "fixed inset-x-0 bottom-[4.75rem] z-[990] max-h-[72vh] rounded-t-[28px] border border-[var(--color-border)] bg-[var(--color-sidebar)] shadow-[0_-25px_60px_rgba(15,23,42,0.32)] transition-transform duration-300 md:hidden",
-          open ? "translate-y-0" : "translate-y-[calc(100%-5.5rem)]",
-        )}
+        className="fixed inset-x-0 bottom-0 z-[990] max-h-[72vh] rounded-t-[28px] border border-[var(--color-border)] bg-[var(--color-sidebar)] shadow-[0_-25px_60px_rgba(15,23,42,0.32)] md:hidden"
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-3">
           <div className="mx-auto h-1.5 w-14 rounded-full bg-[var(--color-border)]" />

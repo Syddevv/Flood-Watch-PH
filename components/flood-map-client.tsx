@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 
 import { useState } from "react";
-import { Crosshair, Layers3, LocateFixed, Map, Satellite } from "lucide-react";
+import { Layers3, LocateFixed, Map, Satellite } from "lucide-react";
 import L from "leaflet";
 import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
 
@@ -155,7 +155,7 @@ export function FloodMapClient({
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
-      <div className="pointer-events-auto absolute bottom-4 left-4 z-[450] w-[142px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-3 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md">
+      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[142px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-3 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
         <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
           FLOOD RISK
         </div>
@@ -176,14 +176,6 @@ export function FloodMapClient({
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-[360] bg-[linear-gradient(rgba(255,255,255,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.25)_1px,transparent_1px)] bg-[size:230px_230px] opacity-[0.22] mix-blend-screen dark:opacity-[0.2]" />
-
-      <button
-        type="button"
-        aria-label="Crosshair"
-        className="pointer-events-auto absolute bottom-22 right-4 z-[450] flex h-11 w-11 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-sidebar)] text-[var(--color-foreground)] shadow-[var(--shadow-floating)] md:hidden"
-      >
-        <Crosshair className="h-4.5 w-4.5" />
-      </button>
     </div>
   );
 }

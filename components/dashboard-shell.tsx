@@ -6,7 +6,6 @@ import { Plus, SquareStack } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { AboutContent } from "@/components/about-content";
-import { BottomNavigation } from "@/components/bottom-navigation";
 import { EmergencyHotlinesContent } from "@/components/emergency-hotlines-content";
 import { FloodMap } from "@/components/flood-map";
 import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
@@ -95,6 +94,27 @@ export function DashboardShell({
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
+  useEffect(() => {
+    const nextActiveItem =
+      pageMode === "flood-map"
+        ? "flood-map"
+        : pageMode === "weather-monitoring"
+          ? "weather-monitoring"
+          : pageMode === "evacuation-centers"
+            ? "evacuation-centers"
+            : pageMode === "incident-reports"
+              ? "incident-reports"
+              : pageMode === "emergency-hotlines"
+                ? "emergency-hotlines"
+                : pageMode === "about"
+                  ? "about"
+                  : "dashboard";
+
+    setActiveItem(nextActiveItem);
+    setSheetOpen(false);
+    setSidebarOpen(false);
+  }, [pageMode]);
+
   const toggleTheme = () => {
     setTheme((currentTheme) => {
       const nextTheme: Theme = currentTheme === "light" ? "dark" : "light";
@@ -104,6 +124,9 @@ export function DashboardShell({
   };
 
   const handleSelect = (id: string) => {
+    setSheetOpen(false);
+    setSidebarOpen(false);
+
     if (id === "dashboard") {
       router.push("/");
       return;
@@ -197,7 +220,7 @@ export function DashboardShell({
               </div>
             )}
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-[5.35rem] z-[500] flex items-end justify-between px-4 md:hidden">
+            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[500] flex items-end justify-between px-4 md:hidden">
               {!isContentOnlyView ? (
                 <button
                   type="button"
@@ -213,9 +236,9 @@ export function DashboardShell({
 
               <button
                 type="button"
-                className="pointer-events-auto flex h-14 items-center gap-2 rounded-full bg-[#ff695f] px-6 text-base font-semibold text-slate-950 shadow-[0_18px_40px_rgba(255,105,95,0.32)]"
+                className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[#ff695f] px-5 text-sm font-semibold text-slate-950 shadow-[0_18px_40px_rgba(255,105,95,0.32)]"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
                 <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
               </button>
             </div>
@@ -235,22 +258,18 @@ export function DashboardShell({
         </div>
       </div>
 
-      <BottomNavigation
-        items={NAV_ITEMS}
-        activeItem={activeItem}
-        onSelect={handleSelect}
-      />
-
-      <MobileLiveInfoSheet
-        open={!isContentOnlyView && sheetOpen}
-        onOpenChange={setSheetOpen}
-        alerts={ACTIVE_ALERTS}
-        weather={WEATHER_OVERVIEW}
-        centers={EVACUATION_CENTERS}
-        hotlines={EMERGENCY_HOTLINES}
-        hotlineNotice={HOTLINE_NOTICE}
-        timestamp={LIVE_TIMESTAMP}
-      />
+      {!isContentOnlyView ? (
+        <MobileLiveInfoSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          alerts={ACTIVE_ALERTS}
+          weather={WEATHER_OVERVIEW}
+          centers={EVACUATION_CENTERS}
+          hotlines={EMERGENCY_HOTLINES}
+          hotlineNotice={HOTLINE_NOTICE}
+          timestamp={LIVE_TIMESTAMP}
+        />
+      ) : null}
     </div>
   );
 }

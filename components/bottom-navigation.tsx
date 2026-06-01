@@ -15,8 +15,8 @@ export function BottomNavigation({
   onSelect,
 }: BottomNavigationProps) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[950] border-t border-[var(--color-border)] bg-[var(--color-sidebar)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-20px_60px_rgba(15,23,42,0.24)] md:hidden">
-      <ul className="grid grid-cols-5 gap-1">
+    <nav className="fixed inset-x-0 bottom-0 z-[950] border-t border-[var(--color-border)] bg-[var(--color-sidebar)] px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-20px_60px_rgba(15,23,42,0.24)] md:hidden">
+      <ul className="grid grid-cols-5 gap-2">
         {items.slice(0, 5).map((item) => {
           const Icon = item.icon;
           const active = item.id === activeItem;
@@ -28,7 +28,7 @@ export function BottomNavigation({
                 aria-label={item.label}
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  "flex w-full flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[0.68rem] font-medium transition",
+                  "flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 py-2 text-[0.56rem] font-medium transition",
                   active
                     ? "text-[var(--color-primary)]"
                     : "text-[var(--color-muted-foreground)]",
