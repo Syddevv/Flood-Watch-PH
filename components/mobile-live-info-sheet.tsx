@@ -9,7 +9,6 @@ import type {
   FloodAlert,
   WeatherOverviewData,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 type MobileLiveInfoSheetProps = {
   open: boolean;

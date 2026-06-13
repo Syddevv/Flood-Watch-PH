@@ -38,9 +38,27 @@ type DashboardShellProps = {
     | "weather-monitoring"
     | "evacuation-centers"
     | "incident-reports"
-    | "emergency-hotlines"
-    | "about";
+      | "emergency-hotlines"
+      | "about";
 };
+
+function getActiveItemFromPageMode(
+  pageMode: NonNullable<DashboardShellProps["pageMode"]>,
+) {
+  return pageMode === "flood-map"
+    ? "flood-map"
+    : pageMode === "weather-monitoring"
+      ? "weather-monitoring"
+      : pageMode === "evacuation-centers"
+        ? "evacuation-centers"
+        : pageMode === "incident-reports"
+          ? "incident-reports"
+          : pageMode === "emergency-hotlines"
+            ? "emergency-hotlines"
+            : pageMode === "about"
+              ? "about"
+              : "dashboard";
+}
 
 export function DashboardShell({
   pageMode = "dashboard",
@@ -58,23 +76,9 @@ export function DashboardShell({
       return "light";
     }
   });
-  const [activeItem, setActiveItem] = useState(
-    pageMode === "flood-map"
-      ? "flood-map"
-      : pageMode === "weather-monitoring"
-        ? "weather-monitoring"
-          : pageMode === "evacuation-centers"
-            ? "evacuation-centers"
-          : pageMode === "incident-reports"
-            ? "incident-reports"
-          : pageMode === "emergency-hotlines"
-            ? "emergency-hotlines"
-          : pageMode === "about"
-            ? "about"
-        : "dashboard",
-  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const activeItem = getActiveItemFromPageMode(pageMode);
   const isFloodMapView = pageMode === "flood-map";
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
   const isEvacuationCentersView = pageMode === "evacuation-centers";
@@ -93,27 +97,6 @@ export function DashboardShell({
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
-
-  useEffect(() => {
-    const nextActiveItem =
-      pageMode === "flood-map"
-        ? "flood-map"
-        : pageMode === "weather-monitoring"
-          ? "weather-monitoring"
-          : pageMode === "evacuation-centers"
-            ? "evacuation-centers"
-            : pageMode === "incident-reports"
-              ? "incident-reports"
-              : pageMode === "emergency-hotlines"
-                ? "emergency-hotlines"
-                : pageMode === "about"
-                  ? "about"
-                  : "dashboard";
-
-    setActiveItem(nextActiveItem);
-    setSheetOpen(false);
-    setSidebarOpen(false);
-  }, [pageMode]);
 
   const toggleTheme = () => {
     setTheme((currentTheme) => {
@@ -161,8 +144,6 @@ export function DashboardShell({
       router.push("/about");
       return;
     }
-
-    setActiveItem(id);
     setSheetOpen(false);
   };
 
