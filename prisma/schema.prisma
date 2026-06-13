@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model FloodReport {
+  id                String               @id @default(cuid())
+  title             String
+  description       String
+  category          String
+  severity          String
+  status            String               @default("Active")
+  locationName      String
+  latitude          Float
+  longitude         Float
+  imageUrl          String?
+  reportedByName    String?
+  sourceType        String               @default("Community")
+  confirmationCount Int                  @default(0)
+  resolvedCount     Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  resolvedAt        DateTime?
+  confirmations     ReportConfirmation[]
+  updates           ReportUpdate[]
+}
+
+model ReportConfirmation {
+  id               String      @id @default(cuid())
+  reportId         String
+  confirmationType String
+  ipHash           String?
+  createdAt        DateTime    @default(now())
+  report           FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model ReportUpdate {
+  id         String      @id @default(cuid())
+  reportId   String
+  updateType String
+  message    String
+  createdAt  DateTime    @default(now())
+  report     FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+model EvacuationCenter {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  address       String
+  city          String
+  province      String
+  latitude      Float
+  longitude     Float
+  contactNumber String?
+  facilities    String[]
+  status        String   @default("Unknown")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SafetyTip {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmergencyContact {
+  id            String   @id @default(cuid())
+  agencyName    String
+  contactNumber String
+  region        String?
+  province      String?
+  city          String?
+  description   String?
+  isNational    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AboutContent {
+  id         String   @id @default(cuid())
+  sectionKey String   @unique
+  title      String
+  content    String
+  updatedAt  DateTime @updatedAt
+}

@@ -3,7 +3,6 @@ import {
   Building2,
   CloudRain,
   Flag,
-  Flame,
   Gauge,
   Home,
   Info,
@@ -524,3 +523,54 @@ export const SEARCH_PLACEHOLDER =
 export const LIVE_TIMESTAMP = "Today, 8:45 PM PHT";
 export const ACTIVE_ALERTS_LABEL = "3 Active Alerts";
 export const REPORT_LABEL = "Report Flood Incident";
+
+export const REPORT_CATEGORIES = [
+  "Flood",
+  "Road Blocked",
+  "Rescue Needed",
+  "Overflowing River",
+  "Damaged Bridge",
+  "Other",
+] as const;
+
+export const REPORT_SEVERITIES = [
+  "Low",
+  "Moderate",
+  "High",
+  "Critical",
+] as const;
+
+export const REPORT_STATUSES = [
+  "Active",
+  "Monitoring",
+  "Resolved",
+] as const;
+
+export const REPORT_SOURCE_TYPES = [
+  "Community",
+  "Official",
+  "System",
+] as const;
+
+export const CONFIRMATION_TYPES = [
+  "still_active",
+  "confirmed",
+  "resolved",
+] as const;
+
+export const EVACUATION_CENTER_STATUSES = [
+  "Open",
+  "Standby",
+  "Full",
+  "Closed",
+  "Unknown",
+] as const;
+
+export const SAFETY_TIP_CATEGORIES = [
+  "Before Flood",
+  "During Flood",
+  "After Flood",
+  "Evacuation",
+  "Emergency Kit",
+  "Health Safety",
+] as const;
