@@ -104,24 +104,26 @@ export type IncidentReportPhoto = {
 };
 
 export type IncidentReportStatus =
-  | "Reported"
-  | "Verified by Community"
-  | "Resolved by Community";
+  | "Needs More Confirmation"
+  | "Confirmed by Community"
+  | "Possibly Resolved"
+  | "Resolved";
 
 export type IncidentReport = {
   id: string;
+  title: string;
   location: string;
   coordinatesLabel: string;
   category: string;
   severity: AlertSeverity;
   status: IncidentReportStatus;
   description: string;
+  createdAt?: string;
   reportedAgo: string;
-  reportedMinutesAgo: number;
   confirmations: number;
   resolvedConfirmations: number;
+  sourceType: "Community" | "Official" | "System";
   resolvedAgo?: string;
-  resolvedMinutesAgo?: number;
   reporter: string;
   sourceUnit: string;
   waterLevel?: string;

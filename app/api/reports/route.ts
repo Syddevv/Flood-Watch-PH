@@ -8,10 +8,10 @@ import {
   trimToUndefined,
 } from "@/lib/api-utils";
 import { prisma } from "@/lib/prisma";
+import { isSupportedReportCategory } from "@/lib/reporting";
 import {
   isValidLatitude,
   isValidLongitude,
-  isValidReportCategory,
   isValidReportSeverity,
 } from "@/lib/validations";
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       return errorResponse("Category is required.", 400);
     }
 
-    if (!isValidReportCategory(category)) {
+    if (!isSupportedReportCategory(category)) {
       return errorResponse("Invalid category value.", 400);
     }
 
