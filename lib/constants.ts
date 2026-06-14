@@ -4,7 +4,6 @@ import {
   CloudRain,
   Flag,
   Gauge,
-  Home,
   Info,
   LifeBuoy,
   Map,
@@ -36,7 +35,6 @@ import type {
 export const THEME_STORAGE_KEY = "floodwatch-theme";
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "flood-map", label: "Flood Map", icon: Map },
   { id: "weather-monitoring", label: "Weather Monitoring", icon: CloudRain },
   { id: "evacuation-centers", label: "Evacuation Centers", icon: Building2 },

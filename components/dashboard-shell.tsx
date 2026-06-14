@@ -45,7 +45,6 @@ import {
 
 type DashboardShellProps = {
   pageMode?:
-    | "dashboard"
     | "flood-map"
     | "weather-monitoring"
     | "evacuation-centers"
@@ -69,11 +68,11 @@ function getActiveItemFromPageMode(
             ? "emergency-hotlines"
             : pageMode === "about"
               ? "about"
-              : "dashboard";
+              : "flood-map";
 }
 
 export function DashboardShell({
-  pageMode = "dashboard",
+  pageMode = "flood-map",
 }: DashboardShellProps) {
   const router = useRouter();
   const [theme, setTheme] = useState<Theme>(() => {
@@ -284,13 +283,8 @@ export function DashboardShell({
     setSheetOpen(false);
     setSidebarOpen(false);
 
-    if (id === "dashboard") {
-      router.push("/");
-      return;
-    }
-
     if (id === "flood-map") {
-      router.push("/flood-map");
+      router.push("/");
       return;
     }
 
