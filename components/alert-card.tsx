@@ -38,6 +38,10 @@ const dotClasses = {
   safe: "bg-[var(--color-success)]",
 };
 
+function formatPrecipitation(precipitation: number | null) {
+  return precipitation === null ? "Unavailable" : `${precipitation.toFixed(1)} mm/hr`;
+}
+
 export function AlertCard({ alert }: { alert: FloodAlert }) {
   return (
     <article
@@ -71,7 +75,7 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
             badgeClasses[alert.severity],
           )}
         >
-          {alert.badge}
+          {alert.riskLevel}
         </span>
       </div>
 
@@ -84,9 +88,9 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
             </span>
           </div>
           <div className="flex items-center gap-1.5 whitespace-nowrap">
-            <span>Water level</span>
+            <span>Precipitation</span>
             <span className="font-mono text-[0.95rem] font-semibold text-[var(--color-foreground)]">
-              {alert.waterLevel}
+              {formatPrecipitation(alert.precipitation)}
             </span>
           </div>
         </div>
@@ -95,7 +99,11 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
           {alert.description}
         </p>
 
-        <div className="mt-3.5 flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <div className="mt-3 flex text-[0.72rem] text-[var(--color-muted-foreground)]">
+          <span>{alert.source}</span>
+        </div>
+
+        <div className="mt-2 flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
           <Clock3 className="h-3.25 w-3.25 shrink-0" />
           <span>Updated {alert.updatedAt}</span>
         </div>

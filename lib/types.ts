@@ -10,43 +10,42 @@ export type NavItem = {
 
 export type AlertSeverity = "safe" | "moderate" | "high" | "severe";
 
+export type FloodRiskLevel =
+  | "Low Risk"
+  | "Moderate Risk"
+  | "High Risk"
+  | "Critical Risk";
+
 export type FloodAlert = {
   id: string;
   title: string;
-  badge: string;
   severity: AlertSeverity;
   location: string;
-  waterLevel: string;
+  riskLevel: FloodRiskLevel;
+  precipitation: number | null;
   description: string;
   updatedAt: string;
-  coordinates: [number, number];
+  source: string;
 };
 
-export type WeatherStat = {
-  id: string;
-  label: string;
-  value: string;
-  icon: LucideIcon;
+export type WeatherLocation = {
+  name: string;
+  latitude: number;
+  longitude: number;
+  temperature: number | null;
+  precipitation: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  condition: string | null;
+  riskLevel: FloodRiskLevel;
+  updatedAt: string;
+  source: string;
 };
 
 export type WeatherOverviewData = {
-  temperature: string;
-  condition: string;
-  icon: LucideIcon;
-  stats: WeatherStat[];
-};
-
-export type WeatherMetric = {
-  id: string;
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  tone: "blue" | "amber" | "green" | "red";
-};
-
-export type RainfallDay = {
-  day: string;
-  amount: number;
+  locations: WeatherLocation[];
+  alerts: FloodAlert[];
+  fetchedAt: string;
 };
 
 export type EvacuationCenter = {

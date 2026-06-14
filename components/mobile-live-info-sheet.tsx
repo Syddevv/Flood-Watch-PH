@@ -16,6 +16,10 @@ type MobileLiveInfoSheetProps = {
   onOpenChange: (open: boolean) => void;
   alerts: FloodAlert[];
   weather: WeatherOverviewData;
+  weatherLoading?: boolean;
+  weatherError?: string | null;
+  alertsLoading?: boolean;
+  alertsError?: string | null;
   centers: EvacuationCenter[];
   hotlines: EmergencyHotline[];
   hotlineNotice: string;
@@ -34,6 +38,10 @@ export function MobileLiveInfoSheet({
   onOpenChange,
   alerts,
   weather,
+  weatherLoading,
+  weatherError,
+  alertsLoading,
+  alertsError,
   centers,
   hotlines,
   hotlineNotice,
@@ -76,6 +84,10 @@ export function MobileLiveInfoSheet({
           <RightInfoPanel
             alerts={alerts}
             weather={weather}
+            weatherLoading={weatherLoading}
+            weatherError={weatherError}
+            alertsLoading={alertsLoading}
+            alertsError={alertsError}
             centers={centers}
             hotlines={hotlines}
             hotlineNotice={hotlineNotice}

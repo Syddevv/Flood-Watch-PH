@@ -3,7 +3,6 @@ import {
   Building2,
   CloudRain,
   Flag,
-  Gauge,
   Info,
   LifeBuoy,
   Map,
@@ -14,8 +13,6 @@ import {
   ShieldAlert,
   Stethoscope,
   Users,
-  Waves,
-  Wind,
 } from "lucide-react";
 
 import type {
@@ -23,13 +20,11 @@ import type {
   EmergencyHotline,
   EvacuationCenter,
   EvacuationDirectoryCenter,
-  FloodAlert,
   IncidentReport,
   LegendItem,
   MapMarker,
   NavItem,
   RiskPolygon,
-  WeatherOverviewData,
 } from "./types";
 
 export const THEME_STORAGE_KEY = "floodwatch-theme";
@@ -42,56 +37,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "emergency-hotlines", label: "Emergency Hotlines", icon: PhoneCall },
   { id: "about", label: "About / How It Works", icon: Info },
 ];
-
-export const ACTIVE_ALERTS: FloodAlert[] = [
-  {
-    id: "alert-marikina",
-    title: "Severe Flood Alert",
-    badge: "Severe Flooding",
-    severity: "severe",
-    location: "Marikina River Basin",
-    waterLevel: "18.4 m",
-    description:
-      "Water has breached the second alarm. Residents in low-lying areas must evacuate now.",
-    updatedAt: "5 mins ago",
-    coordinates: [14.6407, 121.1029],
-  },
-  {
-    id: "alert-pasig",
-    title: "High Flood Risk",
-    badge: "High Risk",
-    severity: "high",
-    location: "Pasig - Cainta",
-    waterLevel: "1.2 m",
-    description:
-      "Rising waters along C. Raymundo Ave. Avoid the area and prepare to relocate.",
-    updatedAt: "12 mins ago",
-    coordinates: [14.5869, 121.1038],
-  },
-  {
-    id: "alert-qc",
-    title: "Moderate Flood Watch",
-    badge: "Moderate Risk",
-    severity: "moderate",
-    location: "Quezon City North",
-    waterLevel: "0.3 m",
-    description:
-      "Street-level flooding reported on Commonwealth Ave. Drive with caution.",
-    updatedAt: "38 mins ago",
-    coordinates: [14.7004, 121.0744],
-  },
-];
-
-export const WEATHER_OVERVIEW: WeatherOverviewData = {
-  temperature: "27°C",
-  condition: "Heavy Rain",
-  icon: CloudRain,
-  stats: [
-    { id: "humidity", label: "Humidity", value: "92%", icon: Waves },
-    { id: "wind", label: "Wind", value: "38 km/h", icon: Wind },
-    { id: "rain", label: "Rain", value: "95%", icon: Gauge },
-  ],
-};
 
 export const EVACUATION_CENTERS: EvacuationCenter[] = [
   {
@@ -446,7 +391,7 @@ export const HEADER_SUBTITLE = "Public Flood Monitoring";
 export const SEARCH_PLACEHOLDER =
   "Search location, city, evacuation center...";
 export const LIVE_TIMESTAMP = "Today, 8:45 PM PHT";
-export const ACTIVE_ALERTS_LABEL = "3 Active Alerts";
+export const ACTIVE_ALERTS_LABEL = "Live Alerts";
 export const REPORT_LABEL = "Report Flood Incident";
 
 export const REPORT_CATEGORIES = [

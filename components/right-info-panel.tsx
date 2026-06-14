@@ -22,6 +22,10 @@ import { cn } from "@/lib/utils";
 type RightInfoPanelProps = {
   alerts: FloodAlert[];
   weather: WeatherOverviewData;
+  weatherLoading?: boolean;
+  weatherError?: string | null;
+  alertsLoading?: boolean;
+  alertsError?: string | null;
   centers: EvacuationCenter[];
   hotlines: EmergencyHotline[];
   hotlineNotice: string;
@@ -126,6 +130,10 @@ export function RightInfoPanel({
   hotlineNotice,
   timestamp,
   officialAlertsTitle = "ACTIVE FLOOD ALERTS",
+  weatherLoading = false,
+  weatherError = null,
+  alertsLoading = false,
+  alertsError = null,
   showCommunityReportsSection = false,
   communityReports = [],
   communityReportsLoading = false,
@@ -153,11 +161,29 @@ export function RightInfoPanel({
           <div className="mt-5 text-[0.73rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
             {officialAlertsTitle}
           </div>
-          <div className="mt-3 space-y-3">
-            {alerts.map((alert) => (
-              <AlertCard key={alert.id} alert={alert} />
-            ))}
-          </div>
+          <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
+            System alerts are based on available weather data and may not replace official
+            advisories. Always follow PAGASA, NDRRMC, LGU, and emergency response announcements.
+          </p>
+          {alertsLoading ? (
+            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              Checking weather-based flood alerts...
+            </div>
+          ) : alertsError ? (
+            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              {alertsError}
+            </div>
+          ) : alerts.length === 0 ? (
+            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              No major weather-based flood alerts right now.
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {alerts.map((alert) => (
+                <AlertCard key={alert.id} alert={alert} />
+              ))}
+            </div>
+          )}
         </div>
 
         {showCommunityReportsSection ? (
@@ -198,9 +224,19 @@ export function RightInfoPanel({
           <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
             WEATHER OVERVIEW
           </div>
-          <div className="mt-3">
-            <WeatherOverview weather={weather} />
-          </div>
+          {weatherLoading ? (
+            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              Loading weather data...
+            </div>
+          ) : weatherError ? (
+            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              {weatherError}
+            </div>
+          ) : (
+            <div className="mt-3">
+              <WeatherOverview weather={weather} />
+            </div>
+          )}
         </div>
 
         <div>

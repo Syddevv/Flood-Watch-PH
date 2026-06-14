@@ -16,7 +16,6 @@ import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
 import {
-  ACTIVE_ALERTS,
   EMERGENCY_HOTLINES,
   EVACUATION_CENTERS,
   FLOOD_LEGEND,
@@ -27,15 +26,15 @@ import {
   REPORT_MARKER_LEGEND,
   REPORT_LABEL,
   THEME_STORAGE_KEY,
-  WEATHER_OVERVIEW,
 } from "@/lib/constants";
 import type { ReportDetailResponse, ReportRecord, ReportsResponse } from "@/lib/report-types";
 import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
-import type { IncidentReport, ReportMapMarker, Theme } from "@/lib/types";
+import type { IncidentReport, ReportMapMarker, Theme, WeatherOverviewData } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { fetchWeatherOverview } from "@/lib/weather-client";
 import {
   hasValidCoordinates,
   matchesFilter,
@@ -51,6 +50,12 @@ type DashboardShellProps = {
     | "incident-reports"
       | "emergency-hotlines"
       | "about";
+};
+
+const EMPTY_WEATHER_OVERVIEW: WeatherOverviewData = {
+  locations: [],
+  alerts: [],
+  fetchedAt: "",
 };
 
 function getActiveItemFromPageMode(
@@ -116,11 +121,56 @@ export function DashboardShell({
   const [floodMapActionLoadingId, setFloodMapActionLoadingId] = useState<string | null>(null);
   const [floodMapConfirmedReportIds, setFloodMapConfirmedReportIds] = useState<Record<string, boolean>>({});
   const [floodMapResolvedReportIds, setFloodMapResolvedReportIds] = useState<Record<string, boolean>>({});
+  const [weatherOverview, setWeatherOverview] = useState<WeatherOverviewData>(EMPTY_WEATHER_OVERVIEW);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  useEffect(() => {
+    if (isContentOnlyView && !isWeatherMonitoringView) {
+      return;
+    }
+
+    let isMounted = true;
+    const abortController = new AbortController();
+
+    async function loadWeatherOverview() {
+      setWeatherLoading(true);
+      setWeatherError(null);
+
+      try {
+        const nextWeatherOverview = await fetchWeatherOverview(abortController.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setWeatherOverview(nextWeatherOverview);
+      } catch (error) {
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+
+        console.error("Failed to load weather overview.", error);
+        setWeatherError("Unable to load weather data.");
+      } finally {
+        if (isMounted) {
+          setWeatherLoading(false);
+        }
+      }
+    }
+
+    loadWeatherOverview();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [isContentOnlyView, isWeatherMonitoringView]);
 
   useEffect(() => {
     if (!isFloodMapView) {
@@ -431,7 +481,11 @@ export function DashboardShell({
             )}
           >
             {isWeatherMonitoringView ? (
-              <WeatherMonitoringContent />
+              <WeatherMonitoringContent
+                weather={weatherOverview}
+                weatherLoading={weatherLoading}
+                weatherError={weatherError}
+              />
             ) : isEvacuationCentersView ? (
               <EvacuationCentersContent />
             ) : isIncidentReportsView ? (
@@ -493,12 +547,16 @@ export function DashboardShell({
 
           {!isContentOnlyView || isFloodMapView ? (
             <RightInfoPanel
-              alerts={ACTIVE_ALERTS}
-              weather={WEATHER_OVERVIEW}
+              alerts={weatherOverview.alerts}
+              weather={weatherOverview}
+              weatherLoading={weatherLoading}
+              weatherError={weatherError}
+              alertsLoading={weatherLoading}
+              alertsError={weatherError}
               centers={EVACUATION_CENTERS}
               hotlines={EMERGENCY_HOTLINES}
               hotlineNotice={HOTLINE_NOTICE}
-              timestamp={LIVE_TIMESTAMP}
+              timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
               officialAlertsTitle={
                 isFloodMapView
                   ? "Official / System Flood Alerts"
@@ -523,12 +581,16 @@ export function DashboardShell({
         <MobileLiveInfoSheet
           open={sheetOpen}
           onOpenChange={setSheetOpen}
-          alerts={ACTIVE_ALERTS}
-          weather={WEATHER_OVERVIEW}
+          alerts={weatherOverview.alerts}
+          weather={weatherOverview}
+          weatherLoading={weatherLoading}
+          weatherError={weatherError}
+          alertsLoading={weatherLoading}
+          alertsError={weatherError}
           centers={EVACUATION_CENTERS}
           hotlines={EMERGENCY_HOTLINES}
           hotlineNotice={HOTLINE_NOTICE}
-          timestamp={LIVE_TIMESTAMP}
+          timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
           officialAlertsTitle={
             isFloodMapView
               ? "Official / System Flood Alerts"
