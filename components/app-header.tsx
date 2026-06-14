@@ -4,14 +4,12 @@ import {
   AlertTriangle,
   Menu,
   Plus,
-  Search,
 } from "lucide-react";
 
 import {
   ACTIVE_ALERTS_LABEL,
   HEADER_SUBTITLE,
   REPORT_LABEL,
-  SEARCH_PLACEHOLDER,
 } from "@/lib/constants";
 import type { Theme } from "@/lib/types";
 
@@ -56,26 +54,7 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="mx-5 hidden min-w-0 max-w-[640px] flex-1 md:block">
-        <label className="flex h-10 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-          <Search className="h-[15px] w-[15px] text-[var(--color-muted-foreground)]" />
-          <input
-            type="search"
-            placeholder={SEARCH_PLACEHOLDER}
-            className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
-          />
-        </label>
-      </div>
-
       <div className="flex items-center gap-2 sm:gap-2.5">
-        <button
-          type="button"
-          aria-label="Search"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
-        >
-          <Search className="h-4 w-4" />
-        </button>
-
         <button
           type="button"
           className="flex h-8.5 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-2.5 text-[0.66rem] font-semibold text-[var(--color-danger)] sm:h-9 sm:gap-1.5 sm:px-3.5 sm:text-[0.78rem]"
