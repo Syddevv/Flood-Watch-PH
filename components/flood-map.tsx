@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Check, Clock3, ThumbsUp, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Clock3, ThumbsUp, X } from "lucide-react";
+import { useState } from "react";
 
 import { formatCountLabel } from "@/lib/reporting";
 import {
@@ -103,6 +104,8 @@ export function FloodMap({
   onClosePreview,
   onOpenReportDetails,
 }: FloodMapProps) {
+  const [mobileReportsPanelOpen, setMobileReportsPanelOpen] = useState(false);
+
   return (
     <div className="relative h-full min-h-0 w-full">
       <DynamicFloodMap
@@ -114,53 +117,70 @@ export function FloodMap({
       />
 
       <div className="pointer-events-auto absolute left-4 top-4 z-[470] max-w-[calc(100%-6rem)] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[360px]">
-        <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          LIVE COMMUNITY REPORTS
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {reportFilterOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onSelectFilter(option.id)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
-                selectedFilter === option.id
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        {allowPolygonToggle ? (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={onToggleRiskOverlays}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
-                showRiskOverlays
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
-              )}
-            >
-              {showRiskOverlays ? "Hide Risk Overlays" : "Show Risk Overlays"}
-            </button>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
+            LIVE COMMUNITY REPORTS
           </div>
-        ) : null}
-        <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
-          Community reports may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
-        </p>
-        <div className="mt-3 rounded-[12px] bg-[var(--color-panel)] px-3 py-2 text-[0.82rem] text-[var(--color-foreground)]">
-          {loadingReports
-            ? "Loading flood reports..."
-            : reportLoadError
-              ? reportLoadError
-              : reportMarkers.length === 0
-                ? "No mapped reports available right now."
-                : `${reportMarkers.length} mapped report${reportMarkers.length === 1 ? "" : "s"} visible`}
+          <button
+            type="button"
+            aria-label={mobileReportsPanelOpen ? "Collapse community report filters" : "Expand community report filters"}
+            aria-expanded={mobileReportsPanelOpen}
+            onClick={() => setMobileReportsPanelOpen((current) => !current)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
+          >
+            {mobileReportsPanelOpen ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+        <div className={cn("hidden md:block", mobileReportsPanelOpen && "block")}>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {reportFilterOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onSelectFilter(option.id)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
+                  selectedFilter === option.id
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {allowPolygonToggle ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={onToggleRiskOverlays}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
+                  showRiskOverlays
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+                )}
+              >
+                {showRiskOverlays ? "Hide Risk Overlays" : "Show Risk Overlays"}
+              </button>
+            </div>
+          ) : null}
+          <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
+            Community reports may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
+          </p>
+          <div className="mt-3 rounded-[12px] bg-[var(--color-panel)] px-3 py-2 text-[0.82rem] text-[var(--color-foreground)]">
+            {loadingReports
+              ? "Loading flood reports..."
+              : reportLoadError
+                ? reportLoadError
+                : reportMarkers.length === 0
+                  ? "No mapped reports available right now."
+                  : `${reportMarkers.length} mapped report${reportMarkers.length === 1 ? "" : "s"} visible`}
+          </div>
         </div>
       </div>
 
