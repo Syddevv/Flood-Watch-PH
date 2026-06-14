@@ -33,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (report.status === "Resolved" || report.resolvedAt) {
-      return errorResponse("Resolved reports can no longer be confirmed.", 400);
+      return errorResponse("Flood reports already marked as resolved can no longer be confirmed.", 400);
     }
 
     const updatedReport = await prisma.$transaction(async (tx) => {

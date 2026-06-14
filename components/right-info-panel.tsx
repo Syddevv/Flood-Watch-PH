@@ -85,7 +85,7 @@ function CommunityReportPanelItem({
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", statusPresentation.dotClassName)} />
-              <span>{report.status}</span>
+              <span>{statusPresentation.label}</span>
             </span>
           </div>
         </div>
@@ -106,7 +106,7 @@ function CommunityReportPanelItem({
         <div className="rounded-[10px] bg-[var(--color-panel)] px-2 py-2">
           <div className="flex items-center gap-1.5">
             <Check className="h-3.5 w-3.5" />
-            <span>{formatCountLabel(report.resolvedConfirmations)}</span>
+            <span>{formatCountLabel(report.resolvedConfirmations)} receded</span>
           </div>
         </div>
       </div>

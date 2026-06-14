@@ -109,7 +109,7 @@ function applyOptimisticReportAction(
       nextStatus === "Resolved"
         ? "Resolved just now"
         : nextStatus === "Likely Resolved"
-          ? "Likely resolved just now"
+          ? "Likely receded just now"
           : report.resolvedAgo,
   };
 }
@@ -234,7 +234,7 @@ function ReportCard({
         </div>
         <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
           <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
-            MARKED RESOLVED
+            RECEDED REPORTS
           </div>
           <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
             {formatCountLabel(report.resolvedConfirmations)}
@@ -253,38 +253,38 @@ function ReportCard({
         <button
           type="button"
           onClick={() => onView(report)}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[0.82rem] font-medium text-[var(--color-foreground)]"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[0.82rem] font-medium text-[var(--color-foreground)]"
         >
           <Eye className="h-3.25 w-3.25" />
-          <span>View</span>
+          <span className="whitespace-nowrap">View</span>
         </button>
         <button
           type="button"
           onClick={() => onConfirm(report.id)}
           disabled={hasConfirmed || isResolved || isBusy}
           className={cn(
-            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[0.82rem] font-medium",
+            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-1.5 text-[0.82rem] font-medium",
             hasConfirmed || isResolved || isBusy
               ? "border-[rgba(148,163,184,0.2)] bg-[rgba(148,163,184,0.12)] text-slate-500"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
           )}
         >
           <ThumbsUp className="h-3.25 w-3.25" />
-          <span>{hasConfirmed ? "Confirmed" : "Confirm"}</span>
+          <span className="whitespace-nowrap">{hasConfirmed ? "Confirmed" : "Confirm"}</span>
         </button>
         <button
           type="button"
           onClick={() => onResolve(report.id)}
           disabled={hasResolved || isResolved || isBusy}
           className={cn(
-            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[0.82rem] font-medium",
+            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-1.5 text-[0.82rem] font-medium",
             hasResolved || isResolved || isBusy
               ? "border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.12)] text-slate-500"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
           )}
         >
           <Check className="h-3.25 w-3.25" />
-          <span>{hasResolved ? "Marked" : "Resolved"}</span>
+          <span className="whitespace-nowrap">{hasResolved ? "Reported" : "Receded"}</span>
         </button>
       </div>
     </article>
@@ -638,14 +638,14 @@ export function IncidentReportsContent() {
       );
       setToast({
         tone: "success",
-        message: "Report marked as resolved. Thank you for the update.",
+        message: "Water receded report submitted. Thank you for the update.",
       });
     } catch (error) {
       console.error("Failed to resolve report.", error);
       setReports(previousReports);
       if (
         error instanceof Error &&
-        error.message === "You already marked this report as resolved from this browser session."
+        error.message === "You already reported the water receded from this browser session."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("resolved", reportId), "true");
@@ -663,7 +663,7 @@ export function IncidentReportsContent() {
         message:
           error instanceof Error && error.message
             ? error.message
-            : "Unable to update this report right now.",
+            : "Unable to submit a water receded report right now.",
       });
     } finally {
       setActionLoadingId(null);
@@ -1141,7 +1141,7 @@ export function IncidentReportsContent() {
 
                   <div className="mx-3 mt-1 border-t border-[rgba(148,163,184,0.14)]" />
                   <div className="px-3 pb-3 pt-4 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    RECENTLY RESOLVED REPORTS
+                    RECENTLY RECEDED REPORTS
                   </div>
                   <div className="space-y-3 px-2 pb-3 sm:px-3">
                     {resolvedReports.length > 0 ? (
@@ -1162,7 +1162,7 @@ export function IncidentReportsContent() {
                       ))
                     ) : (
                       <div className="rounded-[14px] border border-[rgba(148,163,184,0.14)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                        No recently resolved reports yet.
+                        No recently receded reports yet.
                       </div>
                     )}
                   </div>

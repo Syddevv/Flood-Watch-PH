@@ -29,7 +29,7 @@ export const reportFilterOptions = [
   { id: "active", label: "Active Reports" },
   { id: "all", label: "All Reports" },
   { id: "confirmed", label: "Confirmed by Community" },
-  { id: "likely-resolved", label: "Likely Resolved" },
+  { id: "likely-resolved", label: "Likely Receded" },
   { id: "resolved", label: "Resolved" },
   { id: "critical-high", label: "Critical / High Severity" },
 ] as const;
@@ -233,7 +233,7 @@ export function FloodMap({
                     getStatusPresentation(previewReport.status).dotClassName,
                   )}
                 />
-                <span>{previewReport.status}</span>
+                <span>{getStatusPresentation(previewReport.status).label}</span>
               </span>
             </div>
             <div className="mt-2 text-[0.82rem] text-[var(--color-foreground)]">
@@ -249,7 +249,7 @@ export function FloodMap({
               <div className="rounded-[10px] bg-[var(--color-panel)] px-2.5 py-2">
                 <div className="flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" />
-                  <span>{formatCountLabel(previewReport.resolvedConfirmations)}</span>
+                  <span>{formatCountLabel(previewReport.resolvedConfirmations)} receded</span>
                 </div>
               </div>
             </div>

@@ -32,7 +32,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     if (report.status === "Resolved" || report.resolvedAt) {
-      return errorResponse("This report is already resolved.", 400);
+      return errorResponse("This flood report is already marked as resolved.", 400);
     }
 
     const nextResolvedCount = report.resolvedCount + 1;
@@ -82,12 +82,12 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     if (error instanceof Error && error.message === "DUPLICATE_RESOLVED_ACTION") {
       return errorResponse(
-        "You already marked this report as resolved from this browser session.",
+        "You already reported the water receded from this browser session.",
         409,
       );
     }
 
-    console.error("Failed to mark report as resolved.", error);
+    console.error("Failed to submit water receded report.", error);
     return errorResponse("Something went wrong while updating the report.");
   }
 }

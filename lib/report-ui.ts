@@ -45,7 +45,7 @@ export function getStatusPresentation(status: IncidentReportStatus) {
       dotClassName: "bg-[#475569]",
       textClassName: "text-[#475569]",
       wrapperClassName: "bg-[rgba(71,85,105,0.08)]",
-      label: "Likely Resolved",
+      label: "Likely Receded",
     };
   }
 
@@ -108,7 +108,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
       derivedStatus === "Resolved" || report.resolvedAt
         ? `Resolved ${formatRelativeTime(report.resolvedAt ?? report.updatedAt)}`
         : derivedStatus === "Likely Resolved"
-          ? `Likely resolved ${formatRelativeTime(report.updatedAt)}`
+          ? `Likely receded ${formatRelativeTime(report.updatedAt)}`
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",
     sourceUnit: getSourceLabel(report.sourceType),

@@ -219,7 +219,7 @@ export function IncidentReportModal({
               </div>
               <div>
                 <div className="text-[0.78rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                  MARKED RESOLVED
+                  RECEDED REPORTS
                 </div>
                 <div className="mt-1.5 flex items-center gap-2 text-[0.95rem] text-[var(--color-foreground)]">
                   <Check className="h-4 w-4 text-[var(--color-muted-foreground)]" />
@@ -288,7 +288,7 @@ export function IncidentReportModal({
               )}
               >
                 <Check className="h-4 w-4" />
-                <span>{hasResolved ? "Marked" : "Mark as Resolved"}</span>
+                <span>{hasResolved ? "Reported Receded" : "Report Water Receded"}</span>
               </button>
             <button
               type="button"
