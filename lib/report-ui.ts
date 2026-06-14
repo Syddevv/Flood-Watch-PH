@@ -1,4 +1,3 @@
-import { RESOLVED_CONFIRMATION_THRESHOLD } from "@/lib/constants";
 import {
   deriveCommunityStatus,
   formatRelativeTime,
@@ -41,12 +40,12 @@ export function getStatusPresentation(status: IncidentReportStatus) {
     };
   }
 
-  if (status === "Possibly Resolved") {
+  if (status === "Likely Resolved") {
     return {
       dotClassName: "bg-[#475569]",
       textClassName: "text-[#475569]",
       wrapperClassName: "bg-[rgba(71,85,105,0.08)]",
-      label: "Possibly Resolved",
+      label: "Likely Resolved",
     };
   }
 
@@ -83,6 +82,12 @@ function createReportPhotos(report: ReportRecord) {
 
 export function mapReportToIncident(report: ReportRecord): IncidentReport {
   const severityTone = getReportSeverityTone(report.severity);
+  const derivedStatus = deriveCommunityStatus({
+    status: report.status,
+    confirmationCount: report.confirmationCount,
+    resolvedCount: report.resolvedCount,
+    resolvedAt: report.resolvedAt,
+  });
 
   return {
     id: report.id,
@@ -92,12 +97,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     coordinates: [report.latitude, report.longitude],
     category: getReportCategoryLabel(report.category),
     severity: severityTone,
-    status: deriveCommunityStatus({
-      status: report.status,
-      confirmationCount: report.confirmationCount,
-      resolvedCount: report.resolvedCount,
-      resolvedAt: report.resolvedAt,
-    }),
+    status: derivedStatus,
     description: report.description,
     createdAt: report.createdAt,
     reportedAgo: formatRelativeTime(report.createdAt),
@@ -105,10 +105,10 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     resolvedConfirmations: report.resolvedCount,
     sourceType: report.sourceType,
     resolvedAgo:
-      report.status === "Resolved" || report.resolvedAt
+      derivedStatus === "Resolved" || report.resolvedAt
         ? `Resolved ${formatRelativeTime(report.resolvedAt ?? report.updatedAt)}`
-        : report.resolvedCount >= RESOLVED_CONFIRMATION_THRESHOLD
-          ? `Possibly resolved ${formatRelativeTime(report.updatedAt)}`
+        : derivedStatus === "Likely Resolved"
+          ? `Likely resolved ${formatRelativeTime(report.updatedAt)}`
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",
     sourceUnit: getSourceLabel(report.sourceType),

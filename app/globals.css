@@ -89,6 +89,10 @@ input {
   font: inherit;
 }
 
+select {
+  font: inherit;
+}
+
 button {
   cursor: pointer;
 }
@@ -177,6 +181,51 @@ button {
   border-bottom: 0;
 }
 
+.activeReportsScrollArea {
+  position: relative;
+  overflow-y: auto;
+  max-height: clamp(420px, 55vh, 600px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.42) rgba(15, 23, 42, 0.12);
+  -webkit-overflow-scrolling: touch;
+}
+
+.activeReportsScrollArea::-webkit-scrollbar {
+  width: 10px;
+}
+
+.activeReportsScrollArea::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.activeReportsScrollArea::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(15, 23, 42, 0.18);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.42);
+}
+
+.activeReportsScrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+.floodwatch-form-select {
+  color: var(--color-foreground);
+  color-scheme: dark;
+}
+
+.floodwatch-form-select option,
+.floodwatch-form-select optgroup {
+  background: var(--color-surface);
+  color: var(--color-foreground);
+}
+
+@media (max-width: 1279px) {
+  .activeReportsScrollArea {
+    max-height: clamp(420px, 50vh, 500px);
+  }
+}
+
 @media (max-width: 767px) {
   .map-floating-controls {
     right: 12px;
@@ -186,5 +235,9 @@ button {
   .map-floating-controls button {
     height: 44px;
     width: 44px;
+  }
+
+  .activeReportsScrollArea {
+    max-height: 60vh;
   }
 }

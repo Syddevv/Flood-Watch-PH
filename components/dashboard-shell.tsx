@@ -35,6 +35,7 @@ import {
 import type { IncidentReport, ReportMapMarker, Theme, WeatherOverviewData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fetchWeatherOverview } from "@/lib/weather-client";
+import { createReportActionHeaders } from "@/lib/report-session";
 import { getSidebarWeatherOverview } from "@/lib/weather";
 import {
   hasValidCoordinates,
@@ -427,6 +428,7 @@ export function DashboardShell({
     try {
       const response = await fetch(`/api/reports/${reportId}/confirm`, {
         method: "POST",
+        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -452,6 +454,7 @@ export function DashboardShell({
     try {
       const response = await fetch(`/api/reports/${reportId}/resolve`, {
         method: "POST",
+        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 

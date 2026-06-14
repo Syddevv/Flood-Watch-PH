@@ -29,7 +29,7 @@ export const reportFilterOptions = [
   { id: "active", label: "Active Reports" },
   { id: "all", label: "All Reports" },
   { id: "confirmed", label: "Confirmed by Community" },
-  { id: "possibly-resolved", label: "Possibly Resolved" },
+  { id: "likely-resolved", label: "Likely Resolved" },
   { id: "resolved", label: "Resolved" },
   { id: "critical-high", label: "Critical / High Severity" },
 ] as const;
@@ -58,8 +58,8 @@ export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
     return report.status === "Confirmed by Community";
   }
 
-  if (filter === "possibly-resolved") {
-    return report.status === "Possibly Resolved";
+  if (filter === "likely-resolved") {
+    return report.status === "Likely Resolved";
   }
 
   if (filter === "resolved") {

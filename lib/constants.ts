@@ -420,7 +420,7 @@ export const REPORT_SEVERITIES = [
 export const REPORT_STATUSES = [
   "Active",
   "Monitoring",
-  "Possibly Resolved",
+  "Likely Resolved",
   "Resolved",
 ] as const;
 

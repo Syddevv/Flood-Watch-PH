@@ -1,5 +1,6 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
 type RouteContext = {
   params: Promise<{
@@ -7,9 +8,14 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
+    const sessionHash = getReportSessionHashFromRequest(request);
+
+    if (!sessionHash) {
+      return errorResponse("Missing session information for this action.", 400);
+    }
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
@@ -31,10 +37,23 @@ export async function POST(_: Request, context: RouteContext) {
     }
 
     const updatedReport = await prisma.$transaction(async (tx) => {
+      const existingConfirmation = await tx.reportConfirmation.findFirst({
+        where: {
+          reportId: id,
+          confirmationType: "confirmed",
+          ipHash: sessionHash,
+        },
+      });
+
+      if (existingConfirmation) {
+        throw new Error("DUPLICATE_CONFIRMED_ACTION");
+      }
+
       await tx.reportConfirmation.create({
         data: {
           reportId: id,
           confirmationType: "confirmed",
+          ipHash: sessionHash,
         },
       });
 
@@ -50,6 +69,10 @@ export async function POST(_: Request, context: RouteContext) {
 
     return successResponse(updatedReport);
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_CONFIRMED_ACTION") {
+      return errorResponse("You already confirmed this report from this browser session.", 409);
+    }
+
     console.error("Failed to confirm report.", error);
     return errorResponse("Something went wrong while confirming the report.");
   }

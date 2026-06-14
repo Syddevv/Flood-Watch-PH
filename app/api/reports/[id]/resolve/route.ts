@@ -1,5 +1,6 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
 type RouteContext = {
   params: Promise<{
@@ -7,9 +8,14 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
+    const sessionHash = getReportSessionHashFromRequest(request);
+
+    if (!sessionHash) {
+      return errorResponse("Missing session information for this action.", 400);
+    }
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
@@ -32,10 +38,23 @@ export async function POST(_: Request, context: RouteContext) {
     const nextResolvedCount = report.resolvedCount + 1;
 
     const updatedReport = await prisma.$transaction(async (tx) => {
+      const existingResolution = await tx.reportConfirmation.findFirst({
+        where: {
+          reportId: id,
+          confirmationType: "resolved",
+          ipHash: sessionHash,
+        },
+      });
+
+      if (existingResolution) {
+        throw new Error("DUPLICATE_RESOLVED_ACTION");
+      }
+
       await tx.reportConfirmation.create({
         data: {
           reportId: id,
           confirmationType: "resolved",
+          ipHash: sessionHash,
         },
       });
 
@@ -45,9 +64,14 @@ export async function POST(_: Request, context: RouteContext) {
           resolvedCount: {
             increment: 1,
           },
-          ...(nextResolvedCount >= 3 && report.status !== "Resolved"
+          ...(nextResolvedCount >= 3
             ? {
-                status: "Possibly Resolved",
+                status: "Resolved",
+                resolvedAt: new Date(),
+              }
+            : nextResolvedCount >= 2
+            ? {
+                status: "Likely Resolved",
               }
             : {}),
         },
@@ -56,6 +80,13 @@ export async function POST(_: Request, context: RouteContext) {
 
     return successResponse(updatedReport);
   } catch (error) {
+    if (error instanceof Error && error.message === "DUPLICATE_RESOLVED_ACTION") {
+      return errorResponse(
+        "You already marked this report as resolved from this browser session.",
+        409,
+      );
+    }
+
     console.error("Failed to mark report as resolved.", error);
     return errorResponse("Something went wrong while updating the report.");
   }

@@ -111,7 +111,7 @@ export type IncidentReportPhoto = {
 export type IncidentReportStatus =
   | "Needs More Confirmation"
   | "Confirmed by Community"
-  | "Possibly Resolved"
+  | "Likely Resolved"
   | "Resolved";
 
 export type IncidentReport = {

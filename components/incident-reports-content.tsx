@@ -28,6 +28,7 @@ import {
   validateReportImageFile,
 } from "@/lib/report-image-validation";
 import {
+  deriveCommunityStatus,
   formatCountLabel,
 } from "@/lib/reporting";
 import type { IncidentReport } from "@/lib/types";
@@ -39,7 +40,14 @@ import type {
   ReportRecord,
   ReportsResponse,
 } from "@/lib/report-types";
-import { buildStoredActionKey, mapReportToIncident, severityBadgeClasses, severityLabels, getStatusPresentation } from "@/lib/report-ui";
+import {
+  buildStoredActionKey,
+  getStatusPresentation,
+  mapReportToIncident,
+  severityBadgeClasses,
+  severityLabels,
+} from "@/lib/report-ui";
+import { createReportActionHeaders } from "@/lib/report-session";
 
 type FormState = {
   locationName: string;
@@ -76,6 +84,36 @@ const emptyFormState: FormState = {
 
 const reportImageAcceptValue = getReportImageAcceptValue();
 
+function applyOptimisticReportAction(
+  report: IncidentReport,
+  actionType: "confirmed" | "resolved",
+): IncidentReport {
+  const nextConfirmationCount =
+    actionType === "confirmed" ? report.confirmations + 1 : report.confirmations;
+  const nextResolvedCount =
+    actionType === "resolved" ? report.resolvedConfirmations + 1 : report.resolvedConfirmations;
+  const nextStatus = deriveCommunityStatus({
+    status: report.status,
+    confirmationCount: nextConfirmationCount,
+    resolvedCount: nextResolvedCount,
+    resolvedAt:
+      actionType === "resolved" && nextResolvedCount >= 3 ? new Date().toISOString() : null,
+  });
+
+  return {
+    ...report,
+    confirmations: nextConfirmationCount,
+    resolvedConfirmations: nextResolvedCount,
+    status: nextStatus,
+    resolvedAgo:
+      nextStatus === "Resolved"
+        ? "Resolved just now"
+        : nextStatus === "Likely Resolved"
+          ? "Likely resolved just now"
+          : report.resolvedAgo,
+  };
+}
+
 function SelectField({
   icon,
   value,
@@ -93,7 +131,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full bg-transparent text-[0.9rem] outline-none"
+        className="floodwatch-form-select w-full bg-transparent text-[0.9rem] outline-none"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -124,16 +162,19 @@ function ReportCard({
 }) {
   const statusPresentation = getStatusPresentation(report.status);
   const isResolved = report.status === "Resolved";
+  const isLikelyResolved = report.status === "Likely Resolved";
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
 
   return (
     <article
       className={cn(
-        "mx-auto w-full max-w-[360px] rounded-[18px] border p-4 shadow-[var(--shadow-soft)] transition-opacity",
+        "w-full rounded-[18px] border px-3 py-2.5 shadow-[var(--shadow-soft)] transition-opacity",
         isResolved
-          ? "border-[rgba(148,163,184,0.28)] bg-[rgba(148,163,184,0.08)] opacity-75"
-          : "border-[var(--color-border)] bg-[var(--color-surface)]",
+          ? "border-[rgba(148,163,184,0.22)] bg-[rgba(148,163,184,0.08)] opacity-70"
+          : isLikelyResolved
+            ? "border-[rgba(71,85,105,0.26)] bg-[rgba(71,85,105,0.08)]"
+            : "border-[var(--color-border)] bg-[var(--color-surface)]",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -143,22 +184,22 @@ function ReportCard({
             <img
               src={thumbnailUrl}
               alt={report.title}
-              className="h-16 w-16 shrink-0 rounded-[14px] object-cover"
+              className="h-12 w-12 shrink-0 rounded-[12px] object-cover"
             />
           ) : null}
           <div className="min-w-0 flex-1">
-            <div className="text-[0.98rem] font-semibold leading-7 text-[var(--color-foreground)]">
+            <div className="line-clamp-2 text-[0.94rem] font-semibold leading-6 text-[var(--color-foreground)]">
               {report.title}
             </div>
-            <div className="mt-1 flex items-start gap-2 text-[0.86rem] text-[var(--color-muted-foreground)]">
+            <div className="mt-1 flex items-start gap-2 text-[0.8rem] text-[var(--color-muted-foreground)]">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0">{report.location}</span>
+              <span className="min-w-0 line-clamp-1">{report.location}</span>
             </div>
           </div>
         </div>
         <span
           className={cn(
-            "inline-flex max-w-[106px] shrink-0 items-center justify-center rounded-full border px-2.5 py-1 text-center text-[0.7rem] font-semibold leading-5",
+            "inline-flex shrink-0 items-center justify-center rounded-full border px-2 py-0.5 text-center text-[0.66rem] font-semibold leading-5",
             severityBadgeClasses[report.severity],
           )}
         >
@@ -166,45 +207,55 @@ function ReportCard({
         </span>
       </div>
 
-      <div className="mt-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
-        {report.category}
-      </div>
-      <div
-        className={cn(
-          "mt-2.5 inline-flex min-h-9 w-full items-center gap-2 rounded-[11px] px-3 py-2 text-[0.84rem] font-medium leading-5",
-          statusPresentation.textClassName,
-          statusPresentation.wrapperClassName,
-        )}
-      >
-        <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", statusPresentation.dotClassName)} />
-        <span>{statusPresentation.label}</span>
-      </div>
-
-      <div className="mt-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-        {report.sourceUnit}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-[var(--color-panel)] px-2.5 py-1 text-[0.72rem] text-[var(--color-foreground)]">
+          {report.category}
+        </span>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
+            statusPresentation.textClassName,
+            statusPresentation.wrapperClassName,
+          )}
+        >
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", statusPresentation.dotClassName)} />
+          <span>{statusPresentation.label}</span>
+        </span>
       </div>
 
-      <div className="mt-3 rounded-[14px] border border-transparent bg-[var(--color-panel)] px-3.5 py-3 text-[0.84rem] font-medium leading-5 text-[var(--color-foreground)]">
-        Confirmations: {formatCountLabel(report.confirmations)}
-      </div>
-      <div className="mt-2 rounded-[14px] border border-[rgba(148,163,184,0.2)] bg-[rgba(248,250,252,0.72)] px-3.5 py-3 text-[0.84rem] font-medium leading-5 text-[var(--color-foreground)]">
-        Marked Resolved: {formatCountLabel(report.resolvedConfirmations)}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
+          <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
+            CONFIRMATIONS
+          </div>
+          <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
+            {formatCountLabel(report.confirmations)}
+          </div>
+        </div>
+        <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
+          <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
+            MARKED RESOLVED
+          </div>
+          <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
+            {formatCountLabel(report.resolvedConfirmations)}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 text-[0.82rem] text-[var(--color-muted-foreground)]">
+      <div className="mt-3 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--color-muted-foreground)]">
         <div className="flex min-w-0 items-center gap-1.5">
           <Clock3 className="h-3.5 w-3.5" />
           <span className="truncate">{report.resolvedAgo ?? report.reportedAgo}</span>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => onView(report)}
-          className="flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[0.9rem] font-medium text-[var(--color-foreground)]"
+          className="flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[0.82rem] font-medium text-[var(--color-foreground)]"
         >
-          <Eye className="h-3.5 w-3.5" />
+          <Eye className="h-3.25 w-3.25" />
           <span>View</span>
         </button>
         <button
@@ -212,28 +263,28 @@ function ReportCard({
           onClick={() => onConfirm(report.id)}
           disabled={hasConfirmed || isResolved || isBusy}
           className={cn(
-            "flex h-11 items-center justify-center gap-2 rounded-[12px] border px-3 text-[0.9rem] font-medium",
+            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[0.82rem] font-medium",
             hasConfirmed || isResolved || isBusy
               ? "border-[rgba(148,163,184,0.2)] bg-[rgba(148,163,184,0.12)] text-slate-500"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
           )}
         >
-          <ThumbsUp className="h-3.5 w-3.5" />
-          <span>{hasConfirmed ? "Report Confirmed" : "Confirm"}</span>
+          <ThumbsUp className="h-3.25 w-3.25" />
+          <span>{hasConfirmed ? "Confirmed" : "Confirm"}</span>
         </button>
         <button
           type="button"
           onClick={() => onResolve(report.id)}
           disabled={hasResolved || isResolved || isBusy}
           className={cn(
-            "col-span-2 flex h-11 items-center justify-center gap-2 rounded-[12px] border px-4 text-[0.9rem] font-medium",
+            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-2 text-[0.82rem] font-medium",
             hasResolved || isResolved || isBusy
               ? "border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.12)] text-slate-500"
               : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
           )}
         >
-          <Check className="h-3.5 w-3.5" />
-          <span>{hasResolved ? "Marked as Resolved" : "Mark as Resolved"}</span>
+          <Check className="h-3.25 w-3.25" />
+          <span>{hasResolved ? "Marked" : "Resolved"}</span>
         </button>
       </div>
     </article>
@@ -259,6 +310,12 @@ export function IncidentReportsContent() {
     () => (selectedPhoto ? URL.createObjectURL(selectedPhoto) : null),
     [selectedPhoto],
   );
+  const hasValidCoordinates =
+    Number.isFinite(Number(formState.latitude)) && Number.isFinite(Number(formState.longitude));
+  const canSubmitReport =
+    formState.locationName.trim().length > 0 &&
+    formState.description.trim().length > 0 &&
+    hasValidCoordinates;
 
   useEffect(() => {
     return () => {
@@ -384,12 +441,19 @@ export function IncidentReportsContent() {
   );
 
   const activeReports = useMemo(
-    () => reports.filter((report) => report.status !== "Resolved"),
+    () =>
+      reports.filter(
+        (report) => report.status !== "Likely Resolved" && report.status !== "Resolved",
+      ),
     [reports],
   );
 
   const resolvedReports = useMemo(
-    () => reports.filter((report) => report.status === "Resolved"),
+    () =>
+      reports.filter(
+        (report) =>
+          report.status === "Likely Resolved" || report.status === "Resolved",
+      ),
     [reports],
   );
 
@@ -467,11 +531,23 @@ export function IncidentReportsContent() {
       return;
     }
 
+    const previousReports = reports;
+    const previousConfirmedReportIds = confirmedReportIds;
     setActionLoadingId(reportId);
+    setConfirmedReportIds((current) => ({
+      ...current,
+      [reportId]: true,
+    }));
+    setReports((current) =>
+      current.map((report) =>
+        report.id === reportId ? applyOptimisticReportAction(report, "confirmed") : report,
+      ),
+    );
 
     try {
       const response = await fetch(`/api/reports/${reportId}/confirm`, {
         method: "POST",
+        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -483,10 +559,6 @@ export function IncidentReportsContent() {
         localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
       }
 
-      setConfirmedReportIds((current) => ({
-        ...current,
-        [reportId]: true,
-      }));
       setReports((current) =>
         current.map((report) =>
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
@@ -498,9 +570,28 @@ export function IncidentReportsContent() {
       });
     } catch (error) {
       console.error("Failed to confirm report.", error);
+      setReports(previousReports);
+      if (
+        error instanceof Error &&
+        error.message === "You already confirmed this report from this browser session."
+      ) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
+        }
+
+        setConfirmedReportIds((current) => ({
+          ...current,
+          [reportId]: true,
+        }));
+      } else {
+        setConfirmedReportIds(previousConfirmedReportIds);
+      }
       setToast({
         tone: "error",
-        message: "Unable to confirm this report right now.",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to confirm this report right now.",
       });
     } finally {
       setActionLoadingId(null);
@@ -512,11 +603,23 @@ export function IncidentReportsContent() {
       return;
     }
 
+    const previousReports = reports;
+    const previousResolvedReportIds = resolvedReportIds;
     setActionLoadingId(reportId);
+    setResolvedReportIds((current) => ({
+      ...current,
+      [reportId]: true,
+    }));
+    setReports((current) =>
+      current.map((report) =>
+        report.id === reportId ? applyOptimisticReportAction(report, "resolved") : report,
+      ),
+    );
 
     try {
       const response = await fetch(`/api/reports/${reportId}/resolve`, {
         method: "POST",
+        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -528,10 +631,6 @@ export function IncidentReportsContent() {
         localStorage.setItem(buildStoredActionKey("resolved", reportId), "true");
       }
 
-      setResolvedReportIds((current) => ({
-        ...current,
-        [reportId]: true,
-      }));
       setReports((current) =>
         current.map((report) =>
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
@@ -539,13 +638,32 @@ export function IncidentReportsContent() {
       );
       setToast({
         tone: "success",
-        message: "Marked as possibly resolved. Thank you for the update.",
+        message: "Report marked as resolved. Thank you for the update.",
       });
     } catch (error) {
       console.error("Failed to resolve report.", error);
+      setReports(previousReports);
+      if (
+        error instanceof Error &&
+        error.message === "You already marked this report as resolved from this browser session."
+      ) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(buildStoredActionKey("resolved", reportId), "true");
+        }
+
+        setResolvedReportIds((current) => ({
+          ...current,
+          [reportId]: true,
+        }));
+      } else {
+        setResolvedReportIds(previousResolvedReportIds);
+      }
       setToast({
         tone: "error",
-        message: "Unable to update this report right now.",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to update this report right now.",
       });
     } finally {
       setActionLoadingId(null);
@@ -721,14 +839,17 @@ export function IncidentReportsContent() {
                   <button
                     type="button"
                     onClick={handleUseCurrentLocation}
-                    className="flex h-10 items-center justify-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] shadow-[var(--shadow-soft)]"
+                    disabled={loadingCurrentLocation}
+                    className="flex h-10 items-center justify-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] shadow-[var(--shadow-soft)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {loadingCurrentLocation ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
                     ) : (
                       <Phone className="h-4 w-4" />
                     )}
-                    <span>Current Location</span>
+                    <span>
+                      {loadingCurrentLocation ? "Detecting Location..." : "Current Location"}
+                    </span>
                   </button>
                 </div>
                 <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
@@ -825,7 +946,7 @@ export function IncidentReportsContent() {
                       Upload Photo
                     </div>
                     <div className="text-[0.82rem] text-[var(--color-muted-foreground)]">
-                      {formState.photos.length} / 1
+                      {formState.photos.length} / 1 image
                     </div>
                   </div>
                   <label className="mt-3 flex cursor-pointer flex-col rounded-[14px] border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-10 text-center">
@@ -924,8 +1045,8 @@ export function IncidentReportsContent() {
                 <button
                   type="button"
                   onClick={handleSubmitReport}
-                  disabled={submittingReport}
-                  className="flex h-10 items-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.92rem] font-semibold text-white disabled:opacity-70"
+                  disabled={submittingReport || !canSubmitReport}
+                  className="flex h-10 items-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.92rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submittingReport ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -981,8 +1102,8 @@ export function IncidentReportsContent() {
                 </p>
               </div>
 
-              <div className="min-h-0 flex-1 rounded-[18px] border border-[var(--color-border)] bg-transparent">
-                <div className="px-1 pb-1 pt-3">
+              <div className="rounded-[18px] border border-[var(--color-border)] bg-transparent">
+                <div className="px-1 pb-4 pt-3">
                   <div className="px-3 pb-3 pt-1 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
                     ACTIVE REPORTS
                   </div>
@@ -991,29 +1112,38 @@ export function IncidentReportsContent() {
                       <LoaderCircle className="h-5 w-5 animate-spin" />
                     </div>
                   ) : (
-                    <div className="max-h-[320px] space-y-3 overflow-y-auto px-2 pb-3 sm:px-3">
-                      {activeReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          hasConfirmed={Boolean(confirmedReportIds[report.id])}
-                          hasResolved={Boolean(resolvedReportIds[report.id])}
-                          actionLoadingId={actionLoadingId}
-                          onConfirm={handleConfirmReport}
-                          onResolve={handleResolveReport}
-                          onView={(nextReport) => {
-                            setSelectedReportId(nextReport.id);
-                            setModalOpen(true);
-                          }}
-                        />
-                      ))}
+                    <div className="activeReportsScrollArea px-2 pb-3 sm:px-3">
+                      <div className="space-y-3 px-1 py-3">
+                        {activeReports.length > 0 ? (
+                          activeReports.map((report) => (
+                            <ReportCard
+                              key={report.id}
+                              report={report}
+                              hasConfirmed={Boolean(confirmedReportIds[report.id])}
+                              hasResolved={Boolean(resolvedReportIds[report.id])}
+                              actionLoadingId={actionLoadingId}
+                              onConfirm={handleConfirmReport}
+                              onResolve={handleResolveReport}
+                              onView={(nextReport) => {
+                                setSelectedReportId(nextReport.id);
+                                setModalOpen(true);
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
+                            No active community reports right now.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
+                  <div className="mx-3 mt-1 border-t border-[rgba(148,163,184,0.14)]" />
                   <div className="px-3 pb-3 pt-4 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
                     RECENTLY RESOLVED REPORTS
                   </div>
-                  <div className="max-h-[220px] space-y-3 overflow-y-auto px-2 pb-3 sm:px-3">
+                  <div className="space-y-3 px-2 pb-3 sm:px-3">
                     {resolvedReports.length > 0 ? (
                       resolvedReports.map((report) => (
                         <ReportCard
@@ -1031,7 +1161,7 @@ export function IncidentReportsContent() {
                         />
                       ))
                     ) : (
-                      <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.9rem] text-[var(--color-muted-foreground)]">
+                      <div className="rounded-[14px] border border-[rgba(148,163,184,0.14)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
                         No recently resolved reports yet.
                       </div>
                     )}

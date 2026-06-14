@@ -272,10 +272,10 @@ export function IncidentReportModal({
                   ? "bg-[rgba(148,163,184,0.16)] text-slate-500"
                   : "bg-[var(--color-primary)] text-white",
               )}
-            >
-              <ThumbsUp className="h-4 w-4" />
-              <span>{hasConfirmed ? "Report Confirmed" : "Confirm Report"}</span>
-            </button>
+              >
+                <ThumbsUp className="h-4 w-4" />
+                <span>{hasConfirmed ? "Confirmed" : "Confirm Report"}</span>
+              </button>
             <button
               type="button"
               onClick={() => onResolve(report.id)}
@@ -286,10 +286,10 @@ export function IncidentReportModal({
                   ? "border-[rgba(148,163,184,0.2)] bg-[rgba(148,163,184,0.12)] text-slate-500"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
               )}
-            >
-              <Check className="h-4 w-4" />
-              <span>{hasResolved ? "Marked as Resolved" : "Mark as Resolved"}</span>
-            </button>
+              >
+                <Check className="h-4 w-4" />
+                <span>{hasResolved ? "Marked" : "Mark as Resolved"}</span>
+              </button>
             <button
               type="button"
               onClick={() => onOpenChange(false)}

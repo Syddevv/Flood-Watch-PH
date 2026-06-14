@@ -25,10 +25,12 @@ function getStatusRank(status: string) {
       return 0;
     case "Monitoring":
       return 1;
-    case "Resolved":
+    case "Likely Resolved":
       return 2;
-    default:
+    case "Resolved":
       return 3;
+    default:
+      return 4;
   }
 }
 

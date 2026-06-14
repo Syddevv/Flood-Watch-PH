@@ -49,18 +49,22 @@ export function deriveCommunityStatus(report: {
   resolvedAt: Date | string | null;
 }) {
   const isResolved = report.status === "Resolved" || Boolean(report.resolvedAt);
-  const isPossiblyResolved =
-    report.status === "Possibly Resolved" || report.resolvedCount >= 3;
+  const isLikelyResolved =
+    report.status === "Likely Resolved" || report.resolvedCount >= 2;
 
   if (isResolved) {
     return "Resolved";
   }
 
-  if (isPossiblyResolved) {
-    return "Possibly Resolved";
+  if (report.resolvedCount >= 3) {
+    return "Resolved";
   }
 
-  if (report.confirmationCount >= 3) {
+  if (isLikelyResolved) {
+    return "Likely Resolved";
+  }
+
+  if (report.confirmationCount >= 2) {
     return "Confirmed by Community";
   }
 
