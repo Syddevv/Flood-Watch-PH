@@ -115,6 +115,7 @@ export type IncidentReport = {
   title: string;
   location: string;
   coordinatesLabel: string;
+  coordinates?: [number, number];
   category: string;
   severity: AlertSeverity;
   status: IncidentReportStatus;
@@ -139,7 +140,7 @@ export type CommunityActivityStat = {
   icon: LucideIcon;
 };
 
-export type MarkerCategory = "alert" | "center" | "hotline";
+export type MarkerCategory = "alert" | "center" | "hotline" | "report";
 
 export type MapMarker = {
   id: string;
@@ -148,6 +149,17 @@ export type MapMarker = {
   severity?: AlertSeverity;
   coordinates: [number, number];
   title: string;
+};
+
+export type ReportMapMarker = {
+  id: string;
+  label: string;
+  category: "report";
+  severity: AlertSeverity;
+  coordinates: [number, number];
+  title: string;
+  reportId: string;
+  report: IncidentReport;
 };
 
 export type RiskPolygon = {

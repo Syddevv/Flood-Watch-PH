@@ -7,7 +7,13 @@ import { Layers3, LocateFixed, Map, Satellite } from "lucide-react";
 import L from "leaflet";
 import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
 
-import type { LegendItem, MapMarker, RiskPolygon, Theme } from "@/lib/types";
+import type {
+  LegendItem,
+  MapMarker,
+  ReportMapMarker,
+  RiskPolygon,
+  Theme,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_CENTER: [number, number] = [14.6176, 121.0325];
@@ -32,12 +38,18 @@ function iconForMarker(marker: MapMarker) {
   const color =
     marker.category === "alert"
       ? severityColorMap[marker.severity ?? "moderate"]
+      : marker.category === "report"
+      ? severityColorMap[marker.severity ?? "moderate"]
       : marker.category === "center"
         ? "#22c55e"
         : "#2563eb";
 
   const ring =
-    marker.category === "hotline" ? "rgba(37,99,235,0.25)" : "rgba(15,23,42,0.22)";
+    marker.category === "hotline"
+      ? "rgba(37,99,235,0.25)"
+      : marker.category === "report"
+        ? "rgba(37,99,235,0.18)"
+        : "rgba(15,23,42,0.22)";
 
   return L.divIcon({
     className: "floodwatch-marker-shell",
@@ -96,15 +108,19 @@ function MapZoomControls({
 type FloodMapClientProps = {
   theme: Theme;
   markers: MapMarker[];
+  reportMarkers: ReportMapMarker[];
   polygons: RiskPolygon[];
   legend: LegendItem[];
+  onSelectReport: (reportId: string) => void;
 };
 
 export function FloodMapClient({
   theme,
   markers,
+  reportMarkers,
   polygons,
   legend,
+  onSelectReport,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
   const tileConfig = satelliteMode ? SATELLITE_TILES : STREET_TILES;
@@ -144,6 +160,18 @@ export function FloodMapClient({
             position={marker.coordinates}
             icon={iconForMarker(marker)}
             title={marker.title}
+          />
+        ))}
+
+        {reportMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={marker.coordinates}
+            icon={iconForMarker(marker)}
+            title={marker.title}
+            eventHandlers={{
+              click: () => onSelectReport(marker.reportId),
+            }}
           />
         ))}
 
