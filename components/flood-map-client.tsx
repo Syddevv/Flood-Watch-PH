@@ -9,7 +9,6 @@ import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet"
 
 import type {
   LegendItem,
-  MapMarker,
   ReportMapMarker,
   RiskPolygon,
   Theme,
@@ -107,7 +106,6 @@ function MapZoomControls({
 
 type FloodMapClientProps = {
   theme: Theme;
-  markers: MapMarker[];
   reportMarkers: ReportMapMarker[];
   polygons: RiskPolygon[];
   legend: LegendItem[];
@@ -116,7 +114,6 @@ type FloodMapClientProps = {
 
 export function FloodMapClient({
   theme,
-  markers,
   reportMarkers,
   polygons,
   legend,
@@ -154,15 +151,6 @@ export function FloodMapClient({
           />
         ))}
 
-        {markers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={marker.coordinates}
-            icon={iconForMarker(marker)}
-            title={marker.title}
-          />
-        ))}
-
         {reportMarkers.map((marker) => (
           <Marker
             key={marker.id}
@@ -183,11 +171,20 @@ export function FloodMapClient({
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
-      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[142px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-3 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
+      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[196px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-4 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
         <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          FLOOD RISK
+          <div className="text-center">MAP LEGEND MARKER</div>
         </div>
-        <div className="mt-2 space-y-1.25">
+        <div className="mt-2 flex items-center justify-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
+          <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
+            R
+          </span>
+          <span className="whitespace-nowrap">Community Report</span>
+        </div>
+        <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          SEVERITY
+        </div>
+        <div className="mt-1 space-y-1.25">
           {legend.map((item) => (
             <div
               key={item.id}

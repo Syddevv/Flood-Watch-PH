@@ -17,7 +17,6 @@ import {
 import type {
   IncidentReport,
   LegendItem,
-  MapMarker,
   ReportMapMarker,
   RiskPolygon,
   Theme,
@@ -49,9 +48,10 @@ type ReportFilterId = (typeof reportFilterOptions)[number]["id"];
 
 type FloodMapProps = {
   theme: Theme;
-  markers: MapMarker[];
   polygons: RiskPolygon[];
   legend: LegendItem[];
+  allowPolygonToggle?: boolean;
+  defaultShowPolygons?: boolean;
 };
 
 function hasValidCoordinates(report: IncidentReport) {
@@ -89,15 +89,17 @@ function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
 
 export function FloodMap({
   theme,
-  markers,
   polygons,
   legend,
+  allowPolygonToggle = false,
+  defaultShowPolygons = true,
 }: FloodMapProps) {
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [updatesByReportId, setUpdatesByReportId] = useState<Record<string, ReportDetailResponse["data"]["updates"]>>({});
   const [loadingReports, setLoadingReports] = useState(true);
   const [reportLoadError, setReportLoadError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ReportFilterId>("active");
+  const [showRiskOverlays, setShowRiskOverlays] = useState(defaultShowPolygons);
   const [previewReportId, setPreviewReportId] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -323,9 +325,8 @@ export function FloodMap({
     <div className="relative h-full min-h-0 w-full">
       <DynamicFloodMap
         theme={theme}
-        markers={markers}
         reportMarkers={reportMarkers}
-        polygons={polygons}
+        polygons={showRiskOverlays ? polygons : []}
         legend={legend}
         onSelectReport={setPreviewReportId}
       />
@@ -351,6 +352,22 @@ export function FloodMap({
             </button>
           ))}
         </div>
+        {allowPolygonToggle ? (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setShowRiskOverlays((current) => !current)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
+                showRiskOverlays
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+              )}
+            >
+              {showRiskOverlays ? "Hide Risk Overlays" : "Show Risk Overlays"}
+            </button>
+          </div>
+        ) : null}
         <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
           Community reports may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
         </p>

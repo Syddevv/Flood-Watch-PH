@@ -22,8 +22,8 @@ import {
   FLOOD_POLYGONS,
   HOTLINE_NOTICE,
   LIVE_TIMESTAMP,
-  MAP_MARKERS,
   NAV_ITEMS,
+  REPORT_MARKER_LEGEND,
   REPORT_LABEL,
   THEME_STORAGE_KEY,
   WEATHER_OVERVIEW,
@@ -194,9 +194,10 @@ export function DashboardShell({
               <div className="h-full min-h-0 w-full">
                 <FloodMap
                   theme={theme}
-                  markers={MAP_MARKERS}
                   polygons={FLOOD_POLYGONS}
-                  legend={FLOOD_LEGEND}
+                  legend={isFloodMapView ? REPORT_MARKER_LEGEND : FLOOD_LEGEND}
+                  allowPolygonToggle={isFloodMapView}
+                  defaultShowPolygons={!isFloodMapView}
                 />
               </div>
             )}

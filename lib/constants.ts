@@ -431,6 +431,13 @@ export const FLOOD_LEGEND: LegendItem[] = [
   { id: "severe", label: "Severe Flooding", severity: "severe" },
 ];
 
+export const REPORT_MARKER_LEGEND: LegendItem[] = [
+  { id: "report-low", label: "Low Severity", severity: "safe" },
+  { id: "report-moderate", label: "Moderate Severity", severity: "moderate" },
+  { id: "report-high", label: "High Severity", severity: "high" },
+  { id: "report-critical", label: "Critical Severity", severity: "severe" },
+];
+
 export const SIGNAL_CARD = {
   title: "Signal No. 3",
   description: "Tropical storm warning active for Metro Manila & Rizal.",
