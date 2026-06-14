@@ -100,7 +100,8 @@ export type EmergencyHotline = {
 export type IncidentReportPhoto = {
   id: string;
   label: string;
-  accent: string;
+  accent?: string;
+  imageUrl?: string | null;
 };
 
 export type IncidentReportStatus =

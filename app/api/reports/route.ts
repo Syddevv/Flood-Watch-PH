@@ -7,7 +7,9 @@ import {
   parseReportFilters,
   trimToUndefined,
 } from "@/lib/api-utils";
+import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { validateReportImageFile } from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
 import {
   isValidLatitude,
@@ -86,20 +88,21 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    const formData = await request.formData();
+    const imageFile = formData.get("image");
 
-    const title = trimToUndefined(body.title);
-    const description = trimToUndefined(body.description);
-    const category = trimToUndefined(body.category);
-    const severity = trimToUndefined(body.severity);
-    const locationName = trimToUndefined(body.locationName);
-    const reportedByName = trimToUndefined(body.reportedByName);
-    const latitude =
-      typeof body.latitude === "number" ? body.latitude : Number(body.latitude);
-    const longitude =
-      typeof body.longitude === "number"
-        ? body.longitude
-        : Number(body.longitude);
+    if (imageFile && typeof imageFile === "string") {
+      return errorResponse("Invalid image upload.", 400);
+    }
+
+    const title = trimToUndefined(formData.get("title"));
+    const description = trimToUndefined(formData.get("description"));
+    const category = trimToUndefined(formData.get("category"));
+    const severity = trimToUndefined(formData.get("severity"));
+    const locationName = trimToUndefined(formData.get("locationName"));
+    const reportedByName = trimToUndefined(formData.get("reportedByName"));
+    const latitude = Number(formData.get("latitude"));
+    const longitude = Number(formData.get("longitude"));
 
     if (!title) {
       return errorResponse("Title is required.", 400);
@@ -153,6 +156,19 @@ export async function POST(request: Request) {
       return errorResponse("Reported by name must not exceed 80 characters.", 400);
     }
 
+    let imageUrl: string | undefined;
+
+    if (imageFile instanceof File && imageFile.size > 0) {
+      const imageValidationError = validateReportImageFile(imageFile);
+
+      if (imageValidationError) {
+        return errorResponse(imageValidationError, 400);
+      }
+
+      const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+      imageUrl = await uploadReportImageToCloudinary(imageBuffer, imageFile.name);
+    }
+
     const report = await prisma.floodReport.create({
       data: {
         title,
@@ -163,6 +179,7 @@ export async function POST(request: Request) {
         locationName,
         latitude,
         longitude,
+        imageUrl,
         reportedByName,
         sourceType: "Community",
         confirmationCount: 0,
@@ -173,6 +190,10 @@ export async function POST(request: Request) {
     return successResponse(report, { status: 201 });
   } catch (error) {
     console.error("Failed to create report.", error);
-    return errorResponse("Something went wrong while creating the report.");
+    return errorResponse(
+      error instanceof Error
+        ? error.message
+        : "Something went wrong while creating the report.",
+    );
   }
 }

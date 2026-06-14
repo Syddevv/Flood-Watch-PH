@@ -28,6 +28,10 @@ import {
   WATER_DEPTH_OPTIONS,
 } from "@/lib/constants";
 import {
+  getReportImageAcceptValue,
+  validateReportImageFile,
+} from "@/lib/report-image-validation";
+import {
   deriveCommunityStatus,
   formatCountLabel,
   formatRelativeTime,
@@ -133,6 +137,8 @@ const emptyFormState: FormState = {
   photos: [],
 };
 
+const reportImageAcceptValue = getReportImageAcceptValue();
+
 function buildStoredActionKey(type: "confirmed" | "resolved", reportId: string) {
   return `${type}_report_${reportId}`;
 }
@@ -173,17 +179,16 @@ function getStatusPresentation(status: IncidentReportStatus) {
   };
 }
 
-function createPlaceholderPhotos(report: ReportRecord) {
+function createReportPhotos(report: ReportRecord) {
+  if (!report.imageUrl) {
+    return [];
+  }
+
   return [
     {
-      id: `${report.id}-placeholder`,
+      id: `${report.id}-image`,
       label: report.title,
-      accent:
-        report.resolvedCount >= RESOLVED_CONFIRMATION_THRESHOLD
-          ? "from-emerald-50 to-slate-100"
-          : report.confirmationCount >= 3
-            ? "from-sky-100 to-slate-100"
-            : "from-zinc-100 to-slate-200",
+      imageUrl: report.imageUrl,
     },
   ];
 }
@@ -218,7 +223,7 @@ function mapReportToIncident(report: ReportRecord): IncidentReport {
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",
     sourceUnit: getSourceLabel(report.sourceType),
-    photos: createPlaceholderPhotos(report),
+    photos: createReportPhotos(report),
   };
 }
 
@@ -279,7 +284,7 @@ function IncidentReportModal({
   }
 
   const photos = report.photos;
-  const currentPhoto = photos[photoIndex] ?? photos[0];
+  const currentPhoto = photos[photoIndex] ?? photos[0] ?? null;
   const statusPresentation = getStatusPresentation(report.status);
   const isResolved = report.status === "Resolved";
   const confirmDisabled = actionLoading || hasConfirmed || isResolved;
@@ -295,15 +300,18 @@ function IncidentReportModal({
       <div className="fixed inset-0 z-[1210] flex items-center justify-center p-4">
         <div className="flex max-h-[92vh] w-full max-w-[720px] flex-col overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_80px_rgba(15,23,42,0.26)]">
           <div className="relative aspect-[16/9] overflow-hidden bg-[var(--color-panel)]">
-            <div
-              className={cn(
-                "absolute inset-0 bg-gradient-to-br",
-                currentPhoto.accent,
-              )}
-            />
-            <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-[1.05rem] font-medium text-[var(--color-muted-foreground)]">
-              {currentPhoto.label}
-            </div>
+            {currentPhoto?.imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={currentPhoto.imageUrl}
+                alt={currentPhoto.label}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-[1.05rem] font-medium text-[var(--color-muted-foreground)]">
+                No photo attached
+              </div>
+            )}
 
             <button
               type="button"
@@ -547,6 +555,7 @@ function ReportCard({
   const statusPresentation = getStatusPresentation(report.status);
   const isResolved = report.status === "Resolved";
   const isBusy = actionLoadingId === report.id;
+  const thumbnailUrl = report.photos[0]?.imageUrl;
 
   return (
     <article
@@ -558,13 +567,23 @@ function ReportCard({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-[0.98rem] font-semibold leading-7 text-[var(--color-foreground)]">
-            {report.title}
-          </div>
-          <div className="mt-1 flex items-start gap-2 text-[0.86rem] text-[var(--color-muted-foreground)]">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-            <span className="min-w-0">{report.location}</span>
+        <div className="flex min-w-0 flex-1 gap-3">
+          {thumbnailUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={thumbnailUrl}
+              alt={report.title}
+              className="h-16 w-16 shrink-0 rounded-[14px] object-cover"
+            />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <div className="text-[0.98rem] font-semibold leading-7 text-[var(--color-foreground)]">
+              {report.title}
+            </div>
+            <div className="mt-1 flex items-start gap-2 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0">{report.location}</span>
+            </div>
           </div>
         </div>
         <span
@@ -665,6 +684,19 @@ export function IncidentReportsContent() {
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
   const [today] = useState(() => new Date().toDateString());
+  const selectedPhoto = formState.photos[0] ?? null;
+  const photoPreviewUrl = useMemo(
+    () => (selectedPhoto ? URL.createObjectURL(selectedPhoto) : null),
+    [selectedPhoto],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) {
+        URL.revokeObjectURL(photoPreviewUrl);
+      }
+    };
+  }, [photoPreviewUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -838,6 +870,28 @@ export function IncidentReportsContent() {
     }));
   }
 
+  function handlePhotoSelection(files: FileList | null) {
+    const selectedPhoto = files?.[0];
+
+    if (!selectedPhoto) {
+      updateFormState("photos", []);
+      return;
+    }
+
+    const validationError = validateReportImageFile(selectedPhoto);
+
+    if (validationError) {
+      updateFormState("photos", []);
+      setToast({
+        tone: "error",
+        message: validationError,
+      });
+      return;
+    }
+
+    updateFormState("photos", [selectedPhoto]);
+  }
+
   async function handleConfirmReport(reportId: string) {
     if (confirmedReportIds[reportId]) {
       return;
@@ -977,27 +1031,42 @@ export function IncidentReportsContent() {
       return;
     }
 
+    if (selectedPhoto) {
+      const imageValidationError = validateReportImageFile(selectedPhoto);
+
+      if (imageValidationError) {
+        setToast({
+          tone: "error",
+          message: imageValidationError,
+        });
+        return;
+      }
+    }
+
     setSubmittingReport(true);
 
     try {
       const title = `${formState.category} at ${formState.locationName}`.slice(0, 120);
+      const requestBody = new FormData();
+      requestBody.set("title", title);
+      requestBody.set("description", formState.description.trim());
+      requestBody.set("category", formState.category);
+      requestBody.set("severity", formState.severity);
+      requestBody.set("locationName", formState.locationName.trim());
+      requestBody.set("latitude", String(latitude));
+      requestBody.set("longitude", String(longitude));
+
+      if (!formState.submitAnonymously && formState.reportedByName.trim()) {
+        requestBody.set("reportedByName", formState.reportedByName.trim());
+      }
+
+      if (selectedPhoto) {
+        requestBody.set("image", selectedPhoto);
+      }
+
       const response = await fetch("/api/reports", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description: formState.description.trim(),
-          category: formState.category,
-          severity: formState.severity,
-          locationName: formState.locationName.trim(),
-          latitude,
-          longitude,
-          reportedByName: formState.submitAnonymously
-            ? undefined
-            : formState.reportedByName.trim() || undefined,
-        }),
+        body: requestBody,
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -1009,13 +1078,18 @@ export function IncidentReportsContent() {
       setFormState(emptyFormState);
       setToast({
         tone: "success",
-        message: "Community report submitted successfully.",
+        message: selectedPhoto
+          ? "Community report and photo submitted successfully."
+          : "Community report submitted successfully.",
       });
     } catch (error) {
       console.error("Failed to submit report.", error);
       setToast({
         tone: "error",
-        message: "Unable to submit your report right now.",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to submit your report right now.",
       });
     } finally {
       setSubmittingReport(false);
@@ -1178,35 +1252,49 @@ export function IncidentReportsContent() {
                 <div className="mt-6">
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                      Upload Photos
+                      Upload Photo
                     </div>
                     <div className="text-[0.82rem] text-[var(--color-muted-foreground)]">
-                      {formState.photos.length} / 6
+                      {formState.photos.length} / 1
                     </div>
                   </div>
                   <label className="mt-3 flex cursor-pointer flex-col rounded-[14px] border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-10 text-center">
                     <ImageUp className="mx-auto h-8 w-8 text-[var(--color-muted-foreground)]" />
                     <div className="mt-4 text-[0.98rem] font-medium text-[var(--color-foreground)]">
-                      Drag & drop photos here
+                      Drag & drop a photo here
                     </div>
                     <div className="mt-1 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                      or click to browse · PNG, JPG up to 6 files
+                      or click to browse · JPG, PNG, WEBP up to 5 MB
                     </div>
                     <input
                       type="file"
-                      multiple
-                      accept="image/png,image/jpeg"
+                      accept={reportImageAcceptValue}
                       className="sr-only"
-                      onChange={(event) =>
-                        updateFormState(
-                          "photos",
-                          Array.from(event.target.files ?? []).slice(0, 6),
-                        )
-                      }
+                      onChange={(event) => handlePhotoSelection(event.target.files)}
                     />
                   </label>
+                  {formState.photos[0] ? (
+                    <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                      {photoPreviewUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={photoPreviewUrl}
+                          alt={formState.photos[0].name}
+                          className="h-16 w-16 rounded-[12px] object-cover"
+                        />
+                      ) : null}
+                      <div className="min-w-0">
+                        <div className="truncate text-[0.9rem] font-medium text-[var(--color-foreground)]">
+                          {formState.photos[0].name}
+                        </div>
+                        <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
+                          Photo ready to upload with this report.
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   <p className="mt-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                    Photos are currently preview-only and are not yet stored with public reports.
+                    Attach one optional image to help the community verify this report.
                   </p>
                 </div>
               </div>
@@ -1274,7 +1362,7 @@ export function IncidentReportsContent() {
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  <span>Submit Report</span>
+                  <span>{submittingReport ? "Uploading Report..." : "Submit Report"}</span>
                 </button>
               </div>
             </div>

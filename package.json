@@ -16,6 +16,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.17.0",
