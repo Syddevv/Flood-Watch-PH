@@ -35,6 +35,7 @@ import {
 import type { IncidentReport, ReportMapMarker, Theme, WeatherOverviewData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fetchWeatherOverview } from "@/lib/weather-client";
+import { getSidebarWeatherOverview } from "@/lib/weather";
 import {
   hasValidCoordinates,
   matchesFilter,
@@ -80,18 +81,7 @@ export function DashboardShell({
   pageMode = "flood-map",
 }: DashboardShellProps) {
   const router = useRouter();
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      return stored === "dark" ? "dark" : "light";
-    } catch {
-      return "light";
-    }
-  });
+  const [theme, setTheme] = useState<Theme>("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const activeItem = getActiveItemFromPageMode(pageMode);
@@ -124,6 +114,31 @@ export function DashboardShell({
   const [weatherOverview, setWeatherOverview] = useState<WeatherOverviewData>(EMPTY_WEATHER_OVERVIEW);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let frameId = 0;
+
+    try {
+      const rootTheme = document.documentElement.dataset.theme;
+      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      const nextTheme: Theme =
+        storedTheme === "dark" || rootTheme === "dark" ? "dark" : "light";
+
+      frameId = window.requestAnimationFrame(() => {
+        setTheme(nextTheme);
+      });
+    } catch {
+      frameId = window.requestAnimationFrame(() => {
+        setTheme("light");
+      });
+    }
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -319,6 +334,11 @@ export function DashboardShell({
   const floodMapSelectedReport = useMemo(
     () => floodMapReports.find((report) => report.id === floodMapSelectedReportId) ?? null,
     [floodMapReports, floodMapSelectedReportId],
+  );
+
+  const sidebarWeatherOverview = useMemo(
+    () => getSidebarWeatherOverview(weatherOverview),
+    [weatherOverview],
   );
 
   const toggleTheme = () => {
@@ -548,7 +568,7 @@ export function DashboardShell({
           {!isContentOnlyView || isFloodMapView ? (
             <RightInfoPanel
               alerts={weatherOverview.alerts}
-              weather={weatherOverview}
+              weather={sidebarWeatherOverview}
               weatherLoading={weatherLoading}
               weatherError={weatherError}
               alertsLoading={weatherLoading}
@@ -582,7 +602,7 @@ export function DashboardShell({
           open={sheetOpen}
           onOpenChange={setSheetOpen}
           alerts={weatherOverview.alerts}
-          weather={weatherOverview}
+          weather={sidebarWeatherOverview}
           weatherLoading={weatherLoading}
           weatherError={weatherError}
           alertsLoading={weatherLoading}

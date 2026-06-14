@@ -48,6 +48,11 @@ export type WeatherOverviewData = {
   fetchedAt: string;
 };
 
+export type WeatherLocationResult = {
+  location: WeatherLocation;
+  fetchedAt: string;
+};
+
 export type EvacuationCenter = {
   id: string;
   name: string;

@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 import { THEME_STORAGE_KEY } from "@/lib/constants";
 
 const script = `
@@ -16,5 +18,11 @@ const script = `
 `;
 
 export function ThemeScript() {
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+  return (
+    <Script
+      id="theme-script"
+      strategy="afterInteractive"
+      dangerouslySetInnerHTML={{ __html: script }}
+    />
+  );
 }

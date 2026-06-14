@@ -1,9 +1,26 @@
-import { CloudRain, Droplets, MapPin, TriangleAlert, Wind } from "lucide-react";
+"use client";
+
+import { useRef, useState } from "react";
+import {
+  CloudRain,
+  LoaderCircle,
+  LocateFixed,
+  MapPin,
+  Search,
+  TriangleAlert,
+} from "lucide-react";
 
 import { AlertCard } from "@/components/alert-card";
 import { severityBadgeClasses } from "@/lib/report-ui";
-import type { AlertSeverity, FloodRiskLevel, WeatherOverviewData } from "@/lib/types";
+import type {
+  AlertSeverity,
+  FloodRiskLevel,
+  WeatherLocation,
+  WeatherLocationResult,
+  WeatherOverviewData,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { fetchWeatherLocation } from "@/lib/weather-client";
 
 type WeatherMonitoringContentProps = {
   weather: WeatherOverviewData;
@@ -27,22 +44,6 @@ function formatWindSpeed(windSpeed: number | null) {
   return windSpeed === null ? "Unavailable" : `${windSpeed.toFixed(1)} km/h`;
 }
 
-function getHighestRiskLabel(weather: WeatherOverviewData): FloodRiskLevel {
-  if (weather.locations.some((location) => location.riskLevel === "Critical Risk")) {
-    return "Critical Risk";
-  }
-
-  if (weather.locations.some((location) => location.riskLevel === "High Risk")) {
-    return "High Risk";
-  }
-
-  if (weather.locations.some((location) => location.riskLevel === "Moderate Risk")) {
-    return "Moderate Risk";
-  }
-
-  return "Low Risk";
-}
-
 function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
   if (riskLevel === "Critical Risk") {
     return "severe";
@@ -59,20 +60,108 @@ function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
   return "safe";
 }
 
-function getOverviewText(riskLevel: FloodRiskLevel) {
-  if (riskLevel === "Critical Risk") {
-    return "Increased flood risk due to heavy rainfall across monitored locations.";
-  }
+function SelectedLocationWeatherCard({
+  result,
+  title,
+}: {
+  result: WeatherLocationResult;
+  title: string;
+}) {
+  const { location, fetchedAt } = result;
 
-  if (riskLevel === "High Risk") {
-    return "Heavy rainfall may increase flood risk in some monitored areas.";
-  }
+  return (
+    <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)]">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="rounded-[18px] bg-[var(--color-panel)] p-3 text-[var(--color-primary)]">
+            <CloudRain className="h-12 w-12" strokeWidth={1.9} />
+          </div>
+          <div>
+            <div className="text-[0.74rem] font-semibold tracking-[0.06em] text-[var(--color-section-heading)]">
+              {title}
+            </div>
+            <div className="mt-1 text-[1.3rem] font-semibold text-[var(--color-foreground)]">
+              {location.name}
+            </div>
+            <div className="mt-1 text-[0.92rem] text-[var(--color-muted-foreground)]">
+              {location.condition ?? "Weather conditions unavailable"}
+            </div>
+          </div>
+        </div>
 
-  if (riskLevel === "Moderate Risk") {
-    return "Rainfall-based flood risk is elevated in at least one monitored area.";
-  }
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
+              severityBadgeClasses[getSeverityTone(location.riskLevel)],
+            )}
+          >
+            {location.riskLevel}
+          </span>
+          <span className="text-[0.76rem] text-[var(--color-muted-foreground)]">
+            Updated {fetchedAt}
+          </span>
+        </div>
+      </div>
 
-  return "No major weather-based flood alerts right now.";
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard label="Temperature" value={formatTemperature(location.temperature)} />
+        <MetricCard label="Precipitation" value={formatPrecipitation(location.precipitation)} />
+        <MetricCard label="Humidity" value={formatHumidity(location.humidity)} />
+        <MetricCard label="Wind Speed" value={formatWindSpeed(location.windSpeed)} />
+        <MetricCard label="Source" value={location.source} />
+      </div>
+    </section>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
+      <div className="text-[0.75rem] text-[var(--color-muted-foreground)]">{label}</div>
+      <div className="mt-1 text-[0.98rem] font-semibold text-[var(--color-foreground)]">{value}</div>
+    </article>
+  );
+}
+
+function MonitoredLocationCard({ location }: { location: WeatherLocation }) {
+  return (
+    <article className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-[0.95rem] font-semibold text-[var(--color-foreground)]">
+            {location.name}
+          </div>
+          <div className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
+            {location.condition ?? "Weather conditions unavailable"}
+          </div>
+        </div>
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold",
+            severityBadgeClasses[getSeverityTone(location.riskLevel)],
+          )}
+        >
+          {location.riskLevel}
+        </span>
+      </div>
+
+      <div className="mt-4 text-[1.3rem] font-semibold text-[var(--color-foreground)]">
+        {formatTemperature(location.temperature)}
+      </div>
+
+      <div className="mt-3 space-y-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
+        <div>Precipitation: {formatPrecipitation(location.precipitation)}</div>
+        <div>Humidity: {formatHumidity(location.humidity)}</div>
+        <div>Wind speed: {formatWindSpeed(location.windSpeed)}</div>
+      </div>
+
+      <div className="mt-3 text-[0.74rem] text-[var(--color-muted-foreground)]">
+        Last updated {location.updatedAt}
+      </div>
+      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">{location.source}</div>
+    </article>
+  );
 }
 
 export function WeatherMonitoringContent({
@@ -80,9 +169,113 @@ export function WeatherMonitoringContent({
   weatherLoading,
   weatherError,
 }: WeatherMonitoringContentProps) {
-  const highestRisk = getHighestRiskLabel(weather);
-  const highlightedLocation =
-    weather.locations.find((location) => location.riskLevel === highestRisk) ?? weather.locations[0];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLocationResult, setSelectedLocationResult] = useState<WeatherLocationResult | null>(null);
+  const [selectedLocationTitle, setSelectedLocationTitle] = useState("Selected Location Weather");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationActionMessage, setLocationActionMessage] = useState<string | null>(null);
+  const locationAbortRef = useRef<AbortController | null>(null);
+
+  async function loadSelectedLocation(
+    params: { query: string } | { lat: number; lon: number; name?: string },
+    loadingMessage: string,
+    failureMessage: string,
+    title: string,
+  ) {
+    locationAbortRef.current?.abort();
+    const abortController = new AbortController();
+    locationAbortRef.current = abortController;
+    setLocationActionMessage(loadingMessage);
+
+    try {
+      const result = await fetchWeatherLocation(params, abortController.signal);
+      setSelectedLocationResult(result);
+      setSelectedLocationTitle(title);
+      setLocationActionMessage(null);
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      console.error("Failed to load selected weather location.", error);
+      setLocationActionMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : failureMessage,
+      );
+    }
+  }
+
+  async function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedQuery = searchQuery.trim();
+
+    if (!trimmedQuery) {
+      setLocationActionMessage("Location not found. Try another city, municipality, or province.");
+      return;
+    }
+
+    setSearchLoading(true);
+
+    try {
+      await loadSelectedLocation(
+        { query: trimmedQuery },
+        "Searching weather location...",
+        "Unable to load weather for this location. Please try again.",
+        "Selected Location Weather",
+      );
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  async function handleUseMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationActionMessage("Unable to detect your location. Please search manually.");
+      return;
+    }
+
+    setDetectingLocation(true);
+    setLocationActionMessage("Detecting your location...");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await loadSelectedLocation(
+            {
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+              name: "Your Location",
+            },
+            "Detecting your location...",
+            "Unable to detect your location. Please search manually.",
+            "Your Location Weather",
+          );
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setDetectingLocation(false);
+
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationActionMessage(
+            "Location access was denied. You can still search for your city or municipality.",
+          );
+          return;
+        }
+
+        setLocationActionMessage("Unable to detect your location. Please search manually.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      },
+    );
+  }
 
   return (
     <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)]">
@@ -92,9 +285,65 @@ export function WeatherMonitoringContent({
             Weather Monitoring
           </h1>
           <p className="mt-1.5 text-[0.95rem] text-[var(--color-muted-foreground)]">
-            Live weather conditions and rainfall-based flood risk for monitored Philippine locations.
+            Search weather for places in the Philippines or use your current location, while keeping monitored flood-prone areas in view.
           </p>
         </section>
+
+        <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex flex-col gap-3 lg:flex-row lg:items-center"
+          >
+            <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
+              <Search className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search a city, municipality, province, or barangay"
+                className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+              />
+            </label>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="submit"
+                disabled={searchLoading || detectingLocation}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-[0.86rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {searchLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <span>{searchLoading ? "Searching..." : "Search Weather"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUseMyLocation}
+                disabled={searchLoading || detectingLocation}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-5 text-[0.86rem] font-semibold text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {detectingLocation ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LocateFixed className="h-4 w-4" />
+                )}
+                <span>Use My Location</span>
+              </button>
+            </div>
+          </form>
+
+          {locationActionMessage ? (
+            <div className="mt-4 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+              {locationActionMessage}
+            </div>
+          ) : null}
+        </section>
+
+        {selectedLocationResult ? (
+          <SelectedLocationWeatherCard
+            result={selectedLocationResult}
+            title={selectedLocationTitle}
+          />
+        ) : null}
 
         {weatherLoading ? (
           <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
@@ -102,106 +351,10 @@ export function WeatherMonitoringContent({
           </section>
         ) : weatherError ? (
           <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
-            Unable to load weather data.
+            {weatherError}
           </section>
         ) : (
           <>
-            <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)]">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-[18px] bg-[var(--color-panel)] p-3 text-[var(--color-primary)]">
-                    <CloudRain className="h-12 w-12" strokeWidth={1.9} />
-                  </div>
-                  <div>
-                    <div className="font-mono text-[2.7rem] font-semibold leading-none text-[var(--color-foreground)]">
-                      {highlightedLocation ? formatTemperature(highlightedLocation.temperature) : "--"}
-                    </div>
-                    <div className="mt-1 text-[1.08rem] text-[var(--color-muted-foreground)]">
-                      {highlightedLocation
-                        ? `${highlightedLocation.condition ?? "Weather conditions unavailable"} · ${highlightedLocation.name}`
-                        : "Weather conditions unavailable"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
-                  <div className="text-[0.74rem] font-semibold tracking-[0.06em] text-[var(--color-section-heading)]">
-                    WEATHER-BASED SYSTEM STATUS
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
-                        severityBadgeClasses[getSeverityTone(highestRisk)],
-                      )}
-                    >
-                      {highestRisk}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                    {getOverviewText(highestRisk)}
-                  </div>
-                  <div className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-                    Updated {weather.fetchedAt}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {weather.locations.map((location) => (
-                <article
-                  key={location.name}
-                  className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-[0.95rem] font-semibold text-[var(--color-foreground)]">
-                        {location.name}
-                      </div>
-                      <div className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
-                        {location.condition ?? "Weather conditions unavailable"}
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold",
-                        severityBadgeClasses[getSeverityTone(location.riskLevel)],
-                      )}
-                    >
-                      {location.riskLevel}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 text-[1.3rem] font-semibold text-[var(--color-foreground)]">
-                    {formatTemperature(location.temperature)}
-                  </div>
-
-                  <div className="mt-3 space-y-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                    <div className="flex items-center gap-2">
-                      <CloudRain className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span>Precipitation: {formatPrecipitation(location.precipitation)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Droplets className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span>Humidity: {formatHumidity(location.humidity)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Wind className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span>Wind speed: {formatWindSpeed(location.windSpeed)}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 text-[0.74rem] text-[var(--color-muted-foreground)]">
-                    Last updated {location.updatedAt}
-                  </div>
-                  <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
-                    {location.source}
-                  </div>
-                </article>
-              ))}
-            </section>
-
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
               <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
                 <div>
@@ -209,8 +362,7 @@ export function WeatherMonitoringContent({
                     Official / System Flood Alerts
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                    Weather-based system alerts are derived from available rainfall data and do not
-                    replace official advisories.
+                    Weather-based system alerts are derived from available rainfall data and do not replace official advisories.
                   </p>
                 </div>
 
@@ -249,13 +401,33 @@ export function WeatherMonitoringContent({
                       <span className="font-semibold">Advisory disclaimer</span>
                     </div>
                     <p className="mt-2">
-                      System alerts are based on available weather data and may not replace official
-                      advisories. Always follow PAGASA, NDRRMC, LGU, and emergency response
-                      announcements.
+                      System alerts are based on available weather data and may not replace official advisories. Always follow PAGASA, NDRRMC, LGU, and emergency response announcements.
                     </p>
                   </div>
                 </div>
               </aside>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[1.5rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+                    Monitored Philippine Locations
+                  </h2>
+                  <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
+                    Default monitored areas remain visible for quick rainfall-based risk monitoring.
+                  </p>
+                </div>
+                <div className="text-[0.76rem] text-[var(--color-muted-foreground)]">
+                  Updated {weather.fetchedAt}
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {weather.locations.map((location) => (
+                  <MonitoredLocationCard key={location.name} location={location} />
+                ))}
+              </div>
             </section>
           </>
         )}
