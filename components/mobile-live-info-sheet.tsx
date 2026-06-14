@@ -7,6 +7,7 @@ import type {
   EmergencyHotline,
   EvacuationCenter,
   FloodAlert,
+  IncidentReport,
   WeatherOverviewData,
 } from "@/lib/types";
 
@@ -19,6 +20,13 @@ type MobileLiveInfoSheetProps = {
   hotlines: EmergencyHotline[];
   hotlineNotice: string;
   timestamp: string;
+  officialAlertsTitle?: string;
+  showCommunityReportsSection?: boolean;
+  communityReports?: IncidentReport[];
+  communityReportsLoading?: boolean;
+  communityReportsError?: string | null;
+  onViewCommunityReport?: (reportId: string) => void;
+  communityReportsDisclaimer?: string;
 };
 
 export function MobileLiveInfoSheet({
@@ -30,6 +38,13 @@ export function MobileLiveInfoSheet({
   hotlines,
   hotlineNotice,
   timestamp,
+  officialAlertsTitle,
+  showCommunityReportsSection,
+  communityReports,
+  communityReportsLoading,
+  communityReportsError,
+  onViewCommunityReport,
+  communityReportsDisclaimer,
 }: MobileLiveInfoSheetProps) {
   if (!open) {
     return null;
@@ -65,6 +80,13 @@ export function MobileLiveInfoSheet({
             hotlines={hotlines}
             hotlineNotice={hotlineNotice}
             timestamp={timestamp}
+            officialAlertsTitle={officialAlertsTitle}
+            showCommunityReportsSection={showCommunityReportsSection}
+            communityReports={communityReports}
+            communityReportsLoading={communityReportsLoading}
+            communityReportsError={communityReportsError}
+            onViewCommunityReport={onViewCommunityReport}
+            communityReportsDisclaimer={communityReportsDisclaimer}
             className="border-l-0"
           />
         </div>

@@ -9,6 +9,7 @@ import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet"
 
 import type {
   LegendItem,
+  MapMarker,
   ReportMapMarker,
   RiskPolygon,
   Theme,

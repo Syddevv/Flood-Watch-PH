@@ -1,26 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
 import { Check, Clock3, ThumbsUp, X } from "lucide-react";
 
-import { IncidentReportModal } from "@/components/incident-report-modal";
 import { formatCountLabel } from "@/lib/reporting";
-import type { ReportDetailResponse, ReportRecord, ReportsResponse } from "@/lib/report-types";
 import {
-  buildStoredActionKey,
   getStatusPresentation,
-  mapReportToIncident,
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
-import type {
-  IncidentReport,
-  LegendItem,
-  ReportMapMarker,
-  RiskPolygon,
-  Theme,
-} from "@/lib/types";
+import type { IncidentReport, LegendItem, ReportMapMarker, RiskPolygon, Theme } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const DynamicFloodMap = dynamic(
@@ -35,7 +24,7 @@ const DynamicFloodMap = dynamic(
   },
 );
 
-const reportFilterOptions = [
+export const reportFilterOptions = [
   { id: "active", label: "Active Reports" },
   { id: "all", label: "All Reports" },
   { id: "confirmed", label: "Confirmed by Community" },
@@ -44,17 +33,9 @@ const reportFilterOptions = [
   { id: "critical-high", label: "Critical / High Severity" },
 ] as const;
 
-type ReportFilterId = (typeof reportFilterOptions)[number]["id"];
+export type ReportFilterId = (typeof reportFilterOptions)[number]["id"];
 
-type FloodMapProps = {
-  theme: Theme;
-  polygons: RiskPolygon[];
-  legend: LegendItem[];
-  allowPolygonToggle?: boolean;
-  defaultShowPolygons?: boolean;
-};
-
-function hasValidCoordinates(report: IncidentReport) {
+export function hasValidCoordinates(report: IncidentReport) {
   return (
     Array.isArray(report.coordinates) &&
     report.coordinates.length === 2 &&
@@ -63,7 +44,7 @@ function hasValidCoordinates(report: IncidentReport) {
   );
 }
 
-function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
+export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
   if (filter === "all") {
     return true;
   }
@@ -87,240 +68,41 @@ function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
   return report.severity === "high" || report.severity === "severe";
 }
 
+type FloodMapProps = {
+  theme: Theme;
+  polygons: RiskPolygon[];
+  legend: LegendItem[];
+  allowPolygonToggle?: boolean;
+  showRiskOverlays: boolean;
+  onToggleRiskOverlays: () => void;
+  reportMarkers: ReportMapMarker[];
+  selectedFilter: ReportFilterId;
+  onSelectFilter: (filter: ReportFilterId) => void;
+  loadingReports: boolean;
+  reportLoadError: string | null;
+  previewReport: IncidentReport | null;
+  onSelectReport: (reportId: string) => void;
+  onClosePreview: () => void;
+  onOpenReportDetails: (reportId: string) => void;
+};
+
 export function FloodMap({
   theme,
   polygons,
   legend,
   allowPolygonToggle = false,
-  defaultShowPolygons = true,
+  showRiskOverlays,
+  onToggleRiskOverlays,
+  reportMarkers,
+  selectedFilter,
+  onSelectFilter,
+  loadingReports,
+  reportLoadError,
+  previewReport,
+  onSelectReport,
+  onClosePreview,
+  onOpenReportDetails,
 }: FloodMapProps) {
-  const [reports, setReports] = useState<IncidentReport[]>([]);
-  const [updatesByReportId, setUpdatesByReportId] = useState<Record<string, ReportDetailResponse["data"]["updates"]>>({});
-  const [loadingReports, setLoadingReports] = useState(true);
-  const [reportLoadError, setReportLoadError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<ReportFilterId>("active");
-  const [showRiskOverlays, setShowRiskOverlays] = useState(defaultShowPolygons);
-  const [previewReportId, setPreviewReportId] = useState<string | null>(null);
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-  const [confirmedReportIds, setConfirmedReportIds] = useState<Record<string, boolean>>({});
-  const [resolvedReportIds, setResolvedReportIds] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadReports() {
-      setLoadingReports(true);
-      setReportLoadError(null);
-
-      try {
-        const response = await fetch("/api/reports?limit=50", {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as ReportsResponse | { error: string };
-
-        if (!response.ok || !("data" in payload)) {
-          throw new Error(
-            "error" in payload ? payload.error : "Unable to load report markers. Please try again.",
-          );
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        const nextReports = payload.data.map(mapReportToIncident);
-        setReports(nextReports);
-
-        if (typeof window !== "undefined") {
-          const nextConfirmed: Record<string, boolean> = {};
-          const nextResolved: Record<string, boolean> = {};
-
-          for (const report of nextReports) {
-            nextConfirmed[report.id] =
-              localStorage.getItem(buildStoredActionKey("confirmed", report.id)) === "true";
-            nextResolved[report.id] =
-              localStorage.getItem(buildStoredActionKey("resolved", report.id)) === "true";
-          }
-
-          setConfirmedReportIds(nextConfirmed);
-          setResolvedReportIds(nextResolved);
-        }
-      } catch (error) {
-        console.error("Failed to load flood map reports.", error);
-        if (isMounted) {
-          setReportLoadError("Unable to load report markers. Please try again.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingReports(false);
-        }
-      }
-    }
-
-    loadReports();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedReportId || !modalOpen) {
-      return;
-    }
-
-    const reportId = selectedReportId;
-    let isMounted = true;
-
-    async function loadReportDetails() {
-      try {
-        const response = await fetch(`/api/reports/${reportId}`, {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as ReportDetailResponse | { error: string };
-
-        if (!response.ok || !("data" in payload)) {
-          throw new Error("error" in payload ? payload.error : "Failed to load report details.");
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        const nextReport = mapReportToIncident(payload.data);
-        setReports((current) =>
-          current.map((report) => (report.id === nextReport.id ? nextReport : report)),
-        );
-        setUpdatesByReportId((current) => ({
-          ...current,
-          [reportId]: payload.data.updates,
-        }));
-      } catch (error) {
-        console.error("Failed to load report detail from flood map.", error);
-      }
-    }
-
-    loadReportDetails();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [modalOpen, selectedReportId]);
-
-  const selectedReport = useMemo(
-    () => reports.find((report) => report.id === selectedReportId) ?? null,
-    [reports, selectedReportId],
-  );
-  const previewReport = useMemo(
-    () => reports.find((report) => report.id === previewReportId) ?? null,
-    [reports, previewReportId],
-  );
-
-  const mappedReports = useMemo(
-    () => reports.filter((report) => hasValidCoordinates(report)),
-    [reports],
-  );
-
-  const filteredReports = useMemo(
-    () => mappedReports.filter((report) => matchesFilter(report, selectedFilter)),
-    [mappedReports, selectedFilter],
-  );
-
-  const reportMarkers = useMemo<ReportMapMarker[]>(
-    () =>
-      filteredReports.map((report) => ({
-        id: `report-marker-${report.id}`,
-        label: "R",
-        category: "report",
-        severity: report.severity,
-        coordinates: report.coordinates as [number, number],
-        title: report.title,
-        reportId: report.id,
-        report,
-      })),
-    [filteredReports],
-  );
-
-  async function applyUpdatedReport(reportId: string, payload: { data?: ReportRecord; error?: string }, successStorageKey: "confirmed" | "resolved") {
-    if (!payload.data) {
-      throw new Error(payload.error ?? "Failed to update the report.");
-    }
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem(buildStoredActionKey(successStorageKey, reportId), "true");
-    }
-
-    if (successStorageKey === "confirmed") {
-      setConfirmedReportIds((current) => ({
-        ...current,
-        [reportId]: true,
-      }));
-    } else {
-      setResolvedReportIds((current) => ({
-        ...current,
-        [reportId]: true,
-      }));
-    }
-
-    setReports((current) =>
-      current.map((report) =>
-        report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
-      ),
-    );
-  }
-
-  async function handleConfirmReport(reportId: string) {
-    if (confirmedReportIds[reportId]) {
-      return;
-    }
-
-    setActionLoadingId(reportId);
-
-    try {
-      const response = await fetch(`/api/reports/${reportId}/confirm`, {
-        method: "POST",
-      });
-      const payload = (await response.json()) as { data?: ReportRecord; error?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to confirm the report.");
-      }
-
-      await applyUpdatedReport(reportId, payload, "confirmed");
-    } catch (error) {
-      console.error("Failed to confirm report from flood map.", error);
-    } finally {
-      setActionLoadingId(null);
-    }
-  }
-
-  async function handleResolveReport(reportId: string) {
-    if (resolvedReportIds[reportId]) {
-      return;
-    }
-
-    setActionLoadingId(reportId);
-
-    try {
-      const response = await fetch(`/api/reports/${reportId}/resolve`, {
-        method: "POST",
-      });
-      const payload = (await response.json()) as { data?: ReportRecord; error?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to update the report.");
-      }
-
-      await applyUpdatedReport(reportId, payload, "resolved");
-    } catch (error) {
-      console.error("Failed to resolve report from flood map.", error);
-    } finally {
-      setActionLoadingId(null);
-    }
-  }
-
   return (
     <div className="relative h-full min-h-0 w-full">
       <DynamicFloodMap
@@ -328,7 +110,7 @@ export function FloodMap({
         reportMarkers={reportMarkers}
         polygons={showRiskOverlays ? polygons : []}
         legend={legend}
-        onSelectReport={setPreviewReportId}
+        onSelectReport={onSelectReport}
       />
 
       <div className="pointer-events-auto absolute left-4 top-4 z-[470] max-w-[calc(100%-6rem)] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[360px]">
@@ -340,7 +122,7 @@ export function FloodMap({
             <button
               key={option.id}
               type="button"
-              onClick={() => setSelectedFilter(option.id)}
+              onClick={() => onSelectFilter(option.id)}
               className={cn(
                 "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
                 selectedFilter === option.id
@@ -356,7 +138,7 @@ export function FloodMap({
           <div className="mt-3">
             <button
               type="button"
-              onClick={() => setShowRiskOverlays((current) => !current)}
+              onClick={onToggleRiskOverlays}
               className={cn(
                 "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
                 showRiskOverlays
@@ -387,7 +169,7 @@ export function FloodMap({
           <button
             type="button"
             aria-label="Close report preview"
-            onClick={() => setPreviewReportId(null)}
+            onClick={onClosePreview}
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-panel)] text-[var(--color-foreground)]"
           >
             <X className="h-4 w-4" />
@@ -457,10 +239,7 @@ export function FloodMap({
             </div>
             <button
               type="button"
-              onClick={() => {
-                setSelectedReportId(previewReport.id);
-                setModalOpen(true);
-              }}
+              onClick={() => onOpenReportDetails(previewReport.id)}
               className="mt-3 flex h-10 w-full items-center justify-center rounded-[11px] bg-[var(--color-primary)] text-[0.86rem] font-semibold text-white"
             >
               View Details
@@ -468,24 +247,6 @@ export function FloodMap({
           </div>
         </div>
       ) : null}
-
-      <IncidentReportModal
-        key={selectedReportId ?? "empty"}
-        report={selectedReport}
-        updates={selectedReportId ? updatesByReportId[selectedReportId] ?? [] : []}
-        open={modalOpen}
-        actionLoading={actionLoadingId === selectedReportId}
-        hasConfirmed={selectedReportId ? Boolean(confirmedReportIds[selectedReportId]) : false}
-        hasResolved={selectedReportId ? Boolean(resolvedReportIds[selectedReportId]) : false}
-        onConfirm={handleConfirmReport}
-        onResolve={handleResolveReport}
-        onOpenChange={(open) => {
-          setModalOpen(open);
-          if (!open) {
-            setSelectedReportId(null);
-          }
-        }}
-      />
     </div>
   );
 }
