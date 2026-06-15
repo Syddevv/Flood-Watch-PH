@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, SquareStack } from "lucide-react";
 
@@ -550,7 +550,15 @@ export function DashboardShell({
                 weatherError={weatherError}
               />
             ) : isEvacuationCentersView ? (
-              <EvacuationCentersContent />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted-foreground)]">
+                    Loading evacuation centers...
+                  </div>
+                }
+              >
+                <EvacuationCentersContent />
+              </Suspense>
             ) : isIncidentReportsView ? (
               <IncidentReportsContent />
             ) : isEmergencyHotlinesView ? (

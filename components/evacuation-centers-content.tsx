@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -67,23 +68,32 @@ type NearestCenterResult = {
 function EvacuationCenterCard({
   center,
   highlighted,
+  selectedFromMap,
 }: {
   center: EvacuationCenterResource;
   highlighted: boolean;
+  selectedFromMap: boolean;
 }) {
   const statusMeta = EVACUATION_STATUS_META[center.status];
 
   return (
     <article
+      id={`evacuation-center-${center.id}`}
       className={cn(
-        "rounded-[22px] border bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]",
+        "rounded-[22px] border bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)] transition-[box-shadow,border-color] duration-300",
         highlighted
-          ? "border-[var(--color-primary)] shadow-[0_0_0_1px_rgba(37,99,235,0.2),var(--shadow-soft)]"
+          ? "border-[var(--color-primary)] shadow-[0_0_0_1px_rgba(37,99,235,0.28),0_0_0_10px_rgba(37,99,235,0.08),var(--shadow-soft)]"
           : "border-[var(--color-border)]",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {selectedFromMap ? (
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(37,99,235,0.2)] bg-[rgba(37,99,235,0.08)] px-2.5 py-1 text-[0.68rem] font-semibold text-[var(--color-primary)]">
+              <MapPinned className="h-3 w-3" />
+              <span>Viewing selected center</span>
+            </div>
+          ) : null}
           <h2 className="text-[1rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)]">
             {center.name}
           </h2>
@@ -272,9 +282,11 @@ function NearestCenterCard({
 }
 
 export function EvacuationCentersContent() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | EvacuationCenterStatus>("All");
   const [facilityFilter, setFacilityFilter] = useState<"All" | EvacuationFacility>("All");
+  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
   const [highlightedCenterId, setHighlightedCenterId] = useState<string | null>(null);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [isFindingNearest, setIsFindingNearest] = useState(false);
@@ -282,23 +294,50 @@ export function EvacuationCentersContent() {
   const [nearestMessage, setNearestMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const centerId = searchParams.get("center");
+    const hasMatch = centerId
+      ? EVACUATION_CENTERS.some((center) => center.id === centerId)
+      : false;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setSelectedCenterId(hasMatch ? centerId : null);
+      setHighlightedCenterId(hasMatch ? centerId : null);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!selectedCenterId) {
       return;
     }
 
-    const frameId = window.requestAnimationFrame(() => {
-      setHighlightedCenterId(new URLSearchParams(window.location.search).get("center"));
-    });
+    const timeoutId = window.setTimeout(() => {
+      const card = document.getElementById(`evacuation-center-${selectedCenterId}`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+
+    const clearHighlightTimeoutId = window.setTimeout(() => {
+      setHighlightedCenterId((current) => (current === selectedCenterId ? null : current));
+    }, 4500);
 
     return () => {
-      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+      window.clearTimeout(clearHighlightTimeoutId);
     };
-  }, []);
+  }, [selectedCenterId]);
+
+  const selectedCenter = useMemo(
+    () => EVACUATION_CENTERS.find((center) => center.id === selectedCenterId) ?? null,
+    [selectedCenterId],
+  );
 
   const filteredCenters = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return EVACUATION_CENTERS.filter((center) => {
+    const matches = EVACUATION_CENTERS.filter((center) => {
       const matchesQuery = normalizedQuery
         ? [
             center.name,
@@ -318,7 +357,13 @@ export function EvacuationCentersContent() {
 
       return matchesQuery && matchesStatus && matchesFacility;
     });
-  }, [facilityFilter, query, statusFilter]);
+
+    if (selectedCenter && !matches.some((center) => center.id === selectedCenter.id)) {
+      return [selectedCenter, ...matches];
+    }
+
+    return matches;
+  }, [facilityFilter, query, selectedCenter, statusFilter]);
 
   const visibleChecklistItems = useMemo(
     () =>
@@ -525,6 +570,7 @@ export function EvacuationCentersContent() {
                   key={center.id}
                   center={center}
                   highlighted={activeHighlightedCenterId === center.id}
+                  selectedFromMap={selectedCenterId === center.id}
                 />
               ))}
             </div>
