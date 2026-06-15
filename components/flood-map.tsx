@@ -1,16 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Building2, Check, ChevronDown, ChevronUp, Clock3, ThumbsUp, X } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
 import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
-import { formatCountLabel } from "@/lib/reporting";
-import {
-  getStatusPresentation,
-  severityBadgeClasses,
-  severityLabels,
-} from "@/lib/report-ui";
 import type {
   EvacuationCenterMapMarker,
   IncidentReport,
@@ -35,10 +29,9 @@ const DynamicFloodMap = dynamic(
 
 export const reportFilterOptions = [
   { id: "active", label: "Active Reports" },
-  { id: "all", label: "All Reports" },
-  { id: "confirmed", label: "Confirmed by Community" },
   { id: "likely-receded", label: "Likely Receded" },
   { id: "resolved", label: "Resolved" },
+  { id: "all", label: "All Reports" },
   { id: "critical-high", label: "Critical / High Severity" },
 ] as const;
 
@@ -60,10 +53,6 @@ export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
 
   if (filter === "active") {
     return isActiveLifecycleStatus(report.status);
-  }
-
-  if (filter === "confirmed") {
-    return report.status === "Confirmed by Community";
   }
 
   if (filter === "likely-receded") {
@@ -95,9 +84,6 @@ type FloodMapProps = {
   onSelectFilter: (filter: ReportFilterId) => void;
   loadingReports: boolean;
   reportLoadError: string | null;
-  previewReport: IncidentReport | null;
-  onSelectReport: (reportId: string) => void;
-  onClosePreview: () => void;
   onOpenReportDetails: (reportId: string) => void;
 };
 
@@ -119,9 +105,6 @@ export function FloodMap({
   onSelectFilter,
   loadingReports,
   reportLoadError,
-  previewReport,
-  onSelectReport,
-  onClosePreview,
   onOpenReportDetails,
 }: FloodMapProps) {
   const [mobileReportsPanelOpen, setMobileReportsPanelOpen] = useState(false);
@@ -136,7 +119,7 @@ export function FloodMap({
         }
         polygons={showRiskOverlays ? polygons : []}
         legend={legend}
-        onSelectReport={onSelectReport}
+        onOpenReportDetails={onOpenReportDetails}
         focusedCenterId={focusedCenterId}
       />
 
@@ -223,7 +206,7 @@ export function FloodMap({
             </div>
           ) : null}
           <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
-            Community reports may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
+            Active reports show current community hazard signals. Use the Likely Receded or Resolved filters to review clearing reports separately.
           </p>
           <div className="mt-3 rounded-[12px] bg-[var(--color-panel)] px-3 py-2 text-[0.82rem] text-[var(--color-foreground)]">
             {loadingReports
@@ -237,89 +220,6 @@ export function FloodMap({
         </div>
       </div>
 
-      {previewReport ? (
-        <div className="pointer-events-auto absolute bottom-24 right-4 z-[470] w-[min(320px,calc(100%-2rem))] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_92%,transparent)] p-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:bottom-4">
-          <button
-            type="button"
-            aria-label="Close report preview"
-            onClick={onClosePreview}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-panel)] text-[var(--color-foreground)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
-
-          {previewReport.photos[0]?.imageUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={previewReport.photos[0].imageUrl ?? undefined}
-              alt={previewReport.title}
-              className="h-32 w-full rounded-[14px] object-cover"
-            />
-          ) : null}
-
-          <div className={cn(previewReport.photos[0]?.imageUrl ? "mt-3" : "")}>
-            <div className="pr-10 text-[1rem] font-semibold leading-6 text-[var(--color-foreground)]">
-              {previewReport.title}
-            </div>
-            <div className="mt-1 text-[0.85rem] text-[var(--color-muted-foreground)]">
-              {previewReport.location}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold",
-                  severityBadgeClasses[previewReport.severity],
-                )}
-              >
-                {severityLabels[previewReport.severity]}
-              </span>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
-                  getStatusPresentation(previewReport.status).textClassName,
-                  getStatusPresentation(previewReport.status).wrapperClassName,
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-2 w-2 rounded-full",
-                    getStatusPresentation(previewReport.status).dotClassName,
-                  )}
-                />
-                <span>{getStatusPresentation(previewReport.status).label}</span>
-              </span>
-            </div>
-            <div className="mt-2 text-[0.82rem] text-[var(--color-foreground)]">
-              {previewReport.category}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-              <div className="rounded-[10px] bg-[var(--color-panel)] px-2.5 py-2">
-                <div className="flex items-center gap-1.5">
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  <span>{formatCountLabel(previewReport.confirmations)}</span>
-                </div>
-              </div>
-              <div className="rounded-[10px] bg-[var(--color-panel)] px-2.5 py-2">
-                <div className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5" />
-                  <span>{formatCountLabel(previewReport.resolvedConfirmations)} receded</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-[0.76rem] text-[var(--color-muted-foreground)]">
-              <Clock3 className="h-3.5 w-3.5" />
-              <span>{previewReport.reportedAgo}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenReportDetails(previewReport.id)}
-              className="mt-3 flex h-10 w-full items-center justify-center rounded-[11px] bg-[var(--color-primary)] text-[0.86rem] font-semibold text-white"
-            >
-              View Details
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

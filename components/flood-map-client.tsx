@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 
 import { useEffect, useRef, useState } from "react";
-import { Layers3, LocateFixed, Map, Satellite } from "lucide-react";
+import { Check, Clock3, Eye, Layers3, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -19,6 +19,12 @@ import {
   buildDirectionsUrl,
   EVACUATION_STATUS_META,
 } from "@/lib/emergency-resources";
+import { formatCountLabel } from "@/lib/reporting";
+import {
+  getStatusPresentation,
+  severityBadgeClasses,
+  severityLabels,
+} from "@/lib/report-ui";
 import type {
   EvacuationCenterMapMarker,
   LegendItem,
@@ -46,6 +52,33 @@ const severityColorMap = {
   severe: "#ef4444",
 };
 
+const reportMarkerStatusStyles = {
+  "Needs More Confirmation": {
+    color: "#f59e0b",
+    ring: "rgba(245,158,11,0.18)",
+    border: "rgba(245,158,11,0.55)",
+    opacity: 1,
+  },
+  "Confirmed by Community": {
+    color: "#ef4444",
+    ring: "rgba(239,68,68,0.18)",
+    border: "rgba(239,68,68,0.55)",
+    opacity: 1,
+  },
+  "Likely Receded": {
+    color: "#64748b",
+    ring: "rgba(100,116,139,0.16)",
+    border: "rgba(148,163,184,0.48)",
+    opacity: 0.72,
+  },
+  Resolved: {
+    color: "#94a3b8",
+    ring: "rgba(148,163,184,0.12)",
+    border: "rgba(148,163,184,0.4)",
+    opacity: 0.58,
+  },
+} as const;
+
 type CenterMarkerInstance = {
   openPopup: () => void;
   getLatLng: () => { lat: number; lng: number };
@@ -59,9 +92,11 @@ type CenterMarkerInstance = {
 };
 
 function iconForReportMarker(marker: ReportMapMarker) {
+  const markerStyle = reportMarkerStatusStyles[marker.status];
+
   return L.divIcon({
     className: "floodwatch-marker-shell",
-    html: `<div class="floodwatch-marker" style="--marker-color:${severityColorMap[marker.severity]};--marker-ring:rgba(37,99,235,0.18)">R</div>`,
+    html: `<div class="floodwatch-marker" style="--marker-color:${markerStyle.color};--marker-ring:${markerStyle.ring};--marker-border:${markerStyle.border};opacity:${markerStyle.opacity}">R</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -130,7 +165,7 @@ type FloodMapClientProps = {
   evacuationCenterMarkers: EvacuationCenterMapMarker[];
   polygons: RiskPolygon[];
   legend: LegendItem[];
-  onSelectReport: (reportId: string) => void;
+  onOpenReportDetails: (reportId: string) => void;
   focusedCenterId?: string | null;
 };
 
@@ -140,7 +175,7 @@ export function FloodMapClient({
   evacuationCenterMarkers,
   polygons,
   legend,
-  onSelectReport,
+  onOpenReportDetails,
   focusedCenterId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
@@ -197,10 +232,75 @@ export function FloodMapClient({
             position={marker.coordinates}
             icon={iconForReportMarker(marker)}
             title={marker.title}
-            eventHandlers={{
-              click: () => onSelectReport(marker.reportId),
-            }}
-          />
+          >
+            <Popup>
+              <div className="w-[248px] space-y-3">
+                <div>
+                  <div className="text-[0.98rem] font-semibold text-slate-900">
+                    {marker.report.title}
+                  </div>
+                  <div className="mt-1 text-[0.8rem] text-slate-600">
+                    {marker.report.location}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
+                      severityBadgeClasses[marker.report.severity],
+                    )}
+                  >
+                    {severityLabels[marker.report.severity]}
+                  </span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
+                      getStatusPresentation(marker.report.status).textClassName,
+                      getStatusPresentation(marker.report.status).wrapperClassName,
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        getStatusPresentation(marker.report.status).dotClassName,
+                      )}
+                    />
+                    <span>{getStatusPresentation(marker.report.status).label}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[0.74rem] text-slate-600">
+                  <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <span>{formatCountLabel(marker.report.confirmations)}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="h-3.5 w-3.5" />
+                      <span>{formatCountLabel(marker.report.resolvedConfirmations)} receded</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[0.75rem] text-slate-500">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  <span>{marker.report.lastActivityAgo ?? marker.report.reportedAgo}</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenReportDetails(marker.reportId)}
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>View Details</span>
+                </button>
+              </div>
+            </Popup>
+          </Marker>
         ))}
 
         {evacuationCenterMarkers.map((marker) => (
@@ -276,7 +376,13 @@ export function FloodMapClient({
             <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
               R
             </span>
-            <span>Flood Report</span>
+            <span>Active Flood Report</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#64748b] text-[0.72rem] font-bold leading-none text-white opacity-80 shadow-[0_0_0_3px_rgba(100,116,139,0.16)]">
+              R
+            </span>
+            <span>Likely Receded Report</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(34,197,94,0.16)]">
@@ -286,7 +392,7 @@ export function FloodMapClient({
           </div>
         </div>
         <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          REPORT SEVERITY
+          RISK OVERLAY SEVERITY
         </div>
         <div className="mt-1 space-y-1.25">
           {legend.map((item) => (

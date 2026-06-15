@@ -202,6 +202,7 @@ export type ReportMapMarker = {
   label: string;
   category: "report";
   severity: AlertSeverity;
+  status: IncidentReportStatus;
   coordinates: [number, number];
   title: string;
   reportId: string;

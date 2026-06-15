@@ -132,7 +132,7 @@ button {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--marker-border, rgba(255, 255, 255, 0.95));
   background: var(--marker-color);
   box-shadow:
     0 0 0 4px var(--marker-ring),

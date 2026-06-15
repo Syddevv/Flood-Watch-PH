@@ -114,7 +114,6 @@ export function DashboardShell({
   const [floodMapShowReports, setFloodMapShowReports] = useState(true);
   const [floodMapShowEvacuationCenters, setFloodMapShowEvacuationCenters] = useState(true);
   const [floodMapShowRiskOverlays, setFloodMapShowRiskOverlays] = useState(false);
-  const [floodMapPreviewReportId, setFloodMapPreviewReportId] = useState<string | null>(null);
   const [floodMapSelectedReportId, setFloodMapSelectedReportId] = useState<string | null>(null);
   const [floodMapModalOpen, setFloodMapModalOpen] = useState(false);
   const [floodMapActionLoadingId, setFloodMapActionLoadingId] = useState<string | null>(null);
@@ -337,6 +336,7 @@ export function DashboardShell({
         label: "R",
         category: "report",
         severity: report.severity,
+        status: report.status,
         coordinates: report.coordinates as [number, number],
         title: report.title,
         reportId: report.id,
@@ -363,11 +363,6 @@ export function DashboardShell({
   const floodMapSidebarReports = useMemo(
     () => floodMapFilteredReports.slice(0, 5),
     [floodMapFilteredReports],
-  );
-
-  const floodMapPreviewReport = useMemo(
-    () => floodMapReports.find((report) => report.id === floodMapPreviewReportId) ?? null,
-    [floodMapReports, floodMapPreviewReportId],
   );
 
   const floodMapSelectedReport = useMemo(
@@ -589,9 +584,6 @@ export function DashboardShell({
                   onSelectFilter={setFloodMapSelectedFilter}
                   loadingReports={floodMapLoadingReports}
                   reportLoadError={floodMapReportLoadError}
-                  previewReport={floodMapPreviewReport}
-                  onSelectReport={setFloodMapPreviewReportId}
-                  onClosePreview={() => setFloodMapPreviewReportId(null)}
                   onOpenReportDetails={(reportId) => {
                     setFloodMapSelectedReportId(reportId);
                     setFloodMapModalOpen(true);
