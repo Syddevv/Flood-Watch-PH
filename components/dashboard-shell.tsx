@@ -41,7 +41,10 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fetchWeatherOverview } from "@/lib/weather-client";
-import { createReportActionHeaders } from "@/lib/report-session";
+import {
+  createReportActionHeaders,
+  REPORT_ACTION_UNDO_WINDOW_MS,
+} from "@/lib/report-session";
 import { getSidebarWeatherOverview } from "@/lib/weather";
 import {
   hasValidCoordinates,
@@ -49,6 +52,15 @@ import {
   reportFilterOptions,
   type ReportFilterId,
 } from "@/components/flood-map";
+
+type FloodMapToastState = {
+  message: string;
+  tone: "success" | "error";
+  actionType?: "confirmed" | "resolved";
+  reportId?: string;
+  expiresAt?: number;
+  pending?: boolean;
+} | null;
 
 type DashboardShellProps = {
   pageMode?:
@@ -65,6 +77,74 @@ const EMPTY_WEATHER_OVERVIEW: WeatherOverviewData = {
   alerts: [],
   fetchedAt: "",
 };
+
+function FloodMapUndoToast({
+  toast,
+  onUndo,
+}: {
+  toast: Exclude<FloodMapToastState, null>;
+  onUndo: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!toast.expiresAt) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
+  }, [toast.expiresAt]);
+
+  const timeRemainingMs = toast.expiresAt
+    ? Math.max(0, toast.expiresAt - now)
+    : 0;
+  const undoAvailable =
+    Boolean(toast.actionType && toast.reportId && toast.expiresAt) &&
+    timeRemainingMs > 0;
+  const countdownSeconds = Math.ceil(timeRemainingMs / 1000);
+
+  return (
+    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[1300] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
+      <div
+        className={cn(
+          "pointer-events-auto w-full max-w-[560px] rounded-[14px] border px-4 py-3 text-[0.92rem] shadow-[var(--shadow-floating)] backdrop-blur-md",
+          toast.tone === "success"
+            ? "border-[rgba(34,197,94,0.28)] bg-[rgba(240,253,244,0.94)] text-[#166534]"
+            : "border-[rgba(239,68,68,0.28)] bg-[rgba(254,242,242,0.96)] text-[#991b1b]",
+        )}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>{toast.message}</div>
+          {undoAvailable ? (
+            <div className="flex items-center gap-3">
+              <div className="text-[0.78rem] font-medium opacity-75">
+                {countdownSeconds}s
+              </div>
+              <button
+                type="button"
+                onClick={onUndo}
+                disabled={toast.pending}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[0.78rem] font-semibold",
+                  toast.tone === "success"
+                    ? "border-[rgba(22,101,52,0.24)] bg-white/85 text-[#166534]"
+                    : "border-[rgba(153,27,27,0.24)] bg-white/85 text-[#991b1b]",
+                  toast.pending && "cursor-not-allowed opacity-60",
+                )}
+              >
+                {toast.pending ? "Undoing..." : "Undo"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getActiveItemFromPageMode(
   pageMode: NonNullable<DashboardShellProps["pageMode"]>,
@@ -119,6 +199,7 @@ export function DashboardShell({
   const [floodMapActionLoadingId, setFloodMapActionLoadingId] = useState<string | null>(null);
   const [floodMapConfirmedReportIds, setFloodMapConfirmedReportIds] = useState<Record<string, boolean>>({});
   const [floodMapResolvedReportIds, setFloodMapResolvedReportIds] = useState<Record<string, boolean>>({});
+  const [floodMapToast, setFloodMapToast] = useState<FloodMapToastState>(null);
   const [weatherOverview, setWeatherOverview] = useState<WeatherOverviewData>(EMPTY_WEATHER_OVERVIEW);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -148,6 +229,38 @@ export function DashboardShell({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!floodMapToast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () => {
+        setFloodMapToast((current) => {
+          if (!current) {
+            return current;
+          }
+
+          if (
+            current.reportId === floodMapToast.reportId &&
+            current.actionType === floodMapToast.actionType &&
+            current.expiresAt === floodMapToast.expiresAt &&
+            current.message === floodMapToast.message
+          ) {
+            return null;
+          }
+
+          return current;
+        });
+      },
+      floodMapToast.expiresAt
+        ? Math.max(0, floodMapToast.expiresAt - Date.now())
+        : 3200,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [floodMapToast]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -472,8 +585,22 @@ export function DashboardShell({
       }
 
       await applyUpdatedFloodMapReport(reportId, payload, "confirmed");
+      setFloodMapToast({
+        tone: "success",
+        message: "Report confirmed.",
+        actionType: "confirmed",
+        reportId,
+        expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
+      });
     } catch (error) {
       console.error("Failed to confirm report from flood map.", error);
+      setFloodMapToast({
+        tone: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to confirm this report right now.",
+      });
     } finally {
       setFloodMapActionLoadingId(null);
     }
@@ -498,10 +625,115 @@ export function DashboardShell({
       }
 
       await applyUpdatedFloodMapReport(reportId, payload, "resolved");
+      setFloodMapToast({
+        tone: "success",
+        message: "Water receded report submitted.",
+        actionType: "resolved",
+        reportId,
+        expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
+      });
     } catch (error) {
       console.error("Failed to resolve report from flood map.", error);
+      setFloodMapToast({
+        tone: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to submit a water receded report right now.",
+      });
     } finally {
       setFloodMapActionLoadingId(null);
+    }
+  }
+
+  async function handleUndoFloodMapAction() {
+    if (
+      !floodMapToast ||
+      !floodMapToast.actionType ||
+      !floodMapToast.reportId ||
+      !floodMapToast.expiresAt ||
+      floodMapToast.pending
+    ) {
+      return;
+    }
+
+    if (Date.now() >= floodMapToast.expiresAt) {
+      setFloodMapToast({
+        tone: "error",
+        message: "Undo window has expired.",
+      });
+      return;
+    }
+
+    const actionType = floodMapToast.actionType;
+    const reportId = floodMapToast.reportId;
+
+    setFloodMapToast((current) =>
+      current &&
+      current.actionType === actionType &&
+      current.reportId === reportId
+        ? {
+            ...current,
+            pending: true,
+          }
+        : current,
+    );
+
+    try {
+      const response = await fetch(
+        actionType === "confirmed"
+          ? `/api/reports/${reportId}/confirm`
+          : `/api/reports/${reportId}/resolve`,
+        {
+          method: "DELETE",
+          headers: createReportActionHeaders(),
+        },
+      );
+      const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error ?? "Unable to undo this action.");
+      }
+
+      const nextReport = mapReportToIncident(payload.data as ReportRecord);
+
+      setFloodMapReports((current) =>
+        current.map((report) => (report.id === reportId ? nextReport : report)),
+      );
+
+      if (actionType === "confirmed") {
+        setFloodMapConfirmedReportIds((current) => {
+          const next = { ...current };
+          delete next[reportId];
+          return next;
+        });
+      } else {
+        setFloodMapResolvedReportIds((current) => {
+          const next = { ...current };
+          delete next[reportId];
+          return next;
+        });
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(buildStoredActionKey(actionType, reportId));
+      }
+
+      setFloodMapToast({
+        tone: "success",
+        message:
+          actionType === "confirmed"
+            ? "Confirmation removed."
+            : "Water receded report removed.",
+      });
+    } catch (error) {
+      setFloodMapToast({
+        tone: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to undo this action.",
+      });
     }
   }
 
@@ -710,6 +942,10 @@ export function DashboardShell({
             }
           }}
         />
+      ) : null}
+
+      {isFloodMapView && floodMapToast ? (
+        <FloodMapUndoToast toast={floodMapToast} onUndo={handleUndoFloodMapAction} />
       ) : null}
     </div>
   );

@@ -51,7 +51,10 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
-import { createReportActionHeaders } from "@/lib/report-session";
+import {
+  createReportActionHeaders,
+  REPORT_ACTION_UNDO_WINDOW_MS,
+} from "@/lib/report-session";
 
 type FormState = {
   locationName: string;
@@ -70,6 +73,10 @@ type FormState = {
 type ToastState = {
   message: string;
   tone: "success" | "error";
+  actionType?: "confirmed" | "resolved";
+  reportId?: string;
+  expiresAt?: number;
+  pending?: boolean;
 } | null;
 
 const emptyFormState: FormState = {
@@ -91,6 +98,74 @@ const emptySubscribe = () => () => {};
 
 function getTodaySnapshot() {
   return new Date().toDateString();
+}
+
+function UndoToast({
+  toast,
+  onUndo,
+}: {
+  toast: Exclude<ToastState, null>;
+  onUndo: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!toast.expiresAt) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
+  }, [toast.expiresAt]);
+
+  const timeRemainingMs = toast.expiresAt
+    ? Math.max(0, toast.expiresAt - now)
+    : 0;
+  const undoAvailable =
+    Boolean(toast.actionType && toast.reportId && toast.expiresAt) &&
+    timeRemainingMs > 0;
+  const countdownSeconds = Math.ceil(timeRemainingMs / 1000);
+
+  return (
+    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[1300] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
+      <div
+        className={cn(
+          "pointer-events-auto w-full max-w-[560px] rounded-[14px] border px-4 py-3 text-[0.92rem] shadow-[var(--shadow-floating)] backdrop-blur-md",
+          toast.tone === "success"
+            ? "border-[rgba(34,197,94,0.28)] bg-[rgba(240,253,244,0.94)] text-[#166534]"
+            : "border-[rgba(239,68,68,0.28)] bg-[rgba(254,242,242,0.96)] text-[#991b1b]",
+        )}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>{toast.message}</div>
+          {undoAvailable ? (
+            <div className="flex items-center gap-3">
+              <div className="text-[0.78rem] font-medium opacity-75">
+                {countdownSeconds}s
+              </div>
+              <button
+                type="button"
+                onClick={onUndo}
+                disabled={toast.pending}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[0.78rem] font-semibold",
+                  toast.tone === "success"
+                    ? "border-[rgba(22,101,52,0.24)] bg-white/85 text-[#166534]"
+                    : "border-[rgba(153,27,27,0.24)] bg-white/85 text-[#991b1b]",
+                  toast.pending && "cursor-not-allowed opacity-60",
+                )}
+              >
+                {toast.pending ? "Undoing..." : "Undo"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function applyOptimisticReportAction(
@@ -452,9 +527,29 @@ export function IncidentReportsContent() {
       return;
     }
 
-    const timeout = window.setTimeout(() => {
-      setToast(null);
-    }, 3200);
+    const timeout = window.setTimeout(
+      () => {
+        setToast((current) => {
+          if (!current) {
+            return current;
+          }
+
+          if (
+            current.reportId === toast.reportId &&
+            current.actionType === toast.actionType &&
+            current.expiresAt === toast.expiresAt &&
+            current.message === toast.message
+          ) {
+            return null;
+          }
+
+          return current;
+        });
+      },
+      toast.expiresAt
+        ? Math.max(0, toast.expiresAt - Date.now())
+        : 3200,
+    );
 
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -584,13 +679,12 @@ export function IncidentReportsContent() {
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
         ),
       );
-      const nextStatus = mapReportToIncident(payload.data as ReportRecord).status;
       setToast({
         tone: "success",
-        message:
-          nextStatus === "Likely Receded" || nextStatus === "Resolved"
-            ? "This report is no longer active."
-            : "Report confirmed.",
+        message: "Report confirmed.",
+        actionType: "confirmed",
+        reportId,
+        expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
       });
     } catch (error) {
       console.error("Failed to confirm report.", error);
@@ -660,15 +754,12 @@ export function IncidentReportsContent() {
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
         ),
       );
-      const nextStatus = mapReportToIncident(payload.data as ReportRecord).status;
       setToast({
         tone: "success",
-        message:
-          nextStatus === "Resolved"
-            ? "This report is now resolved."
-            : nextStatus === "Likely Receded"
-              ? "This report is now likely receded."
-              : "Water receded report submitted.",
+        message: "Water receded report submitted.",
+        actionType: "resolved",
+        reportId,
+        expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
       });
     } catch (error) {
       console.error("Failed to resolve report.", error);
@@ -697,6 +788,97 @@ export function IncidentReportsContent() {
       });
     } finally {
       setActionLoadingId(null);
+    }
+  }
+
+  async function handleUndoAction() {
+    if (
+      !toast ||
+      !toast.actionType ||
+      !toast.reportId ||
+      !toast.expiresAt ||
+      toast.pending
+    ) {
+      return;
+    }
+
+    if (Date.now() >= toast.expiresAt) {
+      setToast({
+        tone: "error",
+        message: "Undo window has expired.",
+      });
+      return;
+    }
+
+    const actionType = toast.actionType;
+    const reportId = toast.reportId;
+
+    setToast((current) =>
+      current &&
+      current.actionType === actionType &&
+      current.reportId === reportId
+        ? {
+            ...current,
+            pending: true,
+          }
+        : current,
+    );
+
+    try {
+      const response = await fetch(
+        actionType === "confirmed"
+          ? `/api/reports/${reportId}/confirm`
+          : `/api/reports/${reportId}/resolve`,
+        {
+          method: "DELETE",
+          headers: createReportActionHeaders(),
+        },
+      );
+      const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error ?? "Unable to undo this action.");
+      }
+
+      setReports((current) =>
+        current.map((report) =>
+          report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
+        ),
+      );
+
+      if (actionType === "confirmed") {
+        setConfirmedReportIds((current) => {
+          const next = { ...current };
+          delete next[reportId];
+          return next;
+        });
+      } else {
+        setResolvedReportIds((current) => {
+          const next = { ...current };
+          delete next[reportId];
+          return next;
+        });
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(buildStoredActionKey(actionType, reportId));
+      }
+
+      setToast({
+        tone: "success",
+        message:
+          actionType === "confirmed"
+            ? "Confirmation removed."
+            : "Water receded report removed.",
+      });
+    } catch (error) {
+      setToast({
+        tone: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to undo this action.",
+      });
     }
   }
 
@@ -826,19 +1008,6 @@ export function IncidentReportsContent() {
               Submit flood, weather-related, and community hazard reports to help improve public awareness and situational monitoring.
             </p>
           </section>
-
-          {toast ? (
-            <div
-              className={cn(
-                "rounded-[14px] border px-4 py-3 text-[0.92rem]",
-                toast.tone === "success"
-                  ? "border-[rgba(34,197,94,0.28)] bg-[rgba(34,197,94,0.08)] text-[#166534]"
-                  : "border-[rgba(239,68,68,0.28)] bg-[rgba(239,68,68,0.08)] text-[#991b1b]",
-              )}
-            >
-              {toast.message}
-            </div>
-          ) : null}
 
           <section className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
             <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)]">
@@ -1225,6 +1394,8 @@ export function IncidentReportsContent() {
           }
         }}
       />
+
+      {toast ? <UndoToast toast={toast} onUndo={handleUndoAction} /> : null}
     </>
   );
 }

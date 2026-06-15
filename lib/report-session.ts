@@ -1,5 +1,6 @@
 export const REPORT_SESSION_STORAGE_KEY = "community_report_session_hash";
 export const REPORT_SESSION_HEADER = "x-report-session-hash";
+export const REPORT_ACTION_UNDO_WINDOW_MS = 30_000;
 
 function generateSessionHash() {
   if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
