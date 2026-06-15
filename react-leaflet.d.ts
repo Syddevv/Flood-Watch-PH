@@ -4,6 +4,7 @@ declare module "react-leaflet" {
   export const MapContainer: ComponentType<Record<string, unknown>>;
   export const Marker: ComponentType<Record<string, unknown>>;
   export const Polygon: ComponentType<Record<string, unknown>>;
+  export const Popup: ComponentType<Record<string, unknown>>;
   export const TileLayer: ComponentType<Record<string, unknown>>;
   export function useMap(): {
     flyTo: (

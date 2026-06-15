@@ -243,6 +243,10 @@ export function RightInfoPanel({
           <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
             NEARBY EVACUATION CENTERS
           </div>
+          <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
+            Static shelter references for public planning. Confirm final availability with
+            your LGU or barangay before traveling.
+          </p>
           <div className="mt-3 space-y-3">
             {centers.map((center) => (
               <EvacuationCenterCard key={center.id} center={center} />

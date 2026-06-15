@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
+import { EVACUATION_CENTERS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 function getSeverityRank(severity: string) {
@@ -61,41 +62,24 @@ export async function GET(request: Request) {
       category: parsedFilters.filters.category,
     });
 
-    const [reports, evacuationCenters] = await Promise.all([
-      prisma.floodReport.findMany({
-        where,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          category: true,
-          severity: true,
-          status: true,
-          locationName: true,
-          latitude: true,
-          longitude: true,
-          confirmationCount: true,
-          resolvedCount: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.evacuationCenter.findMany({
-        select: {
-          id: true,
-          name: true,
-          address: true,
-          city: true,
-          province: true,
-          latitude: true,
-          longitude: true,
-          contactNumber: true,
-          facilities: true,
-          status: true,
-          updatedAt: true,
-        },
-      }),
-    ]);
+    const reports = await prisma.floodReport.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        severity: true,
+        status: true,
+        locationName: true,
+        latitude: true,
+        longitude: true,
+        confirmationCount: true,
+        resolvedCount: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     const mappedReports = reports
       .map((report) => ({
@@ -117,14 +101,15 @@ export async function GET(request: Request) {
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
 
-    const mappedEvacuationCenters = evacuationCenters.map((center) => ({
+    const mappedEvacuationCenters = EVACUATION_CENTERS.map((center) => ({
       ...center,
       type: "evacuation_center" as const,
+      updatedAt: center.lastVerifiedAt,
     }));
 
     const lastUpdatedCandidates = [
       ...mappedReports.map((report) => report.updatedAt.getTime()),
-      ...mappedEvacuationCenters.map((center) => center.updatedAt.getTime()),
+      ...mappedEvacuationCenters.map((center) => new Date(center.updatedAt).getTime()),
     ];
 
     return Response.json({

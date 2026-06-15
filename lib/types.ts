@@ -53,26 +53,38 @@ export type WeatherLocationResult = {
   fetchedAt: string;
 };
 
-export type EvacuationCenter = {
+export type EvacuationCenterStatus =
+  | "Available"
+  | "Standby"
+  | "Needs Verification"
+  | "Temporarily Unavailable";
+
+export type EvacuationFacility =
+  | "PWD Accessible"
+  | "Medical Support"
+  | "Drinking Water"
+  | "Restrooms"
+  | "Pet Friendly"
+  | "Parking";
+
+export type EvacuationCenterResource = {
   id: string;
   name: string;
-  distance: string;
-  status: string;
-  coordinates: [number, number];
+  address: string;
+  barangay: string;
+  cityOrMunicipality: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+  status: EvacuationCenterStatus;
+  facilities: EvacuationFacility[];
+  contactNumber?: string;
+  notes?: string;
+  lastVerifiedAt: string;
+  estimatedCapacity?: string;
 };
 
-export type EvacuationDirectoryCenter = {
-  id: string;
-  name: string;
-  city: string;
-  address: string;
-  risk: AlertSeverity;
-  distanceKm: number;
-  travelMinutesCar: number;
-  travelMinutesWalk: number;
-  description: string;
-  source: string;
-};
+export type EvacuationCenter = EvacuationCenterResource;
 
 export type EmergencyHotline = {
   id: string;
@@ -99,6 +111,31 @@ export type EmergencyHotline = {
   >;
   serviceDescription: string;
   statusBadges: string[];
+};
+
+export type EmergencyContactCategory =
+  | "Disaster Coordination"
+  | "Weather Updates"
+  | "Local Response"
+  | "Barangay Hotline"
+  | "Police"
+  | "Fire"
+  | "Ambulance";
+
+export type EmergencyContactResource = {
+  id: string;
+  name: string;
+  category: EmergencyContactCategory;
+  phone?: string;
+  coverage?: string;
+  note: string;
+  isSample: boolean;
+  callHref?: string;
+};
+
+export type SafetyChecklistItem = {
+  id: string;
+  text: string;
 };
 
 export type IncidentReportPhoto = {
@@ -164,6 +201,17 @@ export type ReportMapMarker = {
   title: string;
   reportId: string;
   report: IncidentReport;
+};
+
+export type EvacuationCenterMapMarker = {
+  id: string;
+  label: string;
+  category: "center";
+  coordinates: [number, number];
+  title: string;
+  centerId: string;
+  center: EvacuationCenterResource;
+  status: EvacuationCenterStatus;
 };
 
 export type RiskPolygon = {

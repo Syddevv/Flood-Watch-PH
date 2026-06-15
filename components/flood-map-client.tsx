@@ -2,14 +2,26 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Layers3, LocateFixed, Map, Satellite } from "lucide-react";
 import L from "leaflet";
-import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polygon,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
 
+import {
+  buildCenterDetailsHref,
+  buildDirectionsUrl,
+  EVACUATION_STATUS_META,
+} from "@/lib/emergency-resources";
 import type {
+  EvacuationCenterMapMarker,
   LegendItem,
-  MapMarker,
   ReportMapMarker,
   RiskPolygon,
   Theme,
@@ -34,28 +46,35 @@ const severityColorMap = {
   severe: "#ef4444",
 };
 
-function iconForMarker(marker: MapMarker) {
-  const color =
-    marker.category === "alert"
-      ? severityColorMap[marker.severity ?? "moderate"]
-      : marker.category === "report"
-      ? severityColorMap[marker.severity ?? "moderate"]
-      : marker.category === "center"
-        ? "#22c55e"
-        : "#2563eb";
+type CenterMarkerInstance = {
+  openPopup: () => void;
+  getLatLng: () => { lat: number; lng: number };
+  _map?: {
+    flyTo: (
+      center: { lat: number; lng: number },
+      zoom: number,
+      options?: Record<string, unknown>,
+    ) => void;
+  };
+};
 
-  const ring =
-    marker.category === "hotline"
-      ? "rgba(37,99,235,0.25)"
-      : marker.category === "report"
-        ? "rgba(37,99,235,0.18)"
-        : "rgba(15,23,42,0.22)";
+function iconForReportMarker(marker: ReportMapMarker) {
+  return L.divIcon({
+    className: "floodwatch-marker-shell",
+    html: `<div class="floodwatch-marker" style="--marker-color:${severityColorMap[marker.severity]};--marker-ring:rgba(37,99,235,0.18)">R</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+function iconForCenterMarker(marker: EvacuationCenterMapMarker) {
+  const statusMeta = EVACUATION_STATUS_META[marker.status];
 
   return L.divIcon({
     className: "floodwatch-marker-shell",
-    html: `<div class="floodwatch-marker" style="--marker-color:${color};--marker-ring:${ring}">${marker.label}</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    html: `<div class="floodwatch-marker" style="--marker-color:${statusMeta.markerColor};--marker-ring:${statusMeta.markerRing}">E</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
   });
 }
 
@@ -108,20 +127,40 @@ function MapZoomControls({
 type FloodMapClientProps = {
   theme: Theme;
   reportMarkers: ReportMapMarker[];
+  evacuationCenterMarkers: EvacuationCenterMapMarker[];
   polygons: RiskPolygon[];
   legend: LegendItem[];
   onSelectReport: (reportId: string) => void;
+  focusedCenterId?: string | null;
 };
 
 export function FloodMapClient({
   theme,
   reportMarkers,
+  evacuationCenterMarkers,
   polygons,
   legend,
   onSelectReport,
+  focusedCenterId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
+  const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
   const tileConfig = satelliteMode ? SATELLITE_TILES : STREET_TILES;
+
+  useEffect(() => {
+    if (!focusedCenterId) {
+      return;
+    }
+
+    const targetMarker = centerMarkerRefs.current[focusedCenterId];
+    if (!targetMarker) {
+      return;
+    }
+
+    const targetLatLng = targetMarker.getLatLng();
+    targetMarker.openPopup();
+    targetMarker._map?.flyTo(targetLatLng, 13, { duration: 1.1 });
+  }, [focusedCenterId, evacuationCenterMarkers]);
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden">
@@ -156,12 +195,68 @@ export function FloodMapClient({
           <Marker
             key={marker.id}
             position={marker.coordinates}
-            icon={iconForMarker(marker)}
+            icon={iconForReportMarker(marker)}
             title={marker.title}
             eventHandlers={{
               click: () => onSelectReport(marker.reportId),
             }}
           />
+        ))}
+
+        {evacuationCenterMarkers.map((marker) => (
+          <Marker
+            key={marker.id}
+            position={marker.coordinates}
+            icon={iconForCenterMarker(marker)}
+            title={marker.title}
+            ref={(instance: CenterMarkerInstance | null) => {
+              centerMarkerRefs.current[marker.centerId] = instance;
+            }}
+          >
+            <Popup>
+              <div className="w-[240px] space-y-3">
+                <div>
+                  <div className="text-[0.98rem] font-semibold text-slate-900">
+                    {marker.center.name}
+                  </div>
+                  <div className="mt-1 text-[0.8rem] text-slate-600">
+                    {marker.center.address}
+                  </div>
+                  <div className="mt-1 text-[0.75rem] font-medium text-slate-500">
+                    {marker.center.status}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {marker.center.facilities.slice(0, 4).map((facility) => (
+                    <span
+                      key={facility}
+                      className="rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-medium text-slate-700"
+                    >
+                      {facility}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <a
+                    href={buildCenterDetailsHref(marker.center.id)}
+                    className="inline-flex h-9 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 text-[0.75rem] font-semibold text-slate-700 no-underline"
+                  >
+                    View Details
+                  </a>
+                  <a
+                    href={buildDirectionsUrl(marker.center)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold !text-white no-underline shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                  >
+                    Get Directions
+                  </a>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
         ))}
 
         <MapZoomControls
@@ -172,18 +267,26 @@ export function FloodMapClient({
 
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
-      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[196px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-4 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
+      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[216px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-4 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
         <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          <div className="text-center">MAP LEGEND MARKER</div>
+          <div className="text-center">MAP MARKERS</div>
         </div>
-        <div className="mt-2 flex items-center justify-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
-          <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
-            R
-          </span>
-          <span className="whitespace-nowrap">Community Report</span>
+        <div className="mt-2 space-y-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
+              R
+            </span>
+            <span>Flood Report</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(34,197,94,0.16)]">
+              E
+            </span>
+            <span>Evacuation Center</span>
+          </div>
         </div>
         <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          SEVERITY
+          REPORT SEVERITY
         </div>
         <div className="mt-1 space-y-1.25">
           {legend.map((item) => (

@@ -32,7 +32,13 @@ import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
-import type { IncidentReport, ReportMapMarker, Theme, WeatherOverviewData } from "@/lib/types";
+import type {
+  EvacuationCenterMapMarker,
+  IncidentReport,
+  ReportMapMarker,
+  Theme,
+  WeatherOverviewData,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fetchWeatherOverview } from "@/lib/weather-client";
 import { createReportActionHeaders } from "@/lib/report-session";
@@ -105,6 +111,8 @@ export function DashboardShell({
   const [floodMapSelectedFilter, setFloodMapSelectedFilter] = useState<ReportFilterId>(
     reportFilterOptions[0].id,
   );
+  const [floodMapShowReports, setFloodMapShowReports] = useState(true);
+  const [floodMapShowEvacuationCenters, setFloodMapShowEvacuationCenters] = useState(true);
   const [floodMapShowRiskOverlays, setFloodMapShowRiskOverlays] = useState(false);
   const [floodMapPreviewReportId, setFloodMapPreviewReportId] = useState<string | null>(null);
   const [floodMapSelectedReportId, setFloodMapSelectedReportId] = useState<string | null>(null);
@@ -115,6 +123,7 @@ export function DashboardShell({
   const [weatherOverview, setWeatherOverview] = useState<WeatherOverviewData>(EMPTY_WEATHER_OVERVIEW);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [focusedCenterId, setFocusedCenterId] = useState<string | null>(null);
 
   useEffect(() => {
     let frameId = 0;
@@ -145,6 +154,20 @@ export function DashboardShell({
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setFocusedCenterId(new URLSearchParams(window.location.search).get("center"));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [pageMode]);
 
   useEffect(() => {
     if (isContentOnlyView && !isWeatherMonitoringView) {
@@ -322,6 +345,21 @@ export function DashboardShell({
     [floodMapFilteredReports],
   );
 
+  const floodMapEvacuationCenterMarkers = useMemo<EvacuationCenterMapMarker[]>(
+    () =>
+      EVACUATION_CENTERS.map((center) => ({
+        id: `center-marker-${center.id}`,
+        label: "E",
+        category: "center",
+        coordinates: [center.latitude, center.longitude],
+        title: center.name,
+        centerId: center.id,
+        center,
+        status: center.status,
+      })),
+    [],
+  );
+
   const floodMapSidebarReports = useMemo(
     () => floodMapFilteredReports.slice(0, 5),
     [floodMapFilteredReports],
@@ -341,6 +379,8 @@ export function DashboardShell({
     () => getSidebarWeatherOverview(weatherOverview),
     [weatherOverview],
   );
+  const effectiveShowEvacuationCenters =
+    floodMapShowEvacuationCenters || Boolean(focusedCenterId);
 
   const toggleTheme = () => {
     setTheme((currentTheme) => {
@@ -529,6 +569,14 @@ export function DashboardShell({
                     setFloodMapShowRiskOverlays((current) => !current)
                   }
                   reportMarkers={floodMapReportMarkers}
+                  evacuationCenterMarkers={floodMapEvacuationCenterMarkers}
+                  showFloodReports={floodMapShowReports}
+                  showEvacuationCenters={effectiveShowEvacuationCenters}
+                  onToggleFloodReports={() => setFloodMapShowReports((current) => !current)}
+                  onToggleEvacuationCenters={() =>
+                    setFloodMapShowEvacuationCenters((current) => !current)
+                  }
+                  focusedCenterId={focusedCenterId}
                   selectedFilter={floodMapSelectedFilter}
                   onSelectFilter={setFloodMapSelectedFilter}
                   loadingReports={floodMapLoadingReports}
@@ -576,7 +624,7 @@ export function DashboardShell({
               weatherError={weatherError}
               alertsLoading={weatherLoading}
               alertsError={weatherError}
-              centers={EVACUATION_CENTERS}
+              centers={EVACUATION_CENTERS.slice(0, 4)}
               hotlines={EMERGENCY_HOTLINES}
               hotlineNotice={HOTLINE_NOTICE}
               timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
@@ -610,7 +658,7 @@ export function DashboardShell({
           weatherError={weatherError}
           alertsLoading={weatherLoading}
           alertsError={weatherError}
-          centers={EVACUATION_CENTERS}
+          centers={EVACUATION_CENTERS.slice(0, 4)}
           hotlines={EMERGENCY_HOTLINES}
           hotlineNotice={HOTLINE_NOTICE}
           timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
