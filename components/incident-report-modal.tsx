@@ -202,6 +202,14 @@ export function IncidentReportModal({
               </div>
               <div>
                 <div className="text-[0.78rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                  LAST ACTIVITY
+                </div>
+                <div className="mt-1.5 text-[0.95rem] text-[var(--color-foreground)]">
+                  {report.lastActivityAgo ?? report.reportedAgo}
+                </div>
+              </div>
+              <div>
+                <div className="text-[0.78rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
                   REPORTER
                 </div>
                 <div className="mt-1.5 text-[0.95rem] text-[var(--color-foreground)]">
@@ -226,6 +234,11 @@ export function IncidentReportModal({
                   <span>{formatCountLabel(report.resolvedConfirmations)}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5 space-y-2 rounded-[12px] border border-[rgba(148,163,184,0.18)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.84rem] text-[var(--color-muted-foreground)]">
+              <p>This report may be hidden after it is resolved or inactive for some time.</p>
+              <p>Water receded reports are community-submitted and may need verification.</p>
             </div>
 
             {report.resolvedAgo ? (

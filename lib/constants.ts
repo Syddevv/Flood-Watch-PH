@@ -545,10 +545,11 @@ export const REPORT_SEVERITIES = [
 ] as const;
 
 export const REPORT_STATUSES = [
-  "Active",
-  "Monitoring",
-  "Likely Resolved",
+  "Needs More Confirmation",
+  "Confirmed by Community",
+  "Likely Receded",
   "Resolved",
+  "Archived",
 ] as const;
 
 export const REPORT_SOURCE_TYPES = [

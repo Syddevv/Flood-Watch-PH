@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
   Check,
@@ -28,9 +28,13 @@ import {
   validateReportImageFile,
 } from "@/lib/report-image-validation";
 import {
-  deriveCommunityStatus,
   formatCountLabel,
 } from "@/lib/reporting";
+import {
+  deriveReportLifecycleStatus,
+  isActiveLifecycleStatus,
+  isRecededLifecycleStatus,
+} from "@/lib/report-lifecycle";
 import type { IncidentReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
@@ -83,6 +87,11 @@ const emptyFormState: FormState = {
 };
 
 const reportImageAcceptValue = getReportImageAcceptValue();
+const emptySubscribe = () => () => {};
+
+function getTodaySnapshot() {
+  return new Date().toDateString();
+}
 
 function applyOptimisticReportAction(
   report: IncidentReport,
@@ -92,23 +101,38 @@ function applyOptimisticReportAction(
     actionType === "confirmed" ? report.confirmations + 1 : report.confirmations;
   const nextResolvedCount =
     actionType === "resolved" ? report.resolvedConfirmations + 1 : report.resolvedConfirmations;
-  const nextStatus = deriveCommunityStatus({
+  const now = new Date().toISOString();
+  const nextStatus = deriveReportLifecycleStatus({
     status: report.status,
+    severity: report.severity,
     confirmationCount: nextConfirmationCount,
     resolvedCount: nextResolvedCount,
+    createdAt: report.createdAt ?? now,
+    updatedAt: now,
+    lastActivityAt: now,
     resolvedAt:
-      actionType === "resolved" && nextResolvedCount >= 3 ? new Date().toISOString() : null,
+      actionType === "resolved" && nextResolvedCount >= 3
+        ? report.resolvedAt ?? now
+        : report.resolvedAt ?? null,
+    archivedAt: report.archivedAt ?? null,
   });
 
   return {
     ...report,
     confirmations: nextConfirmationCount,
     resolvedConfirmations: nextResolvedCount,
-    status: nextStatus,
+    status: nextStatus === "Archived" ? "Resolved" : nextStatus,
+    updatedAt: now,
+    lastActivityAt: now,
+    lastActivityAgo: "Just now",
+    resolvedAt:
+      actionType === "resolved" && nextResolvedCount >= 3
+        ? report.resolvedAt ?? now
+        : report.resolvedAt,
     resolvedAgo:
       nextStatus === "Resolved"
         ? "Resolved just now"
-        : nextStatus === "Likely Resolved"
+        : nextStatus === "Likely Receded"
           ? "Likely receded just now"
           : report.resolvedAgo,
   };
@@ -162,7 +186,7 @@ function ReportCard({
 }) {
   const statusPresentation = getStatusPresentation(report.status);
   const isResolved = report.status === "Resolved";
-  const isLikelyResolved = report.status === "Likely Resolved";
+  const isLikelyReceded = report.status === "Likely Receded";
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
 
@@ -172,7 +196,7 @@ function ReportCard({
         "w-full rounded-[18px] border px-3 py-2.5 shadow-[var(--shadow-soft)] transition-opacity",
         isResolved
           ? "border-[rgba(148,163,184,0.22)] bg-[rgba(148,163,184,0.08)] opacity-70"
-          : isLikelyResolved
+          : isLikelyReceded
             ? "border-[rgba(71,85,105,0.26)] bg-[rgba(71,85,105,0.08)]"
             : "border-[var(--color-border)] bg-[var(--color-surface)]",
       )}
@@ -304,7 +328,7 @@ export function IncidentReportsContent() {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
-  const [today] = useState(() => new Date().toDateString());
+  const today = useSyncExternalStore(emptySubscribe, getTodaySnapshot, () => null);
   const selectedPhoto = formState.photos[0] ?? null;
   const photoPreviewUrl = useMemo(
     () => (selectedPhoto ? URL.createObjectURL(selectedPhoto) : null),
@@ -441,25 +465,21 @@ export function IncidentReportsContent() {
   );
 
   const activeReports = useMemo(
-    () =>
-      reports.filter(
-        (report) => report.status !== "Likely Resolved" && report.status !== "Resolved",
-      ),
+    () => reports.filter((report) => isActiveLifecycleStatus(report.status)),
     [reports],
   );
 
   const resolvedReports = useMemo(
-    () =>
-      reports.filter(
-        (report) =>
-          report.status === "Likely Resolved" || report.status === "Resolved",
-      ),
+    () => reports.filter((report) => isRecededLifecycleStatus(report.status)),
     [reports],
   );
 
   const activityStats = useMemo(() => {
     const reportsToday = reports.filter(
-      (report) => report.createdAt && new Date(report.createdAt).toDateString() === today,
+      (report) =>
+        today !== null &&
+        report.createdAt &&
+        new Date(report.createdAt).toDateString() === today,
     ).length;
     const activeReportedAreas = activeReports.length;
     const communityConfirmations = reports.reduce(
@@ -564,16 +584,20 @@ export function IncidentReportsContent() {
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
         ),
       );
+      const nextStatus = mapReportToIncident(payload.data as ReportRecord).status;
       setToast({
         tone: "success",
-        message: "Report confirmed. Thank you for helping the community.",
+        message:
+          nextStatus === "Likely Receded" || nextStatus === "Resolved"
+            ? "This report is no longer active."
+            : "Report confirmed.",
       });
     } catch (error) {
       console.error("Failed to confirm report.", error);
       setReports(previousReports);
       if (
         error instanceof Error &&
-        error.message === "You already confirmed this report from this browser session."
+        error.message === "This report has already been updated from this browser."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
@@ -636,16 +660,22 @@ export function IncidentReportsContent() {
           report.id === reportId ? mapReportToIncident(payload.data as ReportRecord) : report,
         ),
       );
+      const nextStatus = mapReportToIncident(payload.data as ReportRecord).status;
       setToast({
         tone: "success",
-        message: "Water receded report submitted. Thank you for the update.",
+        message:
+          nextStatus === "Resolved"
+            ? "This report is now resolved."
+            : nextStatus === "Likely Receded"
+              ? "This report is now likely receded."
+              : "Water receded report submitted.",
       });
     } catch (error) {
       console.error("Failed to resolve report.", error);
       setReports(previousReports);
       if (
         error instanceof Error &&
-        error.message === "You already reported the water receded from this browser session."
+        error.message === "This report has already been updated from this browser."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("resolved", reportId), "true");
@@ -1099,6 +1129,9 @@ export function IncidentReportsContent() {
                 </div>
                 <p className="mt-3 text-[0.9rem] leading-7 text-[var(--color-primary)]">
                   Reports are submitted by the public and may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
+                </p>
+                <p className="mt-2 text-[0.8rem] text-[var(--color-muted-foreground)]">
+                  Community reports may be automatically hidden after they are resolved or inactive for some time.
                 </p>
               </div>
 

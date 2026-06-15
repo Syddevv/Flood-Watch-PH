@@ -49,6 +49,11 @@ const emergencyContactNames = [
 
 async function main() {
   await prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const ninetyMinutesAgo = new Date(now.getTime() - 90 * 60 * 1000);
+    const fortyMinutesAgo = new Date(now.getTime() - 40 * 60 * 1000);
+
     await tx.floodReport.deleteMany({
       where: {
         title: {
@@ -65,12 +70,14 @@ async function main() {
             "Water levels are rising and low-lying communities should stay alert.",
           category: "Overflowing River",
           severity: "Critical",
-          status: "Active",
+          status: "Confirmed by Community",
           locationName: "Marikina River Basin",
           latitude: 14.6407,
           longitude: 121.1029,
           sourceType: "System",
           confirmationCount: 12,
+          lastActivityAt: fortyMinutesAgo,
+          createdAt: threeHoursAgo,
         },
         {
           title: seedReportTitles[1],
@@ -78,26 +85,30 @@ async function main() {
             "Road-level flooding reported near major routes. Avoid the area if possible.",
           category: "Flood",
           severity: "High",
-          status: "Active",
+          status: "Confirmed by Community",
           locationName: "Pasig - Cainta Area",
           latitude: 14.5869,
           longitude: 121.1038,
           sourceType: "Community",
           reportedByName: "Barangay Response Volunteer",
           confirmationCount: 7,
+          lastActivityAt: ninetyMinutesAgo,
+          createdAt: threeHoursAgo,
         },
         {
           title: seedReportTitles[2],
           description: "Street-level flooding reported. Drive with caution.",
           category: "Road Blocked",
           severity: "Moderate",
-          status: "Monitoring",
+          status: "Needs More Confirmation",
           locationName: "Quezon City North",
           latitude: 14.7004,
           longitude: 121.0744,
           sourceType: "Community",
           reportedByName: "Community Watch",
           confirmationCount: 3,
+          lastActivityAt: now,
+          createdAt: ninetyMinutesAgo,
         },
       ],
     });

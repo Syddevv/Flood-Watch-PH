@@ -1,3 +1,8 @@
+import {
+  deriveReportLifecycleStatus,
+  type ReportLifecycleStatus,
+} from "@/lib/report-lifecycle";
+
 const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   Flood: "Flooding",
   "Road Blocked": "Flooded Road",
@@ -44,31 +49,42 @@ export function getReportSeverityTone(severity: string) {
 
 export function deriveCommunityStatus(report: {
   status: string;
+  severity?: string;
   confirmationCount: number;
   resolvedCount: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  lastActivityAt?: Date | string | null;
   resolvedAt: Date | string | null;
+  archivedAt?: Date | string | null;
 }) {
-  const isResolved = report.status === "Resolved" || Boolean(report.resolvedAt);
-  const isLikelyResolved =
-    report.status === "Likely Resolved" || report.resolvedCount >= 2;
+  const derivedStatus = deriveReportLifecycleStatus({
+    status: report.status,
+    severity: report.severity ?? "Low",
+    confirmationCount: report.confirmationCount,
+    resolvedCount: report.resolvedCount,
+    createdAt: report.createdAt ?? new Date(),
+    updatedAt: report.updatedAt ?? report.createdAt ?? new Date(),
+    lastActivityAt: report.lastActivityAt ?? report.updatedAt ?? report.createdAt ?? null,
+    resolvedAt: report.resolvedAt,
+    archivedAt: report.archivedAt ?? null,
+  });
 
-  if (isResolved) {
-    return "Resolved";
-  }
+  return derivedStatus === "Archived" ? "Resolved" : derivedStatus;
+}
 
-  if (report.resolvedCount >= 3) {
-    return "Resolved";
-  }
-
-  if (isLikelyResolved) {
-    return "Likely Resolved";
-  }
-
-  if (report.confirmationCount >= 2) {
-    return "Confirmed by Community";
-  }
-
-  return "Needs More Confirmation";
+export function getPublicReportLifecycleStatus(report: {
+  status: string;
+  severity: string;
+  confirmationCount: number;
+  resolvedCount: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  lastActivityAt?: Date | string | null;
+  resolvedAt: Date | string | null;
+  archivedAt?: Date | string | null;
+}): ReportLifecycleStatus {
+  return deriveReportLifecycleStatus(report);
 }
 
 export function getSourceLabel(sourceType: string) {

@@ -1,4 +1,8 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import {
+  deriveReportLifecycleStatus,
+  getLifecyclePersistencePatch,
+} from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
@@ -21,10 +25,15 @@ export async function POST(request: Request, context: RouteContext) {
       where: { id },
       select: {
         id: true,
+        severity: true,
         status: true,
         confirmationCount: true,
         resolvedCount: true,
+        createdAt: true,
+        updatedAt: true,
+        lastActivityAt: true,
         resolvedAt: true,
+        archivedAt: true,
       },
     });
 
@@ -32,11 +41,24 @@ export async function POST(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (report.status === "Resolved" || report.resolvedAt) {
-      return errorResponse("Flood reports already marked as resolved can no longer be confirmed.", 400);
+    const currentLifecycleStatus = deriveReportLifecycleStatus(report);
+    if (currentLifecycleStatus === "Archived") {
+      return errorResponse("This report is no longer active.", 400);
+    }
+
+    if (currentLifecycleStatus === "Resolved") {
+      return errorResponse("This report is no longer active.", 400);
     }
 
     const updatedReport = await prisma.$transaction(async (tx) => {
+      const lifecyclePatch = getLifecyclePersistencePatch(report);
+      if (Object.keys(lifecyclePatch).length > 0) {
+        await tx.floodReport.update({
+          where: { id },
+          data: lifecyclePatch,
+        });
+      }
+
       const existingConfirmation = await tx.reportConfirmation.findFirst({
         where: {
           reportId: id,
@@ -57,20 +79,31 @@ export async function POST(request: Request, context: RouteContext) {
         },
       });
 
-      return tx.floodReport.update({
+      const nextReport = await tx.floodReport.update({
         where: { id },
         data: {
           confirmationCount: {
             increment: 1,
           },
+          lastActivityAt: new Date(),
         },
+      });
+
+      const nextPatch = getLifecyclePersistencePatch(nextReport);
+      if (Object.keys(nextPatch).length === 0) {
+        return nextReport;
+      }
+
+      return tx.floodReport.update({
+        where: { id },
+        data: nextPatch,
       });
     });
 
     return successResponse(updatedReport);
   } catch (error) {
     if (error instanceof Error && error.message === "DUPLICATE_CONFIRMED_ACTION") {
-      return errorResponse("You already confirmed this report from this browser session.", 409);
+      return errorResponse("This report has already been updated from this browser.", 409);
     }
 
     console.error("Failed to confirm report.", error);

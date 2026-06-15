@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Building2, Check, ChevronDown, ChevronUp, Clock3, ThumbsUp, X } from "lucide-react";
 import { useState } from "react";
 
+import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
 import { formatCountLabel } from "@/lib/reporting";
 import {
   getStatusPresentation,
@@ -36,7 +37,7 @@ export const reportFilterOptions = [
   { id: "active", label: "Active Reports" },
   { id: "all", label: "All Reports" },
   { id: "confirmed", label: "Confirmed by Community" },
-  { id: "likely-resolved", label: "Likely Receded" },
+  { id: "likely-receded", label: "Likely Receded" },
   { id: "resolved", label: "Resolved" },
   { id: "critical-high", label: "Critical / High Severity" },
 ] as const;
@@ -58,15 +59,15 @@ export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
   }
 
   if (filter === "active") {
-    return report.status !== "Resolved";
+    return isActiveLifecycleStatus(report.status);
   }
 
   if (filter === "confirmed") {
     return report.status === "Confirmed by Community";
   }
 
-  if (filter === "likely-resolved") {
-    return report.status === "Likely Resolved";
+  if (filter === "likely-receded") {
+    return report.status === "Likely Receded";
   }
 
   if (filter === "resolved") {

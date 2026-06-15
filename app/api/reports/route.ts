@@ -8,6 +8,12 @@ import {
   trimToUndefined,
 } from "@/lib/api-utils";
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
+import {
+  getLifecyclePersistencePatch,
+  isVisiblePublicLifecycleStatus,
+  matchesLifecycleFilter,
+  type ReportLifecycleStatus,
+} from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { validateReportImageFile } from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
@@ -20,15 +26,35 @@ import {
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
+type ReportListRecord = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  severity: string;
+  status: string;
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  imageUrl: string | null;
+  reportedByName: string | null;
+  sourceType: "Community" | "Official" | "System";
+  confirmationCount: number;
+  resolvedCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  lastActivityAt: Date;
+  resolvedAt: Date | null;
+  archivedAt: Date | null;
+};
+
 function buildReportWhereClause(filters: {
-  status?: string;
   severity?: string;
   category?: string;
   sourceType?: string;
   search?: string;
 }): Prisma.FloodReportWhereInput {
   return {
-    ...(filters.status ? { status: filters.status } : {}),
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.category ? { category: filters.category } : {}),
     ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
@@ -44,6 +70,23 @@ function buildReportWhereClause(filters: {
   };
 }
 
+async function reconcileReportLifecycle(report: ReportListRecord) {
+  const now = new Date();
+  const patch = getLifecyclePersistencePatch(report, now);
+
+  if (Object.keys(patch).length === 0) {
+    return {
+      ...report,
+      status: report.status as ReportLifecycleStatus,
+    };
+  }
+
+  return prisma.floodReport.update({
+    where: { id: report.id },
+    data: patch,
+  });
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -53,26 +96,44 @@ export async function GET(request: Request) {
       return errorResponse(parsedFilters.error, 400);
     }
 
+    const includeArchived = searchParams.get("includeArchived") === "true";
     const page = parsePositiveInteger(searchParams.get("page"), 1);
     const limit = clampLimit(
       parsePositiveInteger(searchParams.get("limit"), DEFAULT_LIMIT),
       MAX_LIMIT,
     );
-    const where = buildReportWhereClause(parsedFilters.filters);
-    const skip = (page - 1) * limit;
+    const where = buildReportWhereClause({
+      severity: parsedFilters.filters.severity,
+      category: parsedFilters.filters.category,
+      sourceType: parsedFilters.filters.sourceType,
+      search: parsedFilters.filters.search,
+    });
 
-    const [reports, total] = await Promise.all([
-      prisma.floodReport.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.floodReport.count({ where }),
-    ]);
+    const reports = await prisma.floodReport.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const reconciledReports = await Promise.all(
+      reports.map((report) => reconcileReportLifecycle(report as ReportListRecord)),
+    );
+
+    const filteredReports = reconciledReports.filter((report) => {
+      const lifecycleStatus = report.status as ReportLifecycleStatus;
+
+      if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+        return false;
+      }
+
+      return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
+    });
+
+    const total = filteredReports.length;
+    const skip = (page - 1) * limit;
+    const paginatedReports = filteredReports.slice(skip, skip + limit);
 
     return Response.json({
-      data: reports,
+      data: paginatedReports,
       pagination: {
         page,
         limit,
@@ -175,7 +236,7 @@ export async function POST(request: Request) {
         description,
         category,
         severity,
-        status: "Active",
+        status: "Needs More Confirmation",
         locationName,
         latitude,
         longitude,
@@ -184,6 +245,7 @@ export async function POST(request: Request) {
         sourceType: "Community",
         confirmationCount: 0,
         resolvedCount: 0,
+        lastActivityAt: new Date(),
       },
     });
 

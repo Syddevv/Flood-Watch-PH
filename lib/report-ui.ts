@@ -40,7 +40,7 @@ export function getStatusPresentation(status: IncidentReportStatus) {
     };
   }
 
-  if (status === "Likely Resolved") {
+  if (status === "Likely Receded") {
     return {
       dotClassName: "bg-[#475569]",
       textClassName: "text-[#475569]",
@@ -84,9 +84,14 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
   const severityTone = getReportSeverityTone(report.severity);
   const derivedStatus = deriveCommunityStatus({
     status: report.status,
+    severity: report.severity,
     confirmationCount: report.confirmationCount,
     resolvedCount: report.resolvedCount,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    lastActivityAt: report.lastActivityAt,
     resolvedAt: report.resolvedAt,
+    archivedAt: report.archivedAt,
   });
 
   return {
@@ -100,14 +105,19 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     status: derivedStatus,
     description: report.description,
     createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    lastActivityAt: report.lastActivityAt,
+    archivedAt: report.archivedAt,
+    resolvedAt: report.resolvedAt,
     reportedAgo: formatRelativeTime(report.createdAt),
+    lastActivityAgo: formatRelativeTime(report.lastActivityAt),
     confirmations: report.confirmationCount,
     resolvedConfirmations: report.resolvedCount,
     sourceType: report.sourceType,
     resolvedAgo:
       derivedStatus === "Resolved" || report.resolvedAt
         ? `Resolved ${formatRelativeTime(report.resolvedAt ?? report.updatedAt)}`
-        : derivedStatus === "Likely Resolved"
+        : derivedStatus === "Likely Receded"
           ? `Likely receded ${formatRelativeTime(report.updatedAt)}`
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",

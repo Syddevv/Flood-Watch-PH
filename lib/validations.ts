@@ -16,7 +16,16 @@ export function isValidReportSeverity(value: string): boolean {
 }
 
 export function isValidReportStatus(value: string): boolean {
-  return isMember(REPORT_STATUSES, value);
+  return (
+    isMember(REPORT_STATUSES, value) ||
+    value === "active" ||
+    value === "receded" ||
+    value === "resolved" ||
+    value === "Archived" ||
+    value === "Active" ||
+    value === "Monitoring" ||
+    value === "Likely Resolved"
+  );
 }
 
 export function isValidReportCategory(value: string): boolean {

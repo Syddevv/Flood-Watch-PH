@@ -1,8 +1,12 @@
-import { Prisma } from "@prisma/client";
-
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
 import { EVACUATION_CENTERS } from "@/lib/constants";
+import {
+  getLifecyclePersistencePatch,
+  isVisiblePublicLifecycleStatus,
+  matchesLifecycleFilter,
+  type ReportLifecycleStatus,
+} from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
 
 function getSeverityRank(severity: string) {
@@ -22,29 +26,19 @@ function getSeverityRank(severity: string) {
 
 function getStatusRank(status: string) {
   switch (status) {
-    case "Active":
+    case "Needs More Confirmation":
       return 0;
-    case "Monitoring":
+    case "Confirmed by Community":
       return 1;
-    case "Likely Resolved":
+    case "Likely Receded":
       return 2;
     case "Resolved":
       return 3;
-    default:
+    case "Archived":
       return 4;
+    default:
+      return 5;
   }
-}
-
-function buildMapReportWhereClause(filters: {
-  status?: string;
-  severity?: string;
-  category?: string;
-}): Prisma.FloodReportWhereInput {
-  return {
-    ...(filters.status ? { status: filters.status } : {}),
-    ...(filters.severity ? { severity: filters.severity } : {}),
-    ...(filters.category ? { category: filters.category } : {}),
-  };
 }
 
 export async function GET(request: Request) {
@@ -56,14 +50,16 @@ export async function GET(request: Request) {
       return errorResponse(parsedFilters.error, 400);
     }
 
-    const where = buildMapReportWhereClause({
-      status: parsedFilters.filters.status,
-      severity: parsedFilters.filters.severity,
-      category: parsedFilters.filters.category,
-    });
-
+    const includeArchived = searchParams.get("includeArchived") === "true";
     const reports = await prisma.floodReport.findMany({
-      where,
+      where: {
+        ...(parsedFilters.filters.severity
+          ? { severity: parsedFilters.filters.severity }
+          : {}),
+        ...(parsedFilters.filters.category
+          ? { category: parsedFilters.filters.category }
+          : {}),
+      },
       select: {
         id: true,
         title: true,
@@ -78,10 +74,54 @@ export async function GET(request: Request) {
         resolvedCount: true,
         createdAt: true,
         updatedAt: true,
+        lastActivityAt: true,
+        resolvedAt: true,
+        archivedAt: true,
       },
     });
 
-    const mappedReports = reports
+    const reconciledReports = await Promise.all(
+      reports.map(async (report) => {
+        const patch = getLifecyclePersistencePatch(report);
+        if (Object.keys(patch).length === 0) {
+          return report;
+        }
+
+        return prisma.floodReport.update({
+          where: { id: report.id },
+          data: patch,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            category: true,
+            severity: true,
+            status: true,
+            locationName: true,
+            latitude: true,
+            longitude: true,
+            confirmationCount: true,
+            resolvedCount: true,
+            createdAt: true,
+            updatedAt: true,
+            lastActivityAt: true,
+            resolvedAt: true,
+            archivedAt: true,
+          },
+        });
+      }),
+    );
+
+    const filteredReports = reconciledReports
+      .filter((report) => {
+        const lifecycleStatus = report.status as ReportLifecycleStatus;
+
+        if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+          return false;
+        }
+
+        return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
+      })
       .map((report) => ({
         ...report,
         type: "flood_report" as const,
@@ -108,15 +148,15 @@ export async function GET(request: Request) {
     }));
 
     const lastUpdatedCandidates = [
-      ...mappedReports.map((report) => report.updatedAt.getTime()),
+      ...filteredReports.map((report) => report.updatedAt.getTime()),
       ...mappedEvacuationCenters.map((center) => new Date(center.updatedAt).getTime()),
     ];
 
     return Response.json({
-      reports: mappedReports,
+      reports: filteredReports,
       evacuationCenters: mappedEvacuationCenters,
       meta: {
-        reportCount: mappedReports.length,
+        reportCount: filteredReports.length,
         evacuationCenterCount: mappedEvacuationCenters.length,
         lastUpdated:
           lastUpdatedCandidates.length > 0

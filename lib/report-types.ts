@@ -1,3 +1,5 @@
+import type { IncidentReportStatus } from "./types";
+
 export type ReportUpdateItem = {
   id: string;
   updateType: string;
@@ -5,13 +7,16 @@ export type ReportUpdateItem = {
   createdAt: string;
 };
 
+export type ReportLifecycleStatus = IncidentReportStatus | "Archived";
+export type LegacyReportLifecycleStatus = "Active" | "Monitoring" | "Likely Resolved";
+
 export type ReportRecord = {
   id: string;
   title: string;
   description: string;
   category: string;
   severity: string;
-  status: string;
+  status: ReportLifecycleStatus | LegacyReportLifecycleStatus;
   locationName: string;
   latitude: number;
   longitude: number;
@@ -22,7 +27,9 @@ export type ReportRecord = {
   resolvedCount: number;
   createdAt: string;
   updatedAt: string;
+  lastActivityAt: string;
   resolvedAt: string | null;
+  archivedAt: string | null;
 };
 
 export type ReportDetailRecord = ReportRecord & {

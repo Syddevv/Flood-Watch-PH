@@ -148,7 +148,7 @@ export type IncidentReportPhoto = {
 export type IncidentReportStatus =
   | "Needs More Confirmation"
   | "Confirmed by Community"
-  | "Likely Resolved"
+  | "Likely Receded"
   | "Resolved";
 
 export type IncidentReport = {
@@ -162,7 +162,12 @@ export type IncidentReport = {
   status: IncidentReportStatus;
   description: string;
   createdAt?: string;
+  updatedAt?: string;
+  lastActivityAt?: string;
+  archivedAt?: string | null;
+  resolvedAt?: string | null;
   reportedAgo: string;
+  lastActivityAgo?: string;
   confirmations: number;
   resolvedConfirmations: number;
   sourceType: "Community" | "Official" | "System";
