@@ -11,7 +11,6 @@ import type {
   LegendItem,
   ReportMapMarker,
   RiskPolygon,
-  Theme,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +66,6 @@ export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
 }
 
 type FloodMapProps = {
-  theme: Theme;
   polygons: RiskPolygon[];
   legend: LegendItem[];
   allowPolygonToggle?: boolean;
@@ -88,7 +86,6 @@ type FloodMapProps = {
 };
 
 export function FloodMap({
-  theme,
   polygons,
   legend,
   allowPolygonToggle = false,
@@ -112,7 +109,6 @@ export function FloodMap({
   return (
     <div className="relative h-full min-h-0 w-full">
       <DynamicFloodMap
-        theme={theme}
         reportMarkers={showFloodReports ? reportMarkers : []}
         evacuationCenterMarkers={
           showEvacuationCenters ? evacuationCenterMarkers : []

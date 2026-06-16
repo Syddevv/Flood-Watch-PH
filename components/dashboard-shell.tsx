@@ -738,11 +738,12 @@ export function DashboardShell({
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div className="h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
       <AppHeader
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenSidebar={() => setSidebarOpen(true)}
+        onReportFlood={() => router.push("/incident-reports")}
       />
 
       <div
@@ -750,7 +751,7 @@ export function DashboardShell({
       >
         <div
           className={cn(
-            "grid h-[calc(100vh-var(--header-height))] min-h-0 bg-[var(--color-background)]",
+            "grid h-[calc(100dvh-var(--header-height))] min-h-0 bg-[var(--color-background)]",
             isContentOnlyView
               ? "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
               : "md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_var(--panel-width)]",
@@ -795,7 +796,6 @@ export function DashboardShell({
             ) : (
               <div className="h-full min-h-0 w-full">
                 <FloodMap
-                  theme={theme}
                   polygons={FLOOD_POLYGONS}
                   legend={isFloodMapView ? REPORT_MARKER_LEGEND : FLOOD_LEGEND}
                   allowPolygonToggle={isFloodMapView}
@@ -838,13 +838,16 @@ export function DashboardShell({
                 <div />
               )}
 
-              <button
-                type="button"
-                className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[#ff695f] px-5 text-sm font-semibold text-slate-950 shadow-[0_18px_40px_rgba(255,105,95,0.32)]"
-              >
-                <Plus className="h-4 w-4" />
-                <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
-              </button>
+              {!isIncidentReportsView ? (
+                <button
+                  type="button"
+                  onClick={() => router.push("/incident-reports")}
+                  className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[#ff695f] px-5 text-sm font-semibold text-slate-950 shadow-[0_18px_40px_rgba(255,105,95,0.32)]"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
+                </button>
+              ) : null}
             </div>
           </main>
 

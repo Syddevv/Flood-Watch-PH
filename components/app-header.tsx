@@ -20,12 +20,14 @@ type AppHeaderProps = {
   theme: Theme;
   onToggleTheme: () => void;
   onOpenSidebar: () => void;
+  onReportFlood: () => void;
 };
 
 export function AppHeader({
   theme,
   onToggleTheme,
   onOpenSidebar,
+  onReportFlood,
 }: AppHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-[1000] flex h-[var(--header-height)] items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-sidebar)] px-4 sm:px-5 md:px-6">
@@ -66,6 +68,7 @@ export function AppHeader({
 
         <button
           type="button"
+          onClick={onReportFlood}
           className="hidden h-9 items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-4 text-[0.78rem] font-semibold text-white transition hover:brightness-105 lg:flex"
         >
           <Plus className="h-[13px] w-[13px]" />

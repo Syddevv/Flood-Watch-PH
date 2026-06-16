@@ -3,7 +3,7 @@
 import "leaflet/dist/leaflet.css";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Clock3, Eye, Layers3, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Clock3, Eye, Layers3, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
 import L from "leaflet";
 import {
   MapContainer,
@@ -31,7 +31,6 @@ import type {
   LegendItem,
   ReportMapMarker,
   RiskPolygon,
-  Theme,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +80,18 @@ const reportMarkerStatusStyles = {
 } as const;
 
 type CenterMarkerInstance = {
+  openPopup: () => void;
+  getLatLng: () => { lat: number; lng: number };
+  _map?: {
+    flyTo: (
+      center: { lat: number; lng: number },
+      zoom: number,
+      options?: Record<string, unknown>,
+    ) => void;
+  };
+};
+
+type ReportMarkerInstance = {
   openPopup: () => void;
   getLatLng: () => { lat: number; lng: number };
   _map?: {
@@ -161,7 +172,6 @@ function MapZoomControls({
 }
 
 type FloodMapClientProps = {
-  theme: Theme;
   reportMarkers: ReportMapMarker[];
   evacuationCenterMarkers: EvacuationCenterMapMarker[];
   polygons: RiskPolygon[];
@@ -171,7 +181,6 @@ type FloodMapClientProps = {
 };
 
 export function FloodMapClient({
-  theme,
   reportMarkers,
   evacuationCenterMarkers,
   polygons,
@@ -180,7 +189,9 @@ export function FloodMapClient({
   focusedCenterId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(true);
   const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
+  const reportMarkerRefs = useRef<Record<string, ReportMarkerInstance | null>>({});
   const tileConfig = satelliteMode ? SATELLITE_TILES : STREET_TILES;
 
   useEffect(() => {
@@ -207,7 +218,6 @@ export function FloodMapClient({
         attributionControl
         className={cn(
           "floodwatch-leaflet h-full w-full",
-          theme === "dark" && !satelliteMode && "is-dark",
           satelliteMode && "is-satellite",
         )}
       >
@@ -233,6 +243,21 @@ export function FloodMapClient({
             position={marker.coordinates}
             icon={iconForReportMarker(marker)}
             title={marker.title}
+            ref={(instance: ReportMarkerInstance | null) => {
+              reportMarkerRefs.current[marker.reportId] = instance;
+            }}
+            eventHandlers={{
+              click: () => {
+                const targetMarker = reportMarkerRefs.current[marker.reportId];
+                if (!targetMarker) {
+                  return;
+                }
+
+                const targetLatLng = targetMarker.getLatLng();
+                targetMarker.openPopup();
+                targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.9 });
+              },
+            }}
           >
             <Popup>
               <div className="w-[248px] space-y-3">
@@ -317,6 +342,18 @@ export function FloodMapClient({
             ref={(instance: CenterMarkerInstance | null) => {
               centerMarkerRefs.current[marker.centerId] = instance;
             }}
+            eventHandlers={{
+              click: () => {
+                const targetMarker = centerMarkerRefs.current[marker.centerId];
+                if (!targetMarker) {
+                  return;
+                }
+
+                const targetLatLng = targetMarker.getLatLng();
+                targetMarker.openPopup();
+                targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.9 });
+              },
+            }}
           >
             <Popup>
               <div className="w-[240px] space-y-3">
@@ -373,49 +410,66 @@ export function FloodMapClient({
       <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
 
       <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[216px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-4 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
-        <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          <div className="text-center">MAP MARKERS</div>
+        <div className="flex items-center justify-between gap-2 text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
+          <div>MAP MARKERS</div>
+          <button
+            type="button"
+            aria-label={legendOpen ? "Collapse map markers legend" : "Expand map markers legend"}
+            aria-expanded={legendOpen}
+            onClick={() => setLegendOpen((current) => !current)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_72%,transparent)] text-[var(--color-foreground)]"
+          >
+            {legendOpen ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronUp className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
-        <div className="mt-2 space-y-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
-              R
-            </span>
-            <span>Active Flood Report</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#64748b] text-[0.72rem] font-bold leading-none text-white opacity-80 shadow-[0_0_0_3px_rgba(100,116,139,0.16)]">
-              R
-            </span>
-            <span>Likely Receded Report</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(34,197,94,0.16)]">
-              E
-            </span>
-            <span>Evacuation Center</span>
-          </div>
-        </div>
-        <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          RISK OVERLAY SEVERITY
-        </div>
-        <div className="mt-1 space-y-1.25">
-          {legend.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]"
-            >
-              <span
-                className="h-2.75 w-2.75 rounded-full"
-                style={{ backgroundColor: severityColorMap[item.severity] }}
-              />
-              <span>{item.label}</span>
+        {legendOpen ? (
+          <>
+            <div className="mt-2 space-y-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
+                  R
+                </span>
+                <span>Active Flood Report</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#64748b] text-[0.72rem] font-bold leading-none text-white opacity-80 shadow-[0_0_0_3px_rgba(100,116,139,0.16)]">
+                  R
+                </span>
+                <span>Likely Receded Report</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(34,197,94,0.16)]">
+                  E
+                </span>
+                <span>Evacuation Center</span>
+              </div>
             </div>
-          ))}
-        </div>
+            <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
+              RISK OVERLAY SEVERITY
+            </div>
+            <div className="mt-1 space-y-1.25">
+              {legend.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]"
+                >
+                  <span
+                    className="h-2.75 w-2.75 rounded-full"
+                    style={{ backgroundColor: severityColorMap[item.severity] }}
+                  />
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-[360] bg-[linear-gradient(rgba(255,255,255,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.25)_1px,transparent_1px)] bg-[size:230px_230px] opacity-[0.22] mix-blend-screen dark:opacity-[0.2]" />
+      <div className="pointer-events-none absolute inset-0 z-[360] bg-[linear-gradient(rgba(255,255,255,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.25)_1px,transparent_1px)] bg-[size:230px_230px] opacity-[0.22] mix-blend-screen" />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelLeftClose, ShieldAlert, X } from "lucide-react";
+import { PanelLeftClose, ShieldAlert } from "lucide-react";
 
 import { SIGNAL_CARD } from "@/lib/constants";
 import type { NavItem } from "@/lib/types";
@@ -36,23 +36,12 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-[var(--header-height)] left-0 z-[910] flex w-[min(82vw,var(--sidebar-width))] flex-col border-r border-[var(--color-border)] bg-[var(--color-sidebar)] transition-transform md:static md:h-full md:min-h-0 md:w-[var(--sidebar-width)] md:translate-x-0 md:self-stretch",
+          "fixed left-0 top-[var(--header-height)] z-[910] flex h-[calc(100dvh-var(--header-height))] w-[min(82vw,var(--sidebar-width))] flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-sidebar)] transition-transform md:static md:h-full md:min-h-0 md:w-[var(--sidebar-width)] md:translate-x-0 md:self-stretch",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-center justify-end px-3 py-3 md:hidden">
-            <button
-              type="button"
-              aria-label="Close navigation"
-              onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <nav className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-3 pt-3">
+          <nav className="min-h-0 flex-1 overflow-y-auto px-2.5 pb-4 pt-3">
             <ul className="space-y-1">
               {items.map((item) => {
                 const Icon = item.icon;
@@ -82,7 +71,7 @@ export function Sidebar({
             </ul>
           </nav>
 
-          <div className="border-t border-[var(--color-border)] px-2.5 py-3">
+          <div className="shrink-0 border-t border-[var(--color-border)] px-2.5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
             <div className="rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-danger)_38%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] p-3.5 shadow-[var(--shadow-soft)]">
               <div className="flex items-center gap-2 text-[0.8rem] font-semibold text-[var(--color-danger)]">
                 <SignalIcon className="h-3.5 w-3.5" />
@@ -95,6 +84,8 @@ export function Sidebar({
 
             <button
               type="button"
+              aria-label="Collapse navigation"
+              onClick={onClose}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2.5 text-[0.8rem] font-medium text-[var(--color-muted-foreground)] transition hover:bg-[var(--color-panel)] hover:text-[var(--color-foreground)]"
             >
               <PanelLeftClose className="h-3.5 w-3.5" />

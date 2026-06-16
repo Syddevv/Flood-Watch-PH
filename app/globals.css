@@ -105,10 +105,6 @@ button {
   font-family: var(--font-geist-sans), sans-serif;
 }
 
-.floodwatch-leaflet.is-dark .leaflet-tile-pane {
-  filter: brightness(0.58) saturate(0.62) hue-rotate(166deg) contrast(0.92);
-}
-
 .floodwatch-leaflet .leaflet-control-attribution {
   border-radius: 8px 0 0 0;
   background: color-mix(in srgb, var(--color-sidebar) 84%, transparent);
