@@ -6,6 +6,7 @@ import { EvacuationCenterCard } from "@/components/evacuation-center-card";
 import { WeatherOverview } from "@/components/weather-overview";
 import { formatCountLabel } from "@/lib/reporting";
 import {
+  getReportCommunitySignal,
   getStatusPresentation,
   severityBadgeClasses,
   severityLabels,
@@ -91,9 +92,9 @@ function CommunityReportPanelItem({
         </div>
       </div>
 
-      <div className="mt-2 text-[0.78rem] text-[var(--color-foreground)]">{report.category}</div>
-      <div className="mt-2 text-[0.74rem] text-[var(--color-muted-foreground)]">
-        {report.reportedAgo}
+      <div className="mt-2 flex items-center gap-1.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
+        <Clock3 className="h-3.5 w-3.5" />
+        <span>{report.lastActivityAgo ?? report.reportedAgo}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-[0.72rem] text-[var(--color-muted-foreground)]">
@@ -109,6 +110,10 @@ function CommunityReportPanelItem({
             <span>{formatCountLabel(report.resolvedConfirmations)} receded</span>
           </div>
         </div>
+      </div>
+
+      <div className="mt-2 text-[0.75rem] text-[var(--color-muted-foreground)]">
+        {getReportCommunitySignal(report)}
       </div>
 
       <button
@@ -162,8 +167,7 @@ export function RightInfoPanel({
             {officialAlertsTitle}
           </div>
           <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-            System alerts are based on available weather data and may not replace official
-            advisories. Always follow PAGASA, NDRRMC, LGU, and emergency response announcements.
+            System alerts are not official advisories. Follow PAGASA, NDRRMC, and LGU updates.
           </p>
           {alertsLoading ? (
             <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
@@ -244,8 +248,7 @@ export function RightInfoPanel({
             NEARBY EVACUATION CENTERS
           </div>
           <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-            Static shelter references for public planning. Confirm final availability with
-            your LGU or barangay before traveling.
+            Static shelter references only. Confirm availability with your LGU or barangay.
           </p>
           <div className="mt-3 space-y-3">
             {centers.map((center) => (

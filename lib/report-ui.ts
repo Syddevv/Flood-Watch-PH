@@ -1,5 +1,6 @@
 import {
   deriveCommunityStatus,
+  formatCountLabel,
   formatRelativeTime,
   getReportCategoryLabel,
   getReportSeverityTone,
@@ -36,7 +37,7 @@ export function getStatusPresentation(status: IncidentReportStatus) {
       dotClassName: "bg-slate-400",
       textClassName: "text-slate-500",
       wrapperClassName: "bg-[rgba(148,163,184,0.08)]",
-      label: "Resolved",
+      label: "Marked receded",
     };
   }
 
@@ -45,7 +46,7 @@ export function getStatusPresentation(status: IncidentReportStatus) {
       dotClassName: "bg-[#475569]",
       textClassName: "text-[#475569]",
       wrapperClassName: "bg-[rgba(71,85,105,0.08)]",
-      label: "Likely Receded",
+      label: "Likely receded",
     };
   }
 
@@ -54,16 +55,36 @@ export function getStatusPresentation(status: IncidentReportStatus) {
       dotClassName: "bg-[#22c55e]",
       textClassName: "text-[#22c55e]",
       wrapperClassName: "bg-[rgba(34,197,94,0.08)]",
-      label: "Confirmed by Community",
+      label: "Community confirmed",
     };
   }
 
-  return {
-    dotClassName: "bg-[var(--color-warning)]",
-    textClassName: "text-[var(--color-warning)]",
-    wrapperClassName: "bg-[rgba(245,158,11,0.08)]",
-    label: "Needs More Confirmation",
-  };
+    return {
+      dotClassName: "bg-[var(--color-warning)]",
+      textClassName: "text-[var(--color-warning)]",
+      wrapperClassName: "bg-[rgba(245,158,11,0.08)]",
+      label: "Recently reported",
+    };
+}
+
+export function getReportCommunitySummary(report: Pick<IncidentReport, "confirmations" | "resolvedConfirmations">) {
+  return `Confirmed by ${formatCountLabel(report.confirmations)} · ${formatCountLabel(report.resolvedConfirmations, "person", "people")} marked receded`;
+}
+
+export function getReportCommunitySignal(report: Pick<IncidentReport, "status" | "resolvedConfirmations">) {
+  if (report.status === "Likely Receded") {
+    return `Likely receded based on ${formatCountLabel(report.resolvedConfirmations, "community report", "community reports")}.`;
+  }
+
+  if (report.status === "Resolved") {
+    return `Marked receded by ${formatCountLabel(report.resolvedConfirmations, "community report", "community reports")}.`;
+  }
+
+  if (report.status === "Confirmed by Community") {
+    return `Confirmed by multiple users. Continue following LGU and PAGASA advisories.`;
+  }
+
+  return "Community reports are not official advisories. Follow LGU and PAGASA updates.";
 }
 
 function createReportPhotos(report: ReportRecord) {

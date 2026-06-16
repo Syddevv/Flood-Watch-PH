@@ -21,6 +21,7 @@ import {
 } from "@/lib/emergency-resources";
 import { formatCountLabel } from "@/lib/reporting";
 import {
+  getReportCommunitySignal,
   getStatusPresentation,
   severityBadgeClasses,
   severityLabels,
@@ -288,6 +289,10 @@ export function FloodMapClient({
                 <div className="flex items-center gap-1.5 text-[0.75rem] text-slate-500">
                   <Clock3 className="h-3.5 w-3.5" />
                   <span>{marker.report.lastActivityAgo ?? marker.report.reportedAgo}</span>
+                </div>
+
+                <div className="text-[0.75rem] leading-5 text-slate-600">
+                  {getReportCommunitySignal(marker.report)}
                 </div>
 
                 <button

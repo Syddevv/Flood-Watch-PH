@@ -463,14 +463,14 @@ export function EmergencyHotlinesContent() {
           </div>
 
           <div className="mt-4">
-            <label className="flex h-12 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
+            <label className="flex min-h-12 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
               <Phone className="h-4 w-4 text-[var(--color-muted-foreground)]" />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search agency, hotline, city, or service..."
-                className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
               />
             </label>
           </div>

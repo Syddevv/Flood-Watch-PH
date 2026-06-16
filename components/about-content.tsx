@@ -43,7 +43,7 @@ const STEP_CARDS: StepCard[] = [
     step: "STEP 1",
     title: "Monitor",
     description:
-      "We aggregate flood reports, river levels, and PAGASA weather data into one live map of Metro Manila and nearby provinces.",
+      "We combine community reports, mapped hazard signals, and public weather monitoring into one public flood view.",
     icon: <Eye className="h-4 w-4" />,
   },
   {
@@ -59,7 +59,7 @@ const STEP_CARDS: StepCard[] = [
     step: "STEP 3",
     title: "Act",
     description:
-      "Find the nearest open evacuation center, view emergency hotlines, and report flooding you witness in your community.",
+      "Find nearby evacuation references, view emergency hotlines, and report flooding you witness in your community.",
     icon: <Plane className="h-4 w-4" />,
   },
 ];
@@ -118,7 +118,7 @@ const FEATURE_CARDS: FeatureCard[] = [
     id: "centers",
     title: "Evacuation Centers",
     description:
-      "Live capacity and occupancy for nearby shelters so you know where to go.",
+      "Public shelter references and directions to help you plan where to go.",
     icon: <Building2 className="h-5 w-5" />,
   },
   {
@@ -249,10 +249,9 @@ export function AboutContent() {
             </h2>
           </div>
           <p className="mt-4 text-[1rem] leading-8 text-[var(--color-muted-foreground)]">
-            FloodWatch PH references public advisories from PAGASA, the NDRRMC, the
-            MMDA, and local Disaster Risk Reduction and Management Offices (DRRMO),
-            combined with verified community reports. This demo uses representative
-            sample data.
+            FloodWatch PH references public weather and emergency guidance together
+            with community reports. Some public pages use representative sample data
+            and should still be verified with official local sources.
           </p>
 
           <div className="mt-5 rounded-[18px] border border-[rgba(245,158,11,0.34)] bg-[rgba(245,158,11,0.08)] px-5 py-4 shadow-[var(--shadow-soft)]">

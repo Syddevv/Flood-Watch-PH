@@ -46,6 +46,8 @@ import type {
 } from "@/lib/report-types";
 import {
   buildStoredActionKey,
+  getReportCommunitySignal,
+  getReportCommunitySummary,
   getStatusPresentation,
   mapReportToIncident,
   severityBadgeClasses,
@@ -242,6 +244,34 @@ function SelectField({
   );
 }
 
+function ReportCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 shadow-[var(--shadow-soft)]">
+      <div className="flex items-start gap-3">
+        <div className="h-12 w-12 rounded-[12px] bg-[var(--color-panel)]" />
+        <div className="min-w-0 flex-1">
+          <div className="h-4 w-2/3 rounded-full bg-[var(--color-panel)]" />
+          <div className="mt-2 h-3 w-5/6 rounded-full bg-[var(--color-panel)]" />
+          <div className="mt-3 flex gap-2">
+            <div className="h-6 w-24 rounded-full bg-[var(--color-panel)]" />
+            <div className="h-6 w-28 rounded-full bg-[var(--color-panel)]" />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 h-3 w-full rounded-full bg-[var(--color-panel)]" />
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="h-14 rounded-[12px] bg-[var(--color-panel)]" />
+        <div className="h-14 rounded-[12px] bg-[var(--color-panel)]" />
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
+        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
+        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
+      </div>
+    </div>
+  );
+}
+
 function ReportCard({
   report,
   onView,
@@ -264,11 +294,12 @@ function ReportCard({
   const isLikelyReceded = report.status === "Likely Receded";
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
+  const communitySignal = getReportCommunitySignal(report);
 
   return (
     <article
       className={cn(
-        "w-full rounded-[18px] border px-3 py-2.5 shadow-[var(--shadow-soft)] transition-opacity",
+        "w-full rounded-[18px] border px-3 py-3 shadow-[var(--shadow-soft)] transition-opacity",
         isResolved
           ? "border-[rgba(148,163,184,0.22)] bg-[rgba(148,163,184,0.08)] opacity-70"
           : isLikelyReceded
@@ -322,6 +353,19 @@ function ReportCard({
         </span>
       </div>
 
+      <div className="mt-2 flex items-center gap-1.5 text-[0.77rem] text-[var(--color-muted-foreground)]">
+        <Clock3 className="h-3.5 w-3.5" />
+        <span>{report.lastActivityAgo ?? report.reportedAgo}</span>
+      </div>
+
+      <div className="mt-2 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
+        {getReportCommunitySummary(report)}
+      </div>
+
+      <div className="mt-2 rounded-[12px] border border-[rgba(148,163,184,0.16)] bg-[rgba(148,163,184,0.05)] px-3 py-2 text-[0.75rem] leading-5 text-[var(--color-foreground)]">
+        {communitySignal}
+      </div>
+
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
           <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
@@ -338,13 +382,6 @@ function ReportCard({
           <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
             {formatCountLabel(report.resolvedConfirmations)}
           </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3 text-[0.78rem] text-[var(--color-muted-foreground)]">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <Clock3 className="h-3.5 w-3.5" />
-          <span className="truncate">{report.resolvedAgo ?? report.reportedAgo}</span>
         </div>
       </div>
 
@@ -398,6 +435,7 @@ export function IncidentReportsContent() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [reportLoadError, setReportLoadError] = useState<string | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
@@ -429,6 +467,7 @@ export function IncidentReportsContent() {
 
     async function loadReports() {
       setLoadingReports(true);
+      setReportLoadError(null);
 
       try {
         const response = await fetch("/api/reports?limit=50", {
@@ -461,10 +500,7 @@ export function IncidentReportsContent() {
         }
       } catch (error) {
         console.error("Failed to load incident reports.", error);
-        setToast({
-          tone: "error",
-          message: "Unable to load live community reports right now.",
-        });
+        setReportLoadError("Unable to load flood reports. Please check your connection and try again.");
       } finally {
         if (isMounted) {
           setLoadingReports(false);
@@ -1293,14 +1329,14 @@ export function IncidentReportsContent() {
               </div>
 
               <div className="rounded-[18px] border border-[var(--color-border)] bg-[rgba(37,99,235,0.06)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="text-[1rem] font-semibold text-[var(--color-primary)]">
-                  Community-Powered Reports
+                <div className="text-[0.96rem] font-semibold text-[var(--color-primary)]">
+                  Community Reports
                 </div>
-                <p className="mt-3 text-[0.9rem] leading-7 text-[var(--color-primary)]">
-                  Reports are submitted by the public and may contain unverified information. Always follow official advisories from PAGASA, NDRRMC, LGUs, and emergency response agencies.
+                <p className="mt-2 text-[0.84rem] leading-6 text-[var(--color-primary)]">
+                  Community reports are not official advisories. Follow LGU and PAGASA updates.
                 </p>
-                <p className="mt-2 text-[0.8rem] text-[var(--color-muted-foreground)]">
-                  Community reports may be automatically hidden after they are resolved or inactive for some time.
+                <p className="mt-1.5 text-[0.78rem] text-[var(--color-muted-foreground)]">
+                  Reports may be hidden after they are resolved or inactive.
                 </p>
               </div>
 
@@ -1310,8 +1346,16 @@ export function IncidentReportsContent() {
                     ACTIVE REPORTS
                   </div>
                   {loadingReports ? (
-                    <div className="flex h-40 items-center justify-center text-[var(--color-muted-foreground)]">
-                      <LoaderCircle className="h-5 w-5 animate-spin" />
+                    <div className="activeReportsScrollArea px-2 pb-3 sm:px-3">
+                      <div className="space-y-3 px-1 py-3">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                          <ReportCardSkeleton key={`active-skeleton-${index}`} />
+                        ))}
+                      </div>
+                    </div>
+                  ) : reportLoadError ? (
+                    <div className="rounded-[14px] border border-[rgba(239,68,68,0.18)] bg-[rgba(254,242,242,0.7)] px-4 py-3 text-[0.88rem] text-[#991b1b]">
+                      {reportLoadError}
                     </div>
                   ) : (
                     <div className="activeReportsScrollArea px-2 pb-3 sm:px-3">
@@ -1334,7 +1378,7 @@ export function IncidentReportsContent() {
                           ))
                         ) : (
                           <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                            No active community reports right now.
+                            No active flood reports right now. You can still monitor conditions and check again later.
                           </div>
                         )}
                       </div>
@@ -1345,6 +1389,19 @@ export function IncidentReportsContent() {
                   <div className="px-3 pb-3 pt-4 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
                     RECENTLY RECEDED REPORTS
                   </div>
+                  {loadingReports ? (
+                    <div className="space-y-3 px-2 pb-3 sm:px-3">
+                      {Array.from({ length: 2 }).map((_, index) => (
+                        <ReportCardSkeleton key={`resolved-skeleton-${index}`} />
+                      ))}
+                    </div>
+                  ) : reportLoadError ? (
+                    <div className="space-y-3 px-2 pb-3 sm:px-3">
+                      <div className="rounded-[14px] border border-[rgba(239,68,68,0.18)] bg-[rgba(254,242,242,0.7)] px-4 py-3 text-[0.88rem] text-[#991b1b]">
+                        {reportLoadError}
+                      </div>
+                    </div>
+                  ) : (
                   <div className="space-y-3 px-2 pb-3 sm:px-3">
                     {resolvedReports.length > 0 ? (
                       resolvedReports.map((report) => (
@@ -1368,6 +1425,7 @@ export function IncidentReportsContent() {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
             </div>

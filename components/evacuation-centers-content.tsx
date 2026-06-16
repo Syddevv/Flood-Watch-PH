@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Accessibility,
   AlertTriangle,
@@ -283,6 +283,7 @@ function NearestCenterCard({
 
 export function EvacuationCentersContent() {
   const searchParams = useSearchParams();
+  const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | EvacuationCenterStatus>("All");
   const [facilityFilter, setFacilityFilter] = useState<"All" | EvacuationFacility>("All");
@@ -292,6 +293,8 @@ export function EvacuationCentersContent() {
   const [isFindingNearest, setIsFindingNearest] = useState(false);
   const [nearestResults, setNearestResults] = useState<NearestCenterResult[]>([]);
   const [nearestMessage, setNearestMessage] = useState<string | null>(null);
+  const [nearestSearchCycle, setNearestSearchCycle] = useState(0);
+  const [pendingScrollCycle, setPendingScrollCycle] = useState<number | null>(null);
 
   useEffect(() => {
     const centerId = searchParams.get("center");
@@ -377,6 +380,26 @@ export function EvacuationCentersContent() {
   const nextNearestCenters = nearestResults.slice(1, 3);
   const activeHighlightedCenterId = highlightedCenterId ?? nearestCenter?.center.id ?? null;
 
+  useEffect(() => {
+    if (pendingScrollCycle === null || isFindingNearest) {
+      return;
+    }
+
+    if (!nearestCenter && !nearestMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      resultsSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      setPendingScrollCycle((current) => (current === pendingScrollCycle ? null : current));
+    }, 140);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isFindingNearest, nearestCenter, nearestMessage, pendingScrollCycle]);
+
   function handleFacilityFilterSelect(facility: EvacuationFacility) {
     setFacilityFilter((current) => (current === facility ? "All" : facility));
   }
@@ -385,15 +408,20 @@ export function EvacuationCentersContent() {
     if (EVACUATION_CENTERS.length === 0) {
       setNearestMessage("No evacuation centers found from the current data.");
       setNearestResults([]);
+      setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
       return;
     }
 
     if (typeof window === "undefined" || !("geolocation" in navigator)) {
       setNearestMessage("Your browser does not support location detection.");
       setNearestResults([]);
+      setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
       return;
     }
 
+    const nextCycle = nearestSearchCycle + 1;
+    setNearestSearchCycle(nextCycle);
+    setPendingScrollCycle(nextCycle);
     setIsFindingNearest(true);
     setNearestMessage("Finding nearest evacuation center...");
 
@@ -451,9 +479,8 @@ export function EvacuationCentersContent() {
             can plan quickly even when live occupancy systems are unavailable.
           </p>
 
-          <div className="mt-4 rounded-[18px] border border-[rgba(56,189,248,0.24)] bg-[rgba(15,23,42,0.52)] px-4 py-3 text-[0.88rem] leading-6 text-slate-200">
-            Evacuation center details may change during emergencies. Always confirm with
-            your LGU, barangay, or emergency response office before going.
+          <div className="mt-4 rounded-[16px] border border-[rgba(56,189,248,0.24)] bg-[rgba(15,23,42,0.52)] px-4 py-2.5 text-[0.84rem] leading-6 text-slate-200">
+            Evacuation center details may change during emergencies. Confirm with your LGU or barangay before going.
           </div>
         </section>
 
@@ -462,14 +489,14 @@ export function EvacuationCentersContent() {
             <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                  <label className="flex h-11 flex-1 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
+                  <label className="flex min-h-12 flex-1 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
                     <Search className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                     <input
                       type="search"
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       placeholder="Search by center, barangay, city, or province..."
-                      className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                      className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
                     />
                   </label>
 
@@ -478,7 +505,7 @@ export function EvacuationCentersContent() {
                       type="button"
                       onClick={handleFindNearestCenter}
                       disabled={isFindingNearest}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.86rem] font-semibold text-white disabled:opacity-70"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.86rem] font-semibold text-white disabled:opacity-70"
                     >
                       {isFindingNearest ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -488,7 +515,7 @@ export function EvacuationCentersContent() {
                       <span>Evacuation Center Near Me</span>
                     </button>
                     <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
-                      Your location is only used in your browser to find nearby evacuation centers.
+                      Location stays in your browser and is only used to find nearby centers.
                     </p>
                   </div>
                 </div>
@@ -496,7 +523,7 @@ export function EvacuationCentersContent() {
                 {nearestMessage ? (
                   <div
                     className={cn(
-                      "rounded-[14px] px-3.5 py-3 text-[0.82rem]",
+                      "rounded-[14px] px-3.5 py-2.5 text-[0.82rem]",
                       isFindingNearest
                         ? "border border-[rgba(37,99,235,0.22)] bg-[rgba(37,99,235,0.08)] text-[var(--color-primary)]"
                         : "border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] text-[var(--color-warning)]",
@@ -557,29 +584,35 @@ export function EvacuationCentersContent() {
               </div>
             </div>
 
-            {nearestCenter ? (
-              <NearestCenterCard
-                nearest={nearestCenter}
-                suggestions={nextNearestCenters}
-              />
-            ) : null}
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              {filteredCenters.map((center) => (
-                <EvacuationCenterCard
-                  key={center.id}
-                  center={center}
-                  highlighted={activeHighlightedCenterId === center.id}
-                  selectedFromMap={selectedCenterId === center.id}
+            <div ref={resultsSectionRef} className="space-y-4">
+              {nearestCenter ? (
+                <NearestCenterCard
+                  nearest={nearestCenter}
+                  suggestions={nextNearestCenters}
                 />
-              ))}
-            </div>
+              ) : nearestMessage && !isFindingNearest ? (
+                <div className="rounded-[18px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[0.88rem] text-[var(--color-muted-foreground)]">
+                  {nearestMessage}
+                </div>
+              ) : null}
 
-            {filteredCenters.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 text-[0.9rem] text-[var(--color-muted-foreground)]">
-                No evacuation centers matched the current search and filter settings.
+              <div className="grid gap-4 lg:grid-cols-2">
+                {filteredCenters.map((center) => (
+                  <EvacuationCenterCard
+                    key={center.id}
+                    center={center}
+                    highlighted={activeHighlightedCenterId === center.id}
+                    selectedFromMap={selectedCenterId === center.id}
+                  />
+                ))}
               </div>
-            ) : null}
+
+              {filteredCenters.length === 0 ? (
+                <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 text-[0.9rem] text-[var(--color-muted-foreground)]">
+                  No evacuation centers matched the current search and filters.
+                </div>
+              ) : null}
+            </div>
 
             <section className="rounded-[20px] border border-[rgba(56,189,248,0.18)] bg-[rgba(15,23,42,0.72)] p-4 shadow-[var(--shadow-soft)] xl:hidden">
               <div className="flex items-center justify-between gap-3">

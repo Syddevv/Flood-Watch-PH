@@ -294,14 +294,14 @@ export function WeatherMonitoringContent({
             onSubmit={handleSearchSubmit}
             className="flex flex-col gap-3 lg:flex-row lg:items-center"
           >
-            <label className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
+            <label className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
               <Search className="h-4 w-4 text-[var(--color-muted-foreground)]" />
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search a city, municipality, province, or barangay"
-                className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
               />
             </label>
 
@@ -332,7 +332,7 @@ export function WeatherMonitoringContent({
           </form>
 
           {locationActionMessage ? (
-            <div className="mt-4 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
+            <div className="mt-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-2.5 text-[0.84rem] text-[var(--color-muted-foreground)]">
               {locationActionMessage}
             </div>
           ) : null}
@@ -362,7 +362,7 @@ export function WeatherMonitoringContent({
                     Official / System Flood Alerts
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                    Weather-based system alerts are derived from available rainfall data and do not replace official advisories.
+                    System alerts use available weather data and do not replace official advisories.
                   </p>
                 </div>
 
@@ -384,8 +384,8 @@ export function WeatherMonitoringContent({
                   Monitoring Notes
                 </h2>
 
-                <div className="mt-4 space-y-3 text-[0.86rem] leading-7 text-[var(--color-muted-foreground)]">
-                  <div className="rounded-[16px] bg-[var(--color-panel)] px-4 py-3">
+                <div className="mt-4 space-y-2.5 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+                  <div className="rounded-[14px] bg-[var(--color-panel)] px-4 py-2.5">
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
                       <span className="font-semibold">Monitored locations</span>
@@ -395,13 +395,13 @@ export function WeatherMonitoringContent({
                     </p>
                   </div>
 
-                  <div className="rounded-[16px] bg-[var(--color-panel)] px-4 py-3">
+                  <div className="rounded-[14px] bg-[var(--color-panel)] px-4 py-2.5">
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <TriangleAlert className="h-4 w-4 text-[var(--color-primary)]" />
                       <span className="font-semibold">Advisory disclaimer</span>
                     </div>
                     <p className="mt-2">
-                      System alerts are based on available weather data and may not replace official advisories. Always follow PAGASA, NDRRMC, LGU, and emergency response announcements.
+                      System alerts are not official advisories. Follow PAGASA, NDRRMC, and LGU updates.
                     </p>
                   </div>
                 </div>
