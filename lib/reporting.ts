@@ -2,6 +2,7 @@ import {
   deriveReportLifecycleStatus,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
+import { getSourceLabelFromReportType } from "@/lib/source-metadata";
 
 const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   Flood: "Flooding",
@@ -88,14 +89,11 @@ export function getPublicReportLifecycleStatus(report: {
 }
 
 export function getSourceLabel(sourceType: string) {
-  switch (sourceType) {
-    case "Official":
-      return "Official Report";
-    case "System":
-      return "System Report";
-    default:
-      return "Reported by Community";
+  if (sourceType === "Official" || sourceType === "System" || sourceType === "Community") {
+    return getSourceLabelFromReportType(sourceType);
   }
+
+  return getSourceLabelFromReportType("Community");
 }
 
 export function formatCountLabel(count: number, singular = "user", plural = "users") {

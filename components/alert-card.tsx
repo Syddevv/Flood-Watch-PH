@@ -99,8 +99,16 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
           {alert.description}
         </p>
 
-        <div className="mt-3 flex text-[0.72rem] text-[var(--color-muted-foreground)]">
-          <span>{alert.source}</span>
+        <div className="mt-3 space-y-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+          <div>
+            <span className="font-medium text-[var(--color-foreground)]">Source:</span>{" "}
+            <span>{alert.source.label ?? alert.source.name}</span>
+          </div>
+          <div>
+            <span className="font-medium text-[var(--color-foreground)]">Official reference:</span>{" "}
+            <span>{alert.officialReference.label ?? alert.officialReference.name}</span>
+          </div>
+          <div>{alert.disclaimer}</div>
         </div>
 
         <div className="mt-2 flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">

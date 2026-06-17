@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   ChevronLeft,
   ChevronRight,
+  CloudRain,
   Clock3,
   MapPin,
   ShieldAlert,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { formatCountLabel, formatRelativeTime } from "@/lib/reporting";
-import type { IncidentReport } from "@/lib/types";
+import type { IncidentReport, WeatherLocationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import type { ReportUpdateItem } from "@/lib/report-types";
@@ -24,6 +25,7 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import { fetchWeatherLocation } from "@/lib/weather-client";
 
 type IncidentReportModalProps = {
   report: IncidentReport | null;
@@ -71,6 +73,56 @@ export function IncidentReportModal({
   actionLoading,
 }: IncidentReportModalProps) {
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [nearbyWeather, setNearbyWeather] = useState<WeatherLocationResult | null>(null);
+  const [nearbyWeatherLoading, setNearbyWeatherLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !report?.coordinates) {
+      return;
+    }
+
+    let isMounted = true;
+    const abortController = new AbortController();
+    const [latitude, longitude] = report.coordinates;
+    const locationName = report.location;
+
+    async function loadNearbyWeather() {
+      setNearbyWeatherLoading(true);
+
+      try {
+        const result = await fetchWeatherLocation(
+          {
+            lat: latitude,
+            lon: longitude,
+            name: locationName,
+          },
+          abortController.signal,
+        );
+
+        if (isMounted) {
+          setNearbyWeather(result);
+        }
+      } catch (error) {
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+
+        console.error("Failed to load nearby weather for report.", error);
+        setNearbyWeather(null);
+      } finally {
+        if (isMounted) {
+          setNearbyWeatherLoading(false);
+        }
+      }
+    }
+
+    loadNearbyWeather();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [open, report]);
 
   if (!open || !report) {
     return null;
@@ -83,6 +135,12 @@ export function IncidentReportModal({
   const confirmDisabled = actionLoading || hasConfirmed || isResolved;
   const resolveDisabled = actionLoading || hasResolved || isResolved;
   const communitySignal = getReportCommunitySignal(report);
+  const sourceBadgeClasses =
+    report.sourceCategory === "official"
+      ? "border-[rgba(37,99,235,0.22)] bg-[rgba(37,99,235,0.08)] text-[#1d4ed8]"
+      : report.sourceCategory === "system"
+        ? "border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] text-[#b45309]"
+        : "border-[rgba(100,116,139,0.2)] bg-[rgba(100,116,139,0.08)] text-[#475569]";
 
   return (
     <>
@@ -164,8 +222,13 @@ export function IncidentReportModal({
               >
                 {severityLabels[report.severity]}
               </span>
-              <span className="inline-flex items-center rounded-full bg-[var(--color-panel)] px-2 py-0.75 text-[0.66rem] font-medium text-[var(--color-foreground)] md:px-2.5 md:py-1 md:text-[0.74rem]">
-                {report.sourceUnit}
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.75 text-[0.66rem] font-medium md:px-2.5 md:py-1 md:text-[0.74rem]",
+                  sourceBadgeClasses,
+                )}
+              >
+                {report.sourceLabel}
               </span>
             </div>
 
@@ -245,7 +308,7 @@ export function IncidentReportModal({
             <div className="mt-3 text-[0.76rem] text-[var(--color-muted-foreground)] md:hidden">
               <span className="font-semibold text-[var(--color-foreground)]">{report.reporter}</span>
               <span> · </span>
-              <span>{report.sourceUnit}</span>
+              <span>{report.sourceLabel}</span>
             </div>
             <div className="mt-4 hidden grid-cols-1 gap-2.5 md:grid md:grid-cols-2">
               <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3.5 py-3">
@@ -261,10 +324,61 @@ export function IncidentReportModal({
                   Source
                 </div>
                 <div className="mt-1 text-[0.86rem] font-medium text-[var(--color-foreground)]">
-                  {report.sourceUnit}
+                  {report.sourceLabel}
                 </div>
               </div>
             </div>
+
+            {report.officialSource?.officialSummary ||
+            report.officialSource?.officialSourceUrl ||
+            report.officialSource?.officialIssuedAt ? (
+              <div className="mt-3 rounded-[12px] border border-[rgba(37,99,235,0.18)] bg-[rgba(37,99,235,0.06)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[#1d4ed8] md:text-[0.74rem]">
+                  Official source metadata
+                </div>
+                {report.officialSource?.officialSummary ? (
+                  <p className="mt-1">{report.officialSource.officialSummary}</p>
+                ) : null}
+                <div className="mt-1 space-y-1 text-[var(--color-muted-foreground)]">
+                  {report.officialSource?.officialArea ? <div>Area: {report.officialSource.officialArea}</div> : null}
+                  {report.officialSource?.officialIssuedAt ? <div>Issued: {report.officialSource.officialIssuedAt}</div> : null}
+                  {report.officialSource?.officialValidUntil ? <div>Valid until: {report.officialSource.officialValidUntil}</div> : null}
+                  {report.officialSource?.officialSourceUrl ? (
+                    <a
+                      href={report.officialSource.officialSourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex text-[#1d4ed8] underline underline-offset-2"
+                    >
+                      View official source
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {nearbyWeatherLoading ? (
+              <div className="mt-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-[0.76rem] text-[var(--color-muted-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
+                Loading nearby weather...
+              </div>
+            ) : nearbyWeather ? (
+              <div className="mt-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-[0.76rem] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
+                <div className="flex items-center gap-2 text-[var(--color-foreground)]">
+                  <CloudRain className="h-4 w-4 text-[var(--color-primary)]" />
+                  <span className="font-semibold">Nearby weather</span>
+                </div>
+                <p className="mt-1 text-[var(--color-foreground)]">
+                  {nearbyWeather.location.condition ?? "Weather conditions unavailable"} ·{" "}
+                  {nearbyWeather.location.precipitation === null
+                    ? "Precipitation unavailable"
+                    : `${nearbyWeather.location.precipitation.toFixed(1)} mm/hr`} · Source:{" "}
+                  {nearbyWeather.location.source.name}
+                </p>
+                <p className="mt-1 text-[var(--color-muted-foreground)]">
+                  {nearbyWeather.advisoryMessage}
+                </p>
+              </div>
+            ) : null}
 
             {report.resolvedAgo ? (
               <div className="mt-3 rounded-[12px] border border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.08)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">

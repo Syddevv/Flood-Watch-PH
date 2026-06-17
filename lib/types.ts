@@ -10,13 +10,51 @@ export type NavItem = {
 
 export type AlertSeverity = "safe" | "moderate" | "high" | "severe";
 
-export type FloodRiskLevel =
-  | "Low Risk"
-  | "Moderate Risk"
-  | "High Risk"
-  | "Critical Risk";
+export type FloodRiskLevel = "Low" | "Moderate" | "High" | "Critical";
 
-export type FloodAlert = {
+export type SourceCategory = "official" | "community" | "system" | "provider";
+
+export type SourceLabel =
+  | "Official PAGASA Reference"
+  | "Official LGU Advisory"
+  | "Official NDRRMC/OCD Report"
+  | "Community Report"
+  | "System Weather-Based Alert";
+
+export type OfficialSourceMetadata = {
+  officialSourceName?: string;
+  officialSourceUrl?: string;
+  officialIssuedAt?: string;
+  officialValidUntil?: string;
+  officialArea?: string;
+  officialSummary?: string;
+};
+
+export type SourceDescriptor = OfficialSourceMetadata & {
+  category: SourceCategory;
+  name: string;
+  label?: SourceLabel;
+  url?: string;
+  note?: string;
+};
+
+export type WeatherReferenceLink = {
+  id: string;
+  title: string;
+  url: string;
+  note: string;
+};
+
+export type WeatherSourcesData = {
+  dataSource: SourceDescriptor;
+  officialReference: SourceDescriptor;
+  advisoryMessage: string;
+  shortAdvisoryMessage: string;
+  links: WeatherReferenceLink[];
+  labels: SourceLabel[];
+};
+
+export type FloodAlert = OfficialSourceMetadata & {
   id: string;
   title: string;
   severity: AlertSeverity;
@@ -25,10 +63,12 @@ export type FloodAlert = {
   precipitation: number | null;
   description: string;
   updatedAt: string;
-  source: string;
+  source: SourceDescriptor;
+  officialReference: SourceDescriptor;
+  disclaimer: string;
 };
 
-export type WeatherLocation = {
+export type WeatherLocation = OfficialSourceMetadata & {
   name: string;
   latitude: number;
   longitude: number;
@@ -39,18 +79,22 @@ export type WeatherLocation = {
   condition: string | null;
   riskLevel: FloodRiskLevel;
   updatedAt: string;
-  source: string;
+  source: SourceDescriptor;
+  officialReference: SourceDescriptor;
+  disclaimer: string;
 };
 
 export type WeatherOverviewData = {
   locations: WeatherLocation[];
   alerts: FloodAlert[];
   fetchedAt: string;
+  advisoryMessage: string;
 };
 
 export type WeatherLocationResult = {
   location: WeatherLocation;
   fetchedAt: string;
+  advisoryMessage: string;
 };
 
 export type EvacuationCenterStatus =
@@ -171,9 +215,12 @@ export type IncidentReport = {
   confirmations: number;
   resolvedConfirmations: number;
   sourceType: "Community" | "Official" | "System";
+  sourceCategory: Exclude<SourceCategory, "provider">;
+  sourceLabel: SourceLabel;
   resolvedAgo?: string;
   reporter: string;
   sourceUnit: string;
+  officialSource?: OfficialSourceMetadata;
   waterLevel?: string;
   note?: string;
   photos: IncidentReportPhoto[];

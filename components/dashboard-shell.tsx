@@ -76,6 +76,7 @@ const EMPTY_WEATHER_OVERVIEW: WeatherOverviewData = {
   locations: [],
   alerts: [],
   fetchedAt: "",
+  advisoryMessage: "",
 };
 
 function FloodMapUndoToast({
@@ -307,7 +308,7 @@ export function DashboardShell({
         }
 
         console.error("Failed to load weather overview.", error);
-        setWeatherError("Unable to load weather data.");
+        setWeatherError("Weather data is temporarily unavailable. Please check PAGASA or try again later.");
       } finally {
         if (isMounted) {
           setWeatherLoading(false);

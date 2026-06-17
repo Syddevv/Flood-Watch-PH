@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CloudRain,
+  ExternalLink,
   LoaderCircle,
   LocateFixed,
   MapPin,
@@ -18,9 +19,10 @@ import type {
   WeatherLocation,
   WeatherLocationResult,
   WeatherOverviewData,
+  WeatherSourcesData,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { fetchWeatherLocation } from "@/lib/weather-client";
+import { fetchWeatherLocation, fetchWeatherSources } from "@/lib/weather-client";
 
 type WeatherMonitoringContentProps = {
   weather: WeatherOverviewData;
@@ -45,15 +47,15 @@ function formatWindSpeed(windSpeed: number | null) {
 }
 
 function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
-  if (riskLevel === "Critical Risk") {
+  if (riskLevel === "Critical") {
     return "severe";
   }
 
-  if (riskLevel === "High Risk") {
+  if (riskLevel === "High") {
     return "high";
   }
 
-  if (riskLevel === "Moderate Risk") {
+  if (riskLevel === "Moderate") {
     return "moderate";
   }
 
@@ -67,7 +69,7 @@ function SelectedLocationWeatherCard({
   result: WeatherLocationResult;
   title: string;
 }) {
-  const { location, fetchedAt } = result;
+  const { location, fetchedAt, advisoryMessage } = result;
 
   return (
     <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)]">
@@ -109,7 +111,17 @@ function SelectedLocationWeatherCard({
         <MetricCard label="Precipitation" value={formatPrecipitation(location.precipitation)} />
         <MetricCard label="Humidity" value={formatHumidity(location.humidity)} />
         <MetricCard label="Wind Speed" value={formatWindSpeed(location.windSpeed)} />
-        <MetricCard label="Source" value={location.source} />
+        <MetricCard label="Source" value={location.source.name} />
+      </div>
+
+      <div className="mt-4 space-y-1 text-[0.76rem] text-[var(--color-muted-foreground)]">
+        <div>
+          Official reference:{" "}
+          <span className="font-medium text-[var(--color-foreground)]">
+            {location.officialReference.label ?? location.officialReference.name}
+          </span>
+        </div>
+        <div>{advisoryMessage}</div>
       </div>
     </section>
   );
@@ -159,8 +171,65 @@ function MonitoredLocationCard({ location }: { location: WeatherLocation }) {
       <div className="mt-3 text-[0.74rem] text-[var(--color-muted-foreground)]">
         Last updated {location.updatedAt}
       </div>
-      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">{location.source}</div>
+      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        Source: {location.source.name}
+      </div>
+      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        Official reference: {location.officialReference.name}
+      </div>
     </article>
+  );
+}
+
+function OfficialAdvisoriesSection({
+  weatherSources,
+  advisoryMessage,
+}: {
+  weatherSources: WeatherSourcesData | null;
+  advisoryMessage: string;
+}) {
+  return (
+    <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-soft)]">
+      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="text-[1.1rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+            Official Advisories
+          </h2>
+          <p className="mt-1 text-[0.84rem] text-[var(--color-muted-foreground)]">
+            {weatherSources?.advisoryMessage ?? advisoryMessage}
+          </p>
+        </div>
+        <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+          Live weather data: Open-Meteo
+        </div>
+      </div>
+
+      {weatherSources ? (
+        <>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {weatherSources.links.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1.5 text-[0.78rem] font-medium text-[var(--color-foreground)]"
+              >
+                <span>{link.title}</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ))}
+          </div>
+          <p className="mt-3 text-[0.78rem] text-[var(--color-muted-foreground)]">
+            {weatherSources.shortAdvisoryMessage}
+          </p>
+        </>
+      ) : (
+        <div className="mt-3 text-[0.78rem] text-[var(--color-muted-foreground)]">
+          Loading official reference links...
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -175,7 +244,36 @@ export function WeatherMonitoringContent({
   const [searchLoading, setSearchLoading] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [locationActionMessage, setLocationActionMessage] = useState<string | null>(null);
+  const [weatherSources, setWeatherSources] = useState<WeatherSourcesData | null>(null);
   const locationAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+
+    async function loadWeatherSources() {
+      try {
+        const nextWeatherSources = await fetchWeatherSources(abortController.signal);
+
+        if (isMounted) {
+          setWeatherSources(nextWeatherSources);
+        }
+      } catch (error) {
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+
+        console.error("Failed to load weather sources.", error);
+      }
+    }
+
+    loadWeatherSources();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, []);
 
   async function loadSelectedLocation(
     params: { query: string } | { lat: number; lon: number; name?: string },
@@ -200,9 +298,7 @@ export function WeatherMonitoringContent({
 
       console.error("Failed to load selected weather location.", error);
       setLocationActionMessage(
-        error instanceof Error && error.message
-          ? error.message
-          : failureMessage,
+        error instanceof Error && error.message ? error.message : failureMessage,
       );
     }
   }
@@ -345,6 +441,11 @@ export function WeatherMonitoringContent({
           />
         ) : null}
 
+        <OfficialAdvisoriesSection
+          weatherSources={weatherSources}
+          advisoryMessage={weather.advisoryMessage}
+        />
+
         {weatherLoading ? (
           <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
             Loading weather data...
@@ -362,7 +463,7 @@ export function WeatherMonitoringContent({
                     Official / System Flood Alerts
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                    System alerts use available weather data and do not replace official advisories.
+                    Weather-based system alerts are estimated and do not replace official advisories.
                   </p>
                 </div>
 
@@ -398,11 +499,9 @@ export function WeatherMonitoringContent({
                   <div className="rounded-[14px] bg-[var(--color-panel)] px-4 py-2.5">
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <TriangleAlert className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span className="font-semibold">Advisory disclaimer</span>
+                      <span className="font-semibold">Risk explanation</span>
                     </div>
-                    <p className="mt-2">
-                      System alerts are not official advisories. Follow PAGASA, NDRRMC, and LGU updates.
-                    </p>
+                    <p className="mt-2">{weather.advisoryMessage}</p>
                   </div>
                 </div>
               </aside>
@@ -415,7 +514,7 @@ export function WeatherMonitoringContent({
                     Monitored Philippine Locations
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                    Default monitored areas remain visible for quick rainfall-based risk monitoring.
+                    Default monitored areas remain visible for quick weather-based flood risk monitoring.
                   </p>
                 </div>
                 <div className="text-[0.76rem] text-[var(--color-muted-foreground)]">

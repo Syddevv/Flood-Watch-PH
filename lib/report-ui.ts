@@ -7,6 +7,10 @@ import {
   getSourceLabel,
   toCoordinatesLabel,
 } from "@/lib/reporting";
+import {
+  getSourceCategoryFromReportType,
+  getSourceLabelFromReportType,
+} from "@/lib/source-metadata";
 import type { AlertSeverity, IncidentReport, IncidentReportStatus } from "@/lib/types";
 
 import type { ReportRecord } from "./report-types";
@@ -135,6 +139,8 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     confirmations: report.confirmationCount,
     resolvedConfirmations: report.resolvedCount,
     sourceType: report.sourceType,
+    sourceCategory: getSourceCategoryFromReportType(report.sourceType),
+    sourceLabel: getSourceLabelFromReportType(report.sourceType),
     resolvedAgo:
       derivedStatus === "Resolved" || report.resolvedAt
         ? `Resolved ${formatRelativeTime(report.resolvedAt ?? report.updatedAt)}`
@@ -143,6 +149,22 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",
     sourceUnit: getSourceLabel(report.sourceType),
+    officialSource:
+      report.officialSourceName ||
+      report.officialSourceUrl ||
+      report.officialIssuedAt ||
+      report.officialValidUntil ||
+      report.officialArea ||
+      report.officialSummary
+        ? {
+            officialSourceName: report.officialSourceName ?? undefined,
+            officialSourceUrl: report.officialSourceUrl ?? undefined,
+            officialIssuedAt: report.officialIssuedAt ?? undefined,
+            officialValidUntil: report.officialValidUntil ?? undefined,
+            officialArea: report.officialArea ?? undefined,
+            officialSummary: report.officialSummary ?? undefined,
+          }
+        : undefined,
     photos: createReportPhotos(report),
   };
 }

@@ -2,16 +2,24 @@ import type {
   AlertSeverity,
   FloodAlert,
   FloodRiskLevel,
+  OfficialSourceMetadata,
   WeatherLocation,
   WeatherLocationResult,
   WeatherOverviewData,
+  WeatherSourcesData,
 } from "@/lib/types";
+import {
+  SOURCE_LABELS,
+  WEATHER_RISK_DISCLAIMER,
+  WEATHER_SOURCE_CACHE_SECONDS,
+  getPagasaOfficialReference,
+  getWeatherDataSource,
+  getWeatherSourcesData,
+} from "@/lib/source-metadata";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
-const WEATHER_SOURCE_LABEL = "Weather data from Open-Meteo";
-const ALERT_SOURCE_LABEL = "Weather-based system alert";
 const WEATHER_TIME_ZONE = "Asia/Manila";
 const REQUEST_TIMEOUT_MS = 8000;
 const PHILIPPINES_COUNTRY_CODE = "PH";
@@ -44,8 +52,6 @@ type OpenMeteoResponse = {
   };
 };
 
-type MonitoredLocation = (typeof MONITORED_LOCATIONS)[number];
-
 type WeatherLookupLocation = {
   name: string;
   latitude: number;
@@ -62,7 +68,6 @@ type GeocodingResult = {
   longitude: number;
   feature_code?: string;
   country_code?: string;
-  country?: string;
   admin1?: string;
   admin2?: string;
   admin3?: string;
@@ -88,6 +93,8 @@ const LOCATION_NOT_FOUND_MESSAGE =
   "Location not found. Try another city, municipality, or province.";
 const GENERIC_LOCATION_ERROR_MESSAGE =
   "Unable to load weather for this location. Please try again.";
+const WEATHER_UNAVAILABLE_MESSAGE =
+  "Weather data is temporarily unavailable. Please check PAGASA or try again later.";
 const STRIP_PHRASES = [
   "philippines",
   "province of",
@@ -202,32 +209,40 @@ function mapWeatherCodeToCondition(weatherCode: number | undefined) {
   }
 }
 
-function getRiskLevel(precipitation: number | null): FloodRiskLevel {
-  if (precipitation === null || precipitation < 2) {
-    return "Low Risk";
+function getRiskLevel(
+  precipitation: number | null,
+  forecastPeak: number | null,
+  condition: string | null,
+): FloodRiskLevel {
+  const baseline = Math.max(precipitation ?? 0, forecastPeak ?? 0);
+  const severeCondition =
+    condition === "Thunderstorm" || condition === "Thunderstorm with hail";
+
+  if (baseline < 2 && !severeCondition) {
+    return "Low";
   }
 
-  if (precipitation < 7.5) {
-    return "Moderate Risk";
+  if (baseline < 7.5 && !severeCondition) {
+    return "Moderate";
   }
 
-  if (precipitation < 15) {
-    return "High Risk";
+  if (baseline < 15 && !severeCondition) {
+    return "High";
   }
 
-  return "Critical Risk";
+  return "Critical";
 }
 
 function getSeverityFromRiskLevel(riskLevel: FloodRiskLevel): AlertSeverity {
-  if (riskLevel === "Critical Risk") {
+  if (riskLevel === "Critical") {
     return "severe";
   }
 
-  if (riskLevel === "High Risk") {
+  if (riskLevel === "High") {
     return "high";
   }
 
-  if (riskLevel === "Moderate Risk") {
+  if (riskLevel === "Moderate") {
     return "moderate";
   }
 
@@ -235,15 +250,15 @@ function getSeverityFromRiskLevel(riskLevel: FloodRiskLevel): AlertSeverity {
 }
 
 function getRiskPriority(riskLevel: FloodRiskLevel) {
-  if (riskLevel === "Critical Risk") {
+  if (riskLevel === "Critical") {
     return 0;
   }
 
-  if (riskLevel === "High Risk") {
+  if (riskLevel === "High") {
     return 1;
   }
 
-  if (riskLevel === "Moderate Risk") {
+  if (riskLevel === "Moderate") {
     return 2;
   }
 
@@ -279,7 +294,10 @@ function isWithinPhilippines(latitude: number, longitude: number) {
 function buildDisplayLocationName(result: GeocodingResult) {
   const adminParts = [result.admin4, result.admin3, result.admin2, result.admin1].filter(
     (part, index, items): part is string =>
-      typeof part === "string" && part.trim().length > 0 && items.indexOf(part) === index && part !== result.name,
+      typeof part === "string" &&
+      part.trim().length > 0 &&
+      items.indexOf(part) === index &&
+      part !== result.name,
   );
 
   return [result.name, ...adminParts.slice(0, 2)].join(", ");
@@ -417,7 +435,6 @@ async function fetchPhilippineGeocodingResults(query: string) {
         Accept: "application/json",
       },
       signal,
-      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -453,7 +470,6 @@ async function reverseGeocodePhilippineLocationName(latitude: number, longitude:
         "User-Agent": "FloodWatchPH/1.0",
       },
       signal,
-      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -527,6 +543,20 @@ function pickPrecipitationValue(payload: OpenMeteoResponse) {
   return null;
 }
 
+function getForecastPeakPrecipitation(payload: OpenMeteoResponse) {
+  const precipitationValues = [
+    ...(payload.hourly?.precipitation ?? []),
+    ...(payload.hourly?.rain ?? []),
+    ...(payload.hourly?.showers ?? []),
+  ].filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
+
+  if (precipitationValues.length === 0) {
+    return null;
+  }
+
+  return Math.max(...precipitationValues);
+}
+
 function roundIfNumber(value: number | null | undefined) {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return null;
@@ -536,31 +566,27 @@ function roundIfNumber(value: number | null | undefined) {
 }
 
 function buildAlertTitle(riskLevel: FloodRiskLevel) {
-  if (riskLevel === "Critical Risk") {
-    return "Critical Rainfall Risk Detected";
+  if (riskLevel === "Critical") {
+    return "Critical Weather-Based Flood Risk";
   }
 
-  if (riskLevel === "High Risk") {
-    return "Heavy Rainfall Risk Detected";
+  if (riskLevel === "High") {
+    return "High Weather-Based Flood Risk";
   }
 
-  return "Elevated Rainfall Risk Detected";
+  return "Elevated Weather-Based Flood Risk";
 }
 
 function buildAlertDescription(location: string, riskLevel: FloodRiskLevel) {
-  if (riskLevel === "Critical Risk") {
-    return `Increased flood risk due to intense rainfall in ${location}, especially in low-lying and flood-prone areas.`;
+  if (riskLevel === "Critical") {
+    return `Heavy rainfall signals may sharply raise flood risk in ${location}, especially in low-lying areas and near waterways.`;
   }
 
-  if (riskLevel === "High Risk") {
-    return `Recent rainfall levels may increase flood risk in ${location}, especially near low-lying roads and waterways.`;
+  if (riskLevel === "High") {
+    return `Rainfall intensity may increase flood risk in ${location}. Monitor local conditions and watch for official advisories.`;
   }
 
-  return `Rainfall-based flood risk is elevated in ${location}. Monitor local conditions and watch for official advisories.`;
-}
-
-async function fetchLocationWeather(location: MonitoredLocation): Promise<WeatherLocation> {
-  return fetchWeatherForLocation(location);
+  return `Weather signals suggest elevated flood risk in ${location}. Monitor local conditions and watch for official advisories.`;
 }
 
 async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
@@ -587,7 +613,6 @@ async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
         Accept: "application/json",
       },
       signal,
-      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -600,10 +625,15 @@ async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
   }
 }
 
-async function fetchWeatherForLocation(location: WeatherLookupLocation): Promise<WeatherLocation> {
-  const payload = await fetchOpenMeteoWeather(location);
+function buildWeatherLocation(
+  location: WeatherLookupLocation,
+  payload: OpenMeteoResponse,
+  officialMetadata: OfficialSourceMetadata = {},
+): WeatherLocation {
   const precipitation = roundIfNumber(pickPrecipitationValue(payload));
-  const riskLevel = getRiskLevel(precipitation);
+  const forecastPeakPrecipitation = roundIfNumber(getForecastPeakPrecipitation(payload));
+  const condition = mapWeatherCodeToCondition(payload.current?.weather_code);
+  const riskLevel = getRiskLevel(precipitation, forecastPeakPrecipitation, condition);
 
   return {
     name: location.name,
@@ -613,11 +643,24 @@ async function fetchWeatherForLocation(location: WeatherLookupLocation): Promise
     precipitation,
     humidity: roundIfNumber(payload.current?.relative_humidity_2m),
     windSpeed: roundIfNumber(payload.current?.wind_speed_10m),
-    condition: mapWeatherCodeToCondition(payload.current?.weather_code),
+    condition,
     riskLevel,
     updatedAt: formatWeatherTimestamp(payload.current?.time),
-    source: WEATHER_SOURCE_LABEL,
+    source: getWeatherDataSource(),
+    officialReference: getPagasaOfficialReference(officialMetadata),
+    disclaimer: WEATHER_RISK_DISCLAIMER,
+    officialSourceName: officialMetadata.officialSourceName,
+    officialSourceUrl: officialMetadata.officialSourceUrl,
+    officialIssuedAt: officialMetadata.officialIssuedAt,
+    officialValidUntil: officialMetadata.officialValidUntil,
+    officialArea: officialMetadata.officialArea,
+    officialSummary: officialMetadata.officialSummary,
   };
+}
+
+async function fetchWeatherForLocation(location: WeatherLookupLocation): Promise<WeatherLocation> {
+  const payload = await fetchOpenMeteoWeather(location);
+  return buildWeatherLocation(location, payload);
 }
 
 async function geocodePhilippineLocation(query: string) {
@@ -662,9 +705,9 @@ function sortLocationsByRisk(locations: WeatherLocation[]) {
 
 function buildSystemAlerts(locations: WeatherLocation[]): FloodAlert[] {
   return locations
-    .filter((location) => location.riskLevel !== "Low Risk")
+    .filter((location) => location.riskLevel !== "Low")
     .map((location) => ({
-      id: `${location.name.toLowerCase().replace(/\s+/g, "-")}-${location.riskLevel.toLowerCase().replace(/\s+/g, "-")}`,
+      id: `${location.name.toLowerCase().replace(/\s+/g, "-")}-${location.riskLevel.toLowerCase()}`,
       title: buildAlertTitle(location.riskLevel),
       severity: getSeverityFromRiskLevel(location.riskLevel),
       location: location.name,
@@ -672,29 +715,53 @@ function buildSystemAlerts(locations: WeatherLocation[]): FloodAlert[] {
       precipitation: location.precipitation,
       description: buildAlertDescription(location.name, location.riskLevel),
       updatedAt: location.updatedAt,
-      source: ALERT_SOURCE_LABEL,
+      source: {
+        category: "system",
+        label: SOURCE_LABELS.system,
+        name: "FloodWatch PH",
+        note: "Weather-based system alert derived from Open-Meteo conditions.",
+      },
+      officialReference: location.officialReference,
+      disclaimer: WEATHER_RISK_DISCLAIMER,
     }));
 }
 
+function createOverviewResponse(locations: WeatherLocation[]): WeatherOverviewData {
+  return {
+    locations,
+    alerts: buildSystemAlerts(locations),
+    fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
+    advisoryMessage: WEATHER_RISK_DISCLAIMER,
+  };
+}
+
+export function getWeatherCacheHeaders() {
+  return {
+    "Cache-Control": `public, s-maxage=${WEATHER_SOURCE_CACHE_SECONDS}, stale-while-revalidate=${WEATHER_SOURCE_CACHE_SECONDS / 2}`,
+  };
+}
+
+export function getWeatherUnavailableMessage() {
+  return WEATHER_UNAVAILABLE_MESSAGE;
+}
+
 export async function getWeatherOverview(): Promise<WeatherOverviewData> {
-  const results = await Promise.allSettled(MONITORED_LOCATIONS.map((location) => fetchLocationWeather(location)));
+  const results = await Promise.allSettled(
+    MONITORED_LOCATIONS.map((location) => fetchWeatherForLocation(location)),
+  );
   const locations = sortLocationsByRisk(
     results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])),
   );
 
   if (locations.length === 0) {
-    throw new Error("Unable to load weather data.");
+    throw new Error(WEATHER_UNAVAILABLE_MESSAGE);
   }
 
-  return {
-    locations,
-    alerts: buildSystemAlerts(locations),
-    fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
-  };
+  return createOverviewResponse(locations);
 }
 
 export function getSidebarWeatherOverview(overview: WeatherOverviewData): WeatherOverviewData {
-  const allLowRisk = overview.locations.every((location) => location.riskLevel === "Low Risk");
+  const allLowRisk = overview.locations.every((location) => location.riskLevel === "Low");
   const sidebarLocations = allLowRisk
     ? overview.locations.slice(0, SIDEBAR_LOCATION_LIMIT)
     : sortLocationsByRisk(overview.locations).slice(0, SIDEBAR_LOCATION_LIMIT);
@@ -716,6 +783,7 @@ export async function getWeatherByQuery(query: string): Promise<WeatherLocationR
   return {
     location,
     fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
+    advisoryMessage: WEATHER_RISK_DISCLAIMER,
   };
 }
 
@@ -725,11 +793,11 @@ export async function getWeatherByCoordinates(
   name?: string,
 ): Promise<WeatherLocationResult> {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error("Unable to load weather for this location. Please try again.");
+    throw new Error(GENERIC_LOCATION_ERROR_MESSAGE);
   }
 
   if (!isWithinPhilippines(latitude, longitude)) {
-    throw new Error("Location not found. Try another city, municipality, or province.");
+    throw new Error(LOCATION_NOT_FOUND_MESSAGE);
   }
 
   const fallbackName = name?.trim();
@@ -747,5 +815,10 @@ export async function getWeatherByCoordinates(
   return {
     location,
     fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
+    advisoryMessage: WEATHER_RISK_DISCLAIMER,
   };
+}
+
+export async function getWeatherSources(): Promise<WeatherSourcesData> {
+  return getWeatherSourcesData();
 }

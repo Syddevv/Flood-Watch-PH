@@ -167,7 +167,7 @@ export function RightInfoPanel({
             {officialAlertsTitle}
           </div>
           <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-            System alerts are not official advisories. Follow PAGASA, NDRRMC, and LGU updates.
+            Weather-based system alerts are estimated and do not replace official advisories.
           </p>
           {alertsLoading ? (
             <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">

@@ -21,15 +21,15 @@ function formatWindSpeed(windSpeed: number | null) {
 }
 
 function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
-  if (riskLevel === "Critical Risk") {
+  if (riskLevel === "Critical") {
     return "severe";
   }
 
-  if (riskLevel === "High Risk") {
+  if (riskLevel === "High") {
     return "high";
   }
 
-  if (riskLevel === "Moderate Risk") {
+  if (riskLevel === "Moderate") {
     return "moderate";
   }
 
@@ -92,7 +92,10 @@ export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
             Updated {location.updatedAt}
           </div>
           <div className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">
-            {location.source}
+            Source: {location.source.name}
+          </div>
+          <div className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">
+            Official reference: {location.officialReference.name}
           </div>
         </article>
       ))}

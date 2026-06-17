@@ -23,6 +23,12 @@ export type ReportRecord = {
   imageUrl: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
+  officialSourceName?: string | null;
+  officialSourceUrl?: string | null;
+  officialIssuedAt?: string | null;
+  officialValidUntil?: string | null;
+  officialArea?: string | null;
+  officialSummary?: string | null;
   confirmationCount: number;
   resolvedCount: number;
   createdAt: string;
