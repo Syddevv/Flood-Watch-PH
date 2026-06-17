@@ -99,34 +99,53 @@ export type WeatherLocationResult = {
 };
 
 export type EvacuationCenterStatus =
-  | "Available"
-  | "Standby"
-  | "Needs Verification"
-  | "Temporarily Unavailable";
+  | "available"
+  | "standby"
+  | "needs_verification"
+  | "temporarily_unavailable";
+
+export type EvacuationCenterVerificationStatus =
+  | "verified"
+  | "needs_verification"
+  | "sample_demo"
+  | "outdated";
+
+export type EvacuationCenterSourceType =
+  | "official_dswd"
+  | "official_lgu"
+  | "openstreetmap"
+  | "community_reference"
+  | "sample_demo";
 
 export type EvacuationFacility =
-  | "PWD Accessible"
-  | "Medical Support"
-  | "Drinking Water"
-  | "Restrooms"
-  | "Pet Friendly"
-  | "Parking";
+  | "pwd_accessible"
+  | "medical_support"
+  | "drinking_water"
+  | "restrooms"
+  | "pet_friendly"
+  | "parking";
 
 export type EvacuationCenterResource = {
   id: string;
   name: string;
   address: string;
-  barangay: string;
-  cityOrMunicipality: string;
+  barangay?: string;
+  city: string;
   province: string;
+  region?: string;
   latitude: number;
   longitude: number;
   status: EvacuationCenterStatus;
+  verificationStatus: EvacuationCenterVerificationStatus;
   facilities: EvacuationFacility[];
+  estimatedCapacity?: number;
   contactNumber?: string;
+  sourceType: EvacuationCenterSourceType;
+  sourceName?: string;
+  sourceUrl?: string;
+  lastVerifiedAt?: string;
   notes?: string;
-  lastVerifiedAt: string;
-  estimatedCapacity?: string;
+  isSample?: boolean;
 };
 
 export type EvacuationCenter = EvacuationCenterResource;
@@ -174,6 +193,8 @@ export type EmergencyContactResource = {
   phone?: string;
   coverage?: string;
   note: string;
+  sourceType: "official_national" | "official_lgu" | "sample_demo";
+  sourceName?: string;
   isSample: boolean;
   callHref?: string;
 };

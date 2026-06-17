@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   Crosshair,
+  Database,
   Droplets,
   LoaderCircle,
   MapPinned,
@@ -24,17 +25,26 @@ import {
 import {
   EMERGENCY_RESOURCE_CONTACTS,
   EVACUATION_CENTERS,
+  EVACUATION_CENTER_DATA_STATUS_NOTE,
   EVACUATION_CENTER_FACILITIES,
+  EVACUATION_CENTER_STATIC_REFERENCE_NOTE,
   FLOOD_SAFETY_CHECKLIST,
 } from "@/lib/constants";
 import {
   buildCenterMapHref,
   buildDirectionsUrl,
+  buildEvacuationCenterLocationLabel,
+  buildEvacuationCenterSearchIndex,
   calculateDistanceKm,
   EMERGENCY_CONTACT_CATEGORY_ACCENTS,
+  EVACUATION_SOURCE_META,
   EVACUATION_STATUS_META,
+  EVACUATION_VERIFICATION_META,
+  formatEstimatedCapacity,
+  formatEvacuationFacilityLabel,
   formatDistanceKm,
   formatLastVerified,
+  summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
 import type {
   EvacuationCenterResource,
@@ -43,21 +53,21 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const STATUS_FILTERS: Array<"All" | EvacuationCenterStatus> = [
-  "All",
-  "Available",
-  "Standby",
-  "Needs Verification",
-  "Temporarily Unavailable",
+const STATUS_FILTERS: Array<{ value: "All" | EvacuationCenterStatus; label: string }> = [
+  { value: "All", label: "All" },
+  { value: "available", label: "Available" },
+  { value: "standby", label: "Standby" },
+  { value: "needs_verification", label: "Needs Verification" },
+  { value: "temporarily_unavailable", label: "Temporarily Unavailable" },
 ];
 
 const FACILITY_ICONS: Record<EvacuationFacility, ReactNode> = {
-  "PWD Accessible": <Accessibility className="h-3.5 w-3.5" />,
-  "Medical Support": <ShieldPlus className="h-3.5 w-3.5" />,
-  "Drinking Water": <Droplets className="h-3.5 w-3.5" />,
-  Restrooms: <Toilet className="h-3.5 w-3.5" />,
-  "Pet Friendly": <Sparkles className="h-3.5 w-3.5" />,
-  Parking: <MapPinned className="h-3.5 w-3.5" />,
+  pwd_accessible: <Accessibility className="h-3.5 w-3.5" />,
+  medical_support: <ShieldPlus className="h-3.5 w-3.5" />,
+  drinking_water: <Droplets className="h-3.5 w-3.5" />,
+  restrooms: <Toilet className="h-3.5 w-3.5" />,
+  pet_friendly: <Sparkles className="h-3.5 w-3.5" />,
+  parking: <MapPinned className="h-3.5 w-3.5" />,
 };
 
 type NearestCenterResult = {
@@ -69,12 +79,16 @@ function EvacuationCenterCard({
   center,
   highlighted,
   selectedFromMap,
+  directionsOrigin,
 }: {
   center: EvacuationCenterResource;
   highlighted: boolean;
   selectedFromMap: boolean;
+  directionsOrigin?: { latitude: number; longitude: number } | null;
 }) {
   const statusMeta = EVACUATION_STATUS_META[center.status];
+  const verificationMeta = EVACUATION_VERIFICATION_META[center.verificationStatus];
+  const sourceMeta = EVACUATION_SOURCE_META[center.sourceType];
 
   return (
     <article
@@ -101,7 +115,7 @@ function EvacuationCenterCard({
             {center.address}
           </div>
           <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
-            {center.barangay}, {center.cityOrMunicipality}, {center.province}
+            {buildEvacuationCenterLocationLabel(center)}
           </div>
         </div>
         <span
@@ -110,7 +124,7 @@ function EvacuationCenterCard({
             statusMeta.badgeClassName,
           )}
         >
-          {center.status}
+          {statusMeta.label}
         </span>
       </div>
 
@@ -121,9 +135,23 @@ function EvacuationCenterCard({
             className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-1 text-[0.74rem] font-medium text-[var(--color-foreground)]"
           >
             {FACILITY_ICONS[facility]}
-            <span>{facility}</span>
+            <span>{formatEvacuationFacilityLabel(facility)}</span>
           </span>
         ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[0.68rem] font-medium",
+            verificationMeta.badgeClassName,
+          )}
+        >
+          {verificationMeta.label}
+        </span>
+        <span className="rounded-full border border-[rgba(148,163,184,0.16)] bg-[var(--color-panel)] px-2.5 py-1 text-[0.68rem] font-medium text-[var(--color-muted-foreground)]">
+          {sourceMeta.label}
+        </span>
       </div>
 
       <div className="mt-3 space-y-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
@@ -133,23 +161,32 @@ function EvacuationCenterCard({
             <span>{center.contactNumber}</span>
           </div>
         ) : null}
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-success)]" />
-          <span>Last verified {formatLastVerified(center.lastVerifiedAt)}</span>
-        </div>
-        {center.estimatedCapacity ? (
+        {center.lastVerifiedAt ? (
           <div className="flex items-center gap-2">
-            <MapPinned className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-            <span>Estimated Capacity: {center.estimatedCapacity}</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-success)]" />
+            <span>Last verified {formatLastVerified(center.lastVerifiedAt)}</span>
           </div>
         ) : null}
+        {typeof center.estimatedCapacity === "number" ? (
+          <div className="flex items-center gap-2">
+            <MapPinned className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            <span>Estimated capacity: {formatEstimatedCapacity(center.estimatedCapacity)}</span>
+          </div>
+        ) : null}
+        {center.sourceName ? <div>Source: {center.sourceName}</div> : null}
       </div>
 
       {center.notes ? (
-        <p className="mt-3 rounded-[16px] bg-[var(--color-panel)] px-3.5 py-3 text-[0.84rem] leading-6 text-[var(--color-foreground)]">
+        <p className="mt-3 line-clamp-2 rounded-[16px] bg-[var(--color-panel)] px-3.5 py-3 text-[0.84rem] leading-6 text-[var(--color-foreground)]">
           {center.notes}
         </p>
       ) : null}
+
+      <p className="mt-3 text-[0.76rem] text-[var(--color-muted-foreground)]">
+        {center.isSample
+          ? "Sample/demo data. Replace with verified LGU or DSWD references."
+          : EVACUATION_CENTER_STATIC_REFERENCE_NOTE}
+      </p>
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Link
@@ -159,7 +196,7 @@ function EvacuationCenterCard({
           View on Map
         </Link>
         <a
-          href={buildDirectionsUrl(center)}
+          href={buildDirectionsUrl(center, directionsOrigin)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex h-10 items-center justify-center rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white"
@@ -174,11 +211,16 @@ function EvacuationCenterCard({
 function NearestCenterCard({
   nearest,
   suggestions,
+  directionsOrigin,
 }: {
   nearest: NearestCenterResult;
   suggestions: NearestCenterResult[];
+  directionsOrigin?: { latitude: number; longitude: number } | null;
 }) {
   const statusMeta = EVACUATION_STATUS_META[nearest.center.status];
+  const verificationMeta = EVACUATION_VERIFICATION_META[nearest.center.verificationStatus];
+  const sourceMeta = EVACUATION_SOURCE_META[nearest.center.sourceType];
+  const facilitySummary = summarizeEvacuationFacilities(nearest.center.facilities, 4);
 
   return (
     <section className="rounded-[22px] border border-[rgba(37,99,235,0.28)] bg-[linear-gradient(135deg,rgba(14,28,52,0.96),rgba(26,43,75,0.98))] p-4 text-white shadow-[var(--shadow-soft)]">
@@ -192,11 +234,9 @@ function NearestCenterCard({
           <h2 className="text-[1.1rem] font-semibold tracking-[-0.02em] text-white">
             {nearest.center.name}
           </h2>
-          <div className="mt-1 text-[0.88rem] text-slate-300">
-            {nearest.center.address}
-          </div>
+          <div className="mt-1 text-[0.88rem] text-slate-300">{nearest.center.address}</div>
           <div className="mt-1 text-[0.8rem] text-slate-400">
-            {nearest.center.barangay}, {nearest.center.cityOrMunicipality}
+            {buildEvacuationCenterLocationLabel(nearest.center)}
           </div>
         </div>
         <div className="text-right">
@@ -214,24 +254,41 @@ function NearestCenterCard({
             statusMeta.badgeClassName,
           )}
         >
-          {nearest.center.status}
+          {statusMeta.label}
+        </span>
+        <span
+          className={cn(
+            "rounded-full border px-3 py-1 text-[0.72rem] font-medium",
+            verificationMeta.badgeClassName,
+          )}
+        >
+          {verificationMeta.label}
         </span>
         <span className="text-[0.78rem] text-slate-300">
-          Last verified {formatLastVerified(nearest.center.lastVerifiedAt)}
+          {nearest.center.lastVerifiedAt
+            ? `Last verified ${formatLastVerified(nearest.center.lastVerifiedAt)}`
+            : sourceMeta.label}
         </span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {nearest.center.facilities.slice(0, 4).map((facility) => (
+        {facilitySummary.visible.map((facilityLabel, index) => (
           <span
-            key={facility}
+            key={`${facilityLabel}-${index}`}
             className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(148,163,184,0.24)] bg-[rgba(15,23,42,0.42)] px-2.5 py-1 text-[0.74rem] font-medium text-slate-100"
           >
-            {FACILITY_ICONS[facility]}
-            <span>{facility}</span>
+            {FACILITY_ICONS[nearest.center.facilities[index]]}
+            <span>{facilityLabel}</span>
           </span>
         ))}
+        {facilitySummary.remaining > 0 ? (
+          <span className="inline-flex items-center rounded-full border border-[rgba(148,163,184,0.24)] bg-[rgba(15,23,42,0.42)] px-2.5 py-1 text-[0.74rem] font-medium text-slate-300">
+            +{facilitySummary.remaining} more
+          </span>
+        ) : null}
       </div>
+
+      <div className="mt-3 text-[0.78rem] text-slate-300">Source: {sourceMeta.label}</div>
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Link
@@ -241,7 +298,7 @@ function NearestCenterCard({
           View on Map
         </Link>
         <a
-          href={buildDirectionsUrl(nearest.center)}
+          href={buildDirectionsUrl(nearest.center, directionsOrigin)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex h-10 items-center justify-center rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white"
@@ -266,7 +323,7 @@ function NearestCenterCard({
                     {entry.center.name}
                   </div>
                   <div className="truncate text-[0.74rem] text-slate-400">
-                    {entry.center.cityOrMunicipality}
+                    {entry.center.city}
                   </div>
                 </div>
                 <div className="text-[0.8rem] font-semibold text-sky-300">
@@ -295,6 +352,15 @@ export function EvacuationCentersContent() {
   const [nearestMessage, setNearestMessage] = useState<string | null>(null);
   const [nearestSearchCycle, setNearestSearchCycle] = useState(0);
   const [pendingScrollCycle, setPendingScrollCycle] = useState<number | null>(null);
+  const [directionsOrigin, setDirectionsOrigin] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const allCentersSampleDemo = useMemo(
+    () => EVACUATION_CENTERS.every((center) => center.sourceType === "sample_demo"),
+    [],
+  );
 
   useEffect(() => {
     const centerId = searchParams.get("center");
@@ -342,18 +408,8 @@ export function EvacuationCentersContent() {
 
     const matches = EVACUATION_CENTERS.filter((center) => {
       const matchesQuery = normalizedQuery
-        ? [
-            center.name,
-            center.address,
-            center.barangay,
-            center.cityOrMunicipality,
-            center.province,
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(normalizedQuery)
+        ? buildEvacuationCenterSearchIndex(center).includes(normalizedQuery)
         : true;
-
       const matchesStatus = statusFilter === "All" || center.status === statusFilter;
       const matchesFacility =
         facilityFilter === "All" || center.facilities.includes(facilityFilter);
@@ -377,7 +433,7 @@ export function EvacuationCentersContent() {
   );
 
   const nearestCenter = nearestResults[0] ?? null;
-  const nextNearestCenters = nearestResults.slice(1, 3);
+  const nextNearestCenters = nearestResults.slice(1, 5);
   const activeHighlightedCenterId = highlightedCenterId ?? nearestCenter?.center.id ?? null;
 
   useEffect(() => {
@@ -432,6 +488,8 @@ export function EvacuationCentersContent() {
           longitude: position.coords.longitude,
         };
 
+        setDirectionsOrigin(origin);
+
         const rankedCenters = EVACUATION_CENTERS.map((center) => ({
           center,
           distanceKm: calculateDistanceKm(origin, {
@@ -447,7 +505,7 @@ export function EvacuationCentersContent() {
       (error) => {
         const denied =
           error.code === error.PERMISSION_DENIED
-            ? "Location access was denied. You can still search by city, barangay, or province."
+            ? "Location access was blocked. You can still search by city, barangay, or province."
             : "Unable to detect your location right now. You can still search by city, barangay, or province.";
 
         setNearestMessage(denied);
@@ -478,9 +536,15 @@ export function EvacuationCentersContent() {
             public-facing page. Center information below uses static seeded data so people
             can plan quickly even when live occupancy systems are unavailable.
           </p>
-
-          <div className="mt-4 rounded-[16px] border border-[rgba(56,189,248,0.24)] bg-[rgba(15,23,42,0.52)] px-4 py-2.5 text-[0.84rem] leading-6 text-slate-200">
-            Evacuation center details may change during emergencies. Confirm with your LGU or barangay before going.
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.8rem] leading-6 text-slate-300">
+            <span className="font-semibold text-sky-300">Data status:</span>
+            <span className="max-w-[960px]">{EVACUATION_CENTER_DATA_STATUS_NOTE}</span>
+            {allCentersSampleDemo ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(148,163,184,0.18)] bg-[rgba(148,163,184,0.08)] px-2.5 py-1 text-[0.7rem] font-medium text-slate-300">
+                <Database className="h-3.5 w-3.5" />
+                <span>Current dataset is sample/demo</span>
+              </span>
+            ) : null}
           </div>
         </section>
 
@@ -495,7 +559,7 @@ export function EvacuationCentersContent() {
                       type="search"
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search by center, barangay, city, or province..."
+                      placeholder="Search by center, barangay, city, province, facility, or source..."
                       className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
                     />
                   </label>
@@ -515,7 +579,7 @@ export function EvacuationCentersContent() {
                       <span>Evacuation Center Near Me</span>
                     </button>
                     <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
-                      Location stays in your browser and is only used to find nearby centers.
+                      Your location stays in your browser and is only used to find nearby centers.
                     </p>
                   </div>
                 </div>
@@ -536,17 +600,17 @@ export function EvacuationCentersContent() {
                 <div className="flex flex-wrap gap-2">
                   {STATUS_FILTERS.map((status) => (
                     <button
-                      key={status}
+                      key={status.value}
                       type="button"
-                      onClick={() => setStatusFilter(status)}
+                      onClick={() => setStatusFilter(status.value)}
                       className={cn(
                         "rounded-full px-3.5 py-2 text-[0.78rem] font-semibold transition",
-                        statusFilter === status
+                        statusFilter === status.value
                           ? "bg-[var(--color-primary)] text-white"
                           : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
                       )}
                     >
-                      {status}
+                      {status.label}
                     </button>
                   ))}
                 </div>
@@ -577,7 +641,7 @@ export function EvacuationCentersContent() {
                       )}
                     >
                       {FACILITY_ICONS[facility]}
-                      <span>{facility}</span>
+                      <span>{formatEvacuationFacilityLabel(facility)}</span>
                     </button>
                   ))}
                 </div>
@@ -589,6 +653,7 @@ export function EvacuationCentersContent() {
                 <NearestCenterCard
                   nearest={nearestCenter}
                   suggestions={nextNearestCenters}
+                  directionsOrigin={directionsOrigin}
                 />
               ) : nearestMessage && !isFindingNearest ? (
                 <div className="rounded-[18px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[0.88rem] text-[var(--color-muted-foreground)]">
@@ -603,6 +668,7 @@ export function EvacuationCentersContent() {
                     center={center}
                     highlighted={activeHighlightedCenterId === center.id}
                     selectedFromMap={selectedCenterId === center.id}
+                    directionsOrigin={directionsOrigin}
                   />
                 ))}
               </div>
@@ -686,7 +752,7 @@ export function EvacuationCentersContent() {
                         </div>
                       </div>
                       {contact.isSample ? (
-                        <span className="rounded-full border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.1)] px-2.5 py-1 text-[0.66rem] font-semibold text-[var(--color-warning)]">
+                        <span className="rounded-full border border-[rgba(148,163,184,0.18)] bg-[rgba(148,163,184,0.08)] px-2.5 py-1 text-[0.66rem] font-semibold text-[var(--color-muted-foreground)]">
                           Sample / Demo
                         </span>
                       ) : null}
@@ -705,6 +771,11 @@ export function EvacuationCentersContent() {
                     <p className="mt-2 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
                       {contact.note}
                     </p>
+                    {contact.sourceName ? (
+                      <div className="mt-2 text-[0.74rem] text-[var(--color-muted-foreground)]">
+                        Source: {contact.sourceName}
+                      </div>
+                    ) : null}
 
                     {contact.callHref ? (
                       <a
@@ -760,8 +831,6 @@ export function EvacuationCentersContent() {
             </section>
           </aside>
         </div>
-
-        <div className="h-20 md:hidden" />
       </div>
     </div>
   );

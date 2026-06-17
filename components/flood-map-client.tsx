@@ -15,9 +15,12 @@ import {
 } from "react-leaflet";
 
 import {
+  formatEvacuationSourceLabel,
+  formatEvacuationVerificationLabel,
   buildCenterDetailsHref,
   buildDirectionsUrl,
   EVACUATION_STATUS_META,
+  summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
 import { formatCountLabel } from "@/lib/reporting";
 import {
@@ -355,49 +358,65 @@ export function FloodMapClient({
               },
             }}
           >
-            <Popup>
-              <div className="w-[240px] space-y-3">
-                <div>
-                  <div className="text-[0.98rem] font-semibold text-slate-900">
-                    {marker.center.name}
-                  </div>
-                  <div className="mt-1 text-[0.8rem] text-slate-600">
-                    {marker.center.address}
-                  </div>
-                  <div className="mt-1 text-[0.75rem] font-medium text-slate-500">
-                    {marker.center.status}
-                  </div>
-                </div>
+            {(() => {
+              const facilitySummary = summarizeEvacuationFacilities(marker.center.facilities, 3);
 
-                <div className="flex flex-wrap gap-1.5">
-                  {marker.center.facilities.slice(0, 4).map((facility) => (
-                    <span
-                      key={facility}
-                      className="rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-medium text-slate-700"
-                    >
-                      {facility}
-                    </span>
-                  ))}
-                </div>
+              return (
+                <Popup>
+                  <div className="w-[240px] space-y-3">
+                    <div>
+                      <div className="text-[0.98rem] font-semibold text-slate-900">
+                        {marker.center.name}
+                      </div>
+                      <div className="mt-1 text-[0.8rem] text-slate-600">
+                        {marker.center.address}
+                      </div>
+                      <div className="mt-1 text-[0.75rem] font-medium text-slate-500">
+                        {EVACUATION_STATUS_META[marker.center.status].label}
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  <a
-                    href={buildCenterDetailsHref(marker.center.id)}
-                    className="inline-flex h-9 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 text-[0.75rem] font-semibold text-slate-700 no-underline"
-                  >
-                    View Details
-                  </a>
-                  <a
-                    href={buildDirectionsUrl(marker.center)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold !text-white no-underline shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
-                  >
-                    Get Directions
-                  </a>
-                </div>
-              </div>
-            </Popup>
+                    <div className="flex flex-wrap gap-1.5">
+                      {facilitySummary.visible.map((facilityLabel, index) => (
+                        <span
+                          key={`${marker.center.id}-${facilityLabel}-${index}`}
+                          className="rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-medium text-slate-700"
+                        >
+                          {facilityLabel}
+                        </span>
+                      ))}
+                      {facilitySummary.remaining > 0 ? (
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[0.68rem] font-medium text-slate-700">
+                          +{facilitySummary.remaining} more
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-1 text-[0.72rem] text-slate-500">
+                      <div>{formatEvacuationVerificationLabel(marker.center.verificationStatus)}</div>
+                      <div>{formatEvacuationSourceLabel(marker.center.sourceType)}</div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      <a
+                        href={buildCenterDetailsHref(marker.center.id)}
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-slate-200 bg-white px-3 text-[0.75rem] font-semibold text-slate-700 no-underline"
+                      >
+                        View Details
+                      </a>
+                      <a
+                        href={buildDirectionsUrl(marker.center)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold !text-white no-underline shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                      >
+                        Get Directions
+                      </a>
+                    </div>
+                  </div>
+                </Popup>
+              );
+            })()}
           </Marker>
         ))}
 
