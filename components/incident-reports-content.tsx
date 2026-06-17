@@ -57,6 +57,7 @@ import {
   createReportActionHeaders,
   REPORT_ACTION_UNDO_WINDOW_MS,
 } from "@/lib/report-session";
+import { fetchWeatherLocation } from "@/lib/weather-client";
 
 type FormState = {
   locationName: string;
@@ -930,10 +931,32 @@ export function IncidentReportsContent() {
     setLoadingCurrentLocation(true);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        updateFormState("latitude", position.coords.latitude.toFixed(6));
-        updateFormState("longitude", position.coords.longitude.toFixed(6));
-        setLoadingCurrentLocation(false);
+      async (position) => {
+        const latitude = position.coords.latitude.toFixed(6);
+        const longitude = position.coords.longitude.toFixed(6);
+
+        updateFormState("latitude", latitude);
+        updateFormState("longitude", longitude);
+
+        try {
+          const result = await fetchWeatherLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            name: "Your Location",
+          });
+          const resolvedLocationName = result.resolvedAddress?.trim() || result.location.name.trim();
+
+          if (resolvedLocationName) {
+            updateFormState("locationName", resolvedLocationName);
+          }
+        } catch {
+          setToast({
+            tone: "error",
+            message: "Current coordinates added. Enter the location name manually if needed.",
+          });
+        } finally {
+          setLoadingCurrentLocation(false);
+        }
       },
       () => {
         setLoadingCurrentLocation(false);
@@ -941,6 +964,11 @@ export function IncidentReportsContent() {
           tone: "error",
           message: "Unable to read your current location.",
         });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
       },
     );
   }

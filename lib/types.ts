@@ -95,6 +95,7 @@ export type WeatherLocationResult = {
   location: WeatherLocation;
   fetchedAt: string;
   advisoryMessage: string;
+  resolvedAddress?: string;
 };
 
 export type EvacuationCenterStatus =

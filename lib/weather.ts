@@ -77,16 +77,27 @@ type GeocodingResult = {
 
 type ReverseGeocodingResponse = {
   address?: {
+    road?: string;
+    neighbourhood?: string;
+    quarter?: string;
     city?: string;
     town?: string;
     municipality?: string;
     village?: string;
+    hamlet?: string;
+    borough?: string;
     suburb?: string;
+    city_district?: string;
     county?: string;
     state?: string;
     country_code?: string;
   };
   display_name?: string;
+};
+
+type ReverseGeocodedPhilippineAddress = {
+  locationName: string | null;
+  formattedAddress: string | null;
 };
 
 const LOCATION_NOT_FOUND_MESSAGE =
@@ -450,7 +461,42 @@ async function fetchPhilippineGeocodingResults(query: string) {
   }
 }
 
-async function reverseGeocodePhilippineLocationName(latitude: number, longitude: number) {
+function formatPhilippineAddress(payload: ReverseGeocodingResponse) {
+  const address = payload.address;
+
+  if (!address) {
+    return null;
+  }
+
+  const lineParts = [
+    address.road,
+    address.neighbourhood,
+    address.quarter,
+    address.village,
+    address.hamlet,
+    address.suburb,
+    address.borough,
+    address.city_district,
+    address.city,
+    address.town,
+    address.municipality,
+    address.county,
+    address.state,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  if (lineParts.length === 0) {
+    return null;
+  }
+
+  return Array.from(new Set(lineParts)).slice(0, 3).join(", ");
+}
+
+async function reverseGeocodePhilippineAddress(
+  latitude: number,
+  longitude: number,
+): Promise<ReverseGeocodedPhilippineAddress> {
   const searchParams = new URLSearchParams({
     format: "jsonv2",
     lat: String(latitude),
@@ -473,29 +519,40 @@ async function reverseGeocodePhilippineLocationName(latitude: number, longitude:
     });
 
     if (!response.ok) {
-      return null;
+      return {
+        locationName: null,
+        formattedAddress: null,
+      };
     }
 
     const payload = (await response.json()) as ReverseGeocodingResponse;
     const countryCode = payload.address?.country_code?.toUpperCase();
 
     if (countryCode && countryCode !== PHILIPPINES_COUNTRY_CODE) {
-      return null;
+      return {
+        locationName: null,
+        formattedAddress: null,
+      };
     }
 
-    return (
-      payload.address?.city ||
-      payload.address?.town ||
-      payload.address?.municipality ||
-      payload.address?.village ||
-      payload.address?.suburb ||
-      payload.address?.county ||
-      payload.address?.state ||
-      payload.display_name?.split(",")[0]?.trim() ||
-      null
-    );
+    return {
+      locationName:
+        payload.address?.city ||
+        payload.address?.town ||
+        payload.address?.municipality ||
+        payload.address?.village ||
+        payload.address?.suburb ||
+        payload.address?.county ||
+        payload.address?.state ||
+        payload.display_name?.split(",")[0]?.trim() ||
+        null,
+      formattedAddress: formatPhilippineAddress(payload),
+    };
   } catch {
-    return null;
+    return {
+      locationName: null,
+      formattedAddress: null,
+    };
   } finally {
     clear();
   }
@@ -801,9 +858,15 @@ export async function getWeatherByCoordinates(
   }
 
   const fallbackName = name?.trim();
+  const reverseGeocodedAddress =
+    !fallbackName || fallbackName === "Your Location"
+      ? await reverseGeocodePhilippineAddress(latitude, longitude)
+      : null;
   const resolvedLocationName =
     !fallbackName || fallbackName === "Your Location"
-      ? (await reverseGeocodePhilippineLocationName(latitude, longitude)) ?? "Your Location"
+      ? reverseGeocodedAddress?.locationName ??
+        reverseGeocodedAddress?.formattedAddress ??
+        "Your Location"
       : fallbackName;
 
   const location = await fetchWeatherForLocation({
@@ -816,6 +879,7 @@ export async function getWeatherByCoordinates(
     location,
     fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
     advisoryMessage: WEATHER_RISK_DISCLAIMER,
+    resolvedAddress: reverseGeocodedAddress?.formattedAddress ?? undefined,
   };
 }
 
