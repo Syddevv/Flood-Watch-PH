@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-import { errorResponse, successResponse } from "@/lib/api-response";
+import { errorResponse } from "@/lib/api-response";
 import {
   clampLimit,
   parsePositiveInteger,
@@ -25,6 +25,10 @@ import {
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+
+function buildInlineImageDataUrl(fileBuffer: Buffer, mimeType: string) {
+  return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
+}
 
 type ReportListRecord = {
   id: string;
@@ -227,7 +231,13 @@ export async function POST(request: Request) {
       }
 
       const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-      imageUrl = await uploadReportImageToCloudinary(imageBuffer, imageFile.name);
+
+      try {
+        imageUrl = await uploadReportImageToCloudinary(imageBuffer, imageFile.name);
+      } catch (error) {
+        console.error("Failed to upload report image.", error);
+        imageUrl = buildInlineImageDataUrl(imageBuffer, imageFile.type);
+      }
     }
 
     const report = await prisma.floodReport.create({
@@ -249,7 +259,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return successResponse(report, { status: 201 });
+    return Response.json({ data: report }, { status: 201 });
   } catch (error) {
     console.error("Failed to create report.", error);
     return errorResponse(

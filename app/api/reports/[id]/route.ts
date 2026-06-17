@@ -60,3 +60,27 @@ export async function GET(request: Request, context: RouteContext) {
     return errorResponse("Something went wrong while fetching the report.");
   }
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+
+    const existingReport = await prisma.floodReport.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existingReport) {
+      return errorResponse("Flood report not found.", 404);
+    }
+
+    const deletedReport = await prisma.floodReport.delete({
+      where: { id },
+    });
+
+    return successResponse(deletedReport);
+  } catch (error) {
+    console.error("Failed to delete report.", error);
+    return errorResponse("Something went wrong while deleting the report.");
+  }
+}
