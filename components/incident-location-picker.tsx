@@ -93,6 +93,7 @@ export function IncidentLocationPicker({
   const [searching, setSearching] = useState(false);
   const [resolvingSelection, setResolvingSelection] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [selectionWarning, setSelectionWarning] = useState<string | null>(null);
   const resolveRequestRef = useRef(0);
 
   useEffect(() => {
@@ -133,6 +134,7 @@ export function IncidentLocationPicker({
 
     setResolvingSelection(true);
     setInlineError(null);
+    setSelectionWarning(null);
     setSelection({
       latitude,
       longitude,
@@ -154,6 +156,7 @@ export function IncidentLocationPicker({
         return;
       }
 
+      setSelectionWarning(null);
       setSelection({
         latitude,
         longitude,
@@ -164,6 +167,9 @@ export function IncidentLocationPicker({
         return;
       }
 
+      setSelectionWarning(
+        "Place name lookup failed. You can still use this pinned location and edit the location field later if needed.",
+      );
       setSelection({
         latitude,
         longitude,
@@ -185,6 +191,7 @@ export function IncidentLocationPicker({
 
     setSearching(true);
     setInlineError(null);
+    setSelectionWarning(null);
 
     try {
       const result = await fetchWeatherLocation({ query: trimmedQuery });
@@ -216,10 +223,16 @@ export function IncidentLocationPicker({
       latitude,
       longitude,
     });
+    setSearchQuery(buildFallbackLocationName(latitude, longitude));
     void resolveSelection(latitude, longitude);
   }
 
   function handleConfirm() {
+    if (resolvingSelection || searching) {
+      setInlineError("Please wait for the selected location to finish resolving.");
+      return;
+    }
+
     if (!selection) {
       setInlineError("Please select a location on the map first.");
       return;
@@ -244,7 +257,7 @@ export function IncidentLocationPicker({
         role="dialog"
         aria-modal="true"
         aria-labelledby="incident-location-picker-title"
-        className="fixed inset-0 z-[var(--layer-sheet)] flex items-end md:items-center md:justify-center md:p-6"
+        className="fixed inset-0 z-[var(--layer-sheet)] flex items-end md:items-start md:justify-center md:px-6 md:pb-6 md:pt-[calc(var(--header-height)+1.25rem)]"
       >
         <div className="flex h-[calc(100dvh-var(--header-height))] w-full flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-sidebar)] shadow-[var(--shadow-floating)] md:h-[min(88vh,820px)] md:max-w-[1080px] md:rounded-[20px]">
           <div className="border-b border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] px-4 pb-3 pt-3 md:px-5 md:py-4">
@@ -359,6 +372,11 @@ export function IncidentLocationPicker({
                         Resolving nearby place name...
                       </div>
                     ) : null}
+                    {selectionWarning ? (
+                      <div className="rounded-[12px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-warning-text)]">
+                        {selectionWarning}
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="mt-3 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
@@ -396,10 +414,14 @@ export function IncidentLocationPicker({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={!selection}
+                  disabled={!selection || resolvingSelection || searching}
                   className="inline-flex h-11 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Use this location
+                  {resolvingSelection
+                    ? "Resolving location..."
+                    : searching
+                      ? "Please wait..."
+                      : "Use this location"}
                 </button>
               </div>
             </aside>

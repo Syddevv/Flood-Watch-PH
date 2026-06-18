@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
   Check,
@@ -519,10 +519,12 @@ export function IncidentReportsContent() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
   const [pendingNearbyDuplicate, setPendingNearbyDuplicate] =
     useState<PendingNearbyDuplicateState>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const today = useSyncExternalStore(emptySubscribe, getTodaySnapshot, () => null);
   const selectedPhoto = formState.photos[0] ?? null;
   const photoPreviewUrl = useMemo(
@@ -543,6 +545,25 @@ export function IncidentReportsContent() {
       }
     };
   }, [photoPreviewUrl]);
+
+  useEffect(() => {
+    if (!photoDialogOpen) {
+      return;
+    }
+
+    const handleWindowFocus = () => {
+      window.setTimeout(() => {
+        setPhotoDialogOpen(false);
+        photoInputRef.current?.blur();
+      }, 0);
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [photoDialogOpen]);
 
   async function loadReports() {
     setLoadingReports(true);
@@ -752,18 +773,30 @@ export function IncidentReportsContent() {
     }));
   }
 
+  function handleOpenPhotoPicker() {
+    setPhotoDialogOpen(true);
+    photoInputRef.current?.click();
+  }
+
   function handlePhotoSelection(files: FileList | null) {
+    setPhotoDialogOpen(false);
+    photoInputRef.current?.blur();
+
     const selectedPhoto = files?.[0];
 
     if (!selectedPhoto) {
-      updateFormState("photos", []);
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
       return;
     }
 
     const validationError = validateReportImageFile(selectedPhoto);
 
     if (validationError) {
-      updateFormState("photos", []);
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
       setToast({
         tone: "error",
         message: validationError,
@@ -1249,7 +1282,7 @@ export function IncidentReportsContent() {
   return (
     <>
       <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)]">
-        <div className="mx-auto flex min-h-full w-full max-w-[1440px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6 xl:px-8">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6 xl:px-8">
           <section>
             <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
               Report an Incident
@@ -1259,7 +1292,7 @@ export function IncidentReportsContent() {
             </p>
           </section>
 
-          <section className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
+          <section className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
             <div className="space-y-4">
               <section className="rounded-[18px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
                 <div className="flex items-start gap-3">
@@ -1417,10 +1450,23 @@ export function IncidentReportsContent() {
                   </div>
                 </div>
 
-                <label className="mt-3 flex cursor-pointer flex-col rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[color:color-mix(in_srgb,var(--color-surface)_96%,transparent)] text-[var(--color-muted-foreground)]">
+                <div className="mt-3">
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept={reportImageAcceptValue}
+                    className="sr-only"
+                    tabIndex={-1}
+                    onChange={(event) => handlePhotoSelection(event.target.files)}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleOpenPhotoPicker}
+                    className="flex w-full cursor-pointer flex-col rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-5 text-left"
+                  >
+                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                     <div className="flex items-start gap-3">
+                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[color:color-mix(in_srgb,var(--color-surface)_96%,transparent)] text-[var(--color-muted-foreground)]">
                         <ImageUp className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
@@ -1432,17 +1478,12 @@ export function IncidentReportsContent() {
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 py-2 text-[0.8rem] font-medium text-[var(--color-foreground)]">
-                      Choose file
-                    </div>
-                  </div>
-                  <input
-                    type="file"
-                    accept={reportImageAcceptValue}
-                    className="sr-only"
-                    onChange={(event) => handlePhotoSelection(event.target.files)}
-                  />
-                </label>
+                     <div className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 py-2 text-[0.8rem] font-medium text-[var(--color-foreground)]">
+                       Choose file
+                     </div>
+                   </div>
+                  </button>
+                </div>
 
                 {formState.photos[0] ? (
                   <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-3">
@@ -1610,8 +1651,8 @@ export function IncidentReportsContent() {
               </FormSection>
             </div>
 
-            <div className="flex min-h-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-var(--header-height)-2rem)] lg:self-start lg:overflow-hidden">
-              <div className="space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+            <div className="flex min-h-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-var(--header-height)-2rem)] lg:self-start lg:overflow-hidden">
+              <div className="space-y-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                 <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
                   <div className="text-[0.92rem] font-semibold text-[var(--color-foreground)]">
                     Submission guide
