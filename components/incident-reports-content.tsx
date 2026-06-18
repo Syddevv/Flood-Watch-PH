@@ -28,9 +28,6 @@ import {
   validateReportImageFile,
 } from "@/lib/report-image-validation";
 import {
-  formatCountLabel,
-} from "@/lib/reporting";
-import {
   deriveReportLifecycleStatus,
   isActiveLifecycleStatus,
   isRecededLifecycleStatus,
@@ -48,7 +45,6 @@ import type {
 } from "@/lib/report-types";
 import {
   buildStoredActionKey,
-  getReportCommunitySignal,
   getStatusPresentation,
   mapReportToIncident,
   severityBadgeClasses,
@@ -58,8 +54,6 @@ import {
   compareReportsByPriority,
   getReportActivityLabel,
   getReportFreshnessBadge,
-  getReportTrustDetail,
-  getReportTrustSummary,
 } from "@/lib/report-trust";
 import {
   createReportActionHeaders,
@@ -261,27 +255,20 @@ function SelectField({
 
 function ReportCardSkeleton() {
   return (
-    <div className="animate-pulse rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 shadow-[var(--shadow-soft)]">
-      <div className="flex items-start gap-3">
-        <div className="h-12 w-12 rounded-[12px] bg-[var(--color-panel)]" />
-        <div className="min-w-0 flex-1">
-          <div className="h-4 w-2/3 rounded-full bg-[var(--color-panel)]" />
-          <div className="mt-2 h-3 w-5/6 rounded-full bg-[var(--color-panel)]" />
-          <div className="mt-3 flex gap-2">
-            <div className="h-6 w-24 rounded-full bg-[var(--color-panel)]" />
-            <div className="h-6 w-28 rounded-full bg-[var(--color-panel)]" />
-          </div>
+    <div className="animate-pulse rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5">
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-2.5">
+        <div className="h-10 w-10 rounded-[9px] bg-[var(--color-panel)]" />
+        <div className="min-w-0 space-y-1.5">
+          <div className="h-3.5 w-32 rounded-full bg-[var(--color-panel)]" />
+          <div className="h-3 w-24 rounded-full bg-[var(--color-panel)]" />
+          <div className="h-3 w-full rounded-full bg-[var(--color-panel)]" />
         </div>
       </div>
-      <div className="mt-3 h-3 w-full rounded-full bg-[var(--color-panel)]" />
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="h-14 rounded-[12px] bg-[var(--color-panel)]" />
-        <div className="h-14 rounded-[12px] bg-[var(--color-panel)]" />
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
-        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
-        <div className="h-9 rounded-[11px] bg-[var(--color-panel)]" />
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <div className="h-3.5 w-32 rounded-full bg-[var(--color-panel)]" />
+        <div className="h-3.5 w-20 rounded-full bg-[var(--color-panel)]" />
+        <div className="ml-auto h-7 w-24 rounded-[9px] bg-[var(--color-panel)]" />
+        <div className="h-7 w-20 rounded-[9px] bg-[var(--color-panel)]" />
       </div>
     </div>
   );
@@ -310,156 +297,159 @@ function ReportCard({
   const isLikelyReceded = report.status === "Likely Receded";
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
-  const communitySignal = getReportCommunitySignal(report);
   const activityLabel = getReportActivityLabel(report);
-  const trustSummary = getReportTrustSummary(report);
-  const trustDetail = getReportTrustDetail(report);
+  const canConfirm = !hasConfirmed && !isResolved && !isBusy;
+  const canResolve = !hasResolved && !isResolved && !isBusy;
+  const primaryOpensDetails = isResolved || hasConfirmed;
+  const primaryActionLabel = isResolved
+    ? "View details"
+    : hasConfirmed
+      ? "View details"
+      : isBusy
+        ? "Updating"
+        : "Confirm";
 
   return (
     <article
       className={cn(
-        "w-full rounded-[18px] border px-3 py-3 shadow-[var(--shadow-soft)] transition-opacity",
+        "w-full rounded-[12px] border bg-[var(--color-surface)] px-3 py-2.5 transition-colors",
         isResolved
-          ? "border-[rgba(148,163,184,0.22)] bg-[rgba(148,163,184,0.08)] opacity-70"
+          ? "border-[rgba(148,163,184,0.22)] opacity-72"
           : isLikelyReceded
-            ? "border-[rgba(71,85,105,0.26)] bg-[rgba(71,85,105,0.08)]"
+            ? "border-[rgba(71,85,105,0.28)]"
             : "border-[var(--color-border)] bg-[var(--color-surface)]",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 gap-3">
+      <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2.5">
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-[9px] bg-[var(--color-panel)]">
           {thumbnailUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={thumbnailUrl}
               alt={report.title}
-              className="h-12 w-12 shrink-0 rounded-[12px] object-cover"
+              className="h-full w-full object-cover"
             />
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <div className="line-clamp-2 text-[0.94rem] font-semibold leading-6 text-[var(--color-foreground)]">
-              {report.title}
-            </div>
-            <div className="mt-1 flex items-start gap-2 text-[0.8rem] text-[var(--color-muted-foreground)]">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="min-w-0 line-clamp-1">{report.location}</span>
-            </div>
+          ) : (
+            <span
+              className={cn(
+                "h-2.5 w-2.5 rounded-full",
+                report.severity === "severe"
+                  ? "bg-[var(--color-danger)]"
+                  : report.severity === "high"
+                    ? "bg-[var(--color-high)]"
+                    : report.severity === "moderate"
+                      ? "bg-[var(--color-warning)]"
+                      : "bg-[var(--color-success)]",
+              )}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[0.64rem] font-semibold leading-4",
+                severityBadgeClasses[report.severity],
+              )}
+            >
+              {severityLabels[report.severity]}
+            </span>
+            <span
+              className={cn(
+                "inline-flex min-w-0 items-center gap-1.25 rounded-full px-2 py-0.5 text-[0.66rem] font-medium leading-4",
+                statusPresentation.textClassName,
+                statusPresentation.wrapperClassName,
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusPresentation.dotClassName)} />
+              <span className="truncate">{statusPresentation.label}</span>
+            </span>
+            {freshnessBadge ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[0.66rem] font-medium leading-4",
+                  freshnessBadge.tone === "success"
+                    ? "bg-[rgba(34,197,94,0.12)] text-[var(--color-success)]"
+                    : freshnessBadge.tone === "warning"
+                      ? "bg-[rgba(245,158,11,0.12)] text-[var(--color-warning)]"
+                      : freshnessBadge.tone === "muted"
+                        ? "bg-[rgba(148,163,184,0.14)] text-[var(--color-muted-foreground)]"
+                        : "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
+                )}
+              >
+                {freshnessBadge.label}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-1 line-clamp-1 text-[0.95rem] font-semibold leading-5 text-[var(--color-foreground)]">
+            {report.title}
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.76rem] leading-4 text-[var(--color-muted-foreground)]">
+            <MapPin className="h-3.25 w-3.25 shrink-0" />
+            <span className="min-w-0 truncate">{report.location}</span>
           </div>
         </div>
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center justify-center rounded-full border px-2 py-0.5 text-center text-[0.66rem] font-semibold leading-5",
-            severityBadgeClasses[report.severity],
-          )}
-        >
-          {severityLabels[report.severity]}
-        </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-[var(--color-panel)] px-2.5 py-1 text-[0.72rem] text-[var(--color-foreground)]">
-          {report.category}
-        </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
-            statusPresentation.textClassName,
-            statusPresentation.wrapperClassName,
-          )}
-        >
-          <span className={cn("h-2 w-2 shrink-0 rounded-full", statusPresentation.dotClassName)} />
-          <span>{statusPresentation.label}</span>
-        </span>
-        {freshnessBadge ? (
-          <span
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.74rem] leading-4 text-[var(--color-muted-foreground)]">
+          <span className="inline-flex min-w-0 items-center gap-1.25 whitespace-nowrap">
+            <Clock3 className="h-3.25 w-3.25 shrink-0" />
+            <span className="font-mono tabular-nums">{activityLabel}</span>
+          </span>
+          <span className="whitespace-nowrap font-mono tabular-nums">
+            {report.confirmations} confirmed
+          </span>
+        </div>
+
+        <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-1.25 sm:w-auto sm:flex-nowrap">
+          <button
+            type="button"
+            onClick={canConfirm ? () => onConfirm(report.id) : () => onView(report)}
+            disabled={isBusy}
             className={cn(
-              "rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
-              freshnessBadge.tone === "success"
-                ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
-                : freshnessBadge.tone === "warning"
-                  ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
-                  : freshnessBadge.tone === "muted"
-                    ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
-                    : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+              "inline-flex h-7 items-center justify-center gap-1.25 whitespace-nowrap rounded-[9px] px-2.5 text-[0.74rem] font-semibold leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]",
+              isResolved || hasConfirmed
+                ? "border border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                : canConfirm
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "border border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.1)] text-[var(--color-muted-foreground)]",
             )}
           >
-            {freshnessBadge.label}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-2 flex items-center gap-1.5 text-[0.77rem] text-[var(--color-muted-foreground)]">
-        <Clock3 className="h-3.5 w-3.5" />
-        <span>{activityLabel}</span>
-      </div>
-
-      <div className="mt-2 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
-        {trustSummary}
-      </div>
-
-      <div className="mt-2 rounded-[12px] border border-[rgba(148,163,184,0.16)] bg-[rgba(148,163,184,0.05)] px-3 py-2 text-[0.75rem] leading-5 text-[var(--color-foreground)]">
-        <div>{communitySignal}</div>
-        <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
-          {trustDetail}
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
-          <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
-            CONFIRMATIONS
-          </div>
-          <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
-            {formatCountLabel(report.confirmations)}
-          </div>
-        </div>
-        <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
-          <div className="text-[0.66rem] font-semibold tracking-[0.05em] text-[var(--color-muted-foreground)]">
-            RECEDED REPORTS
-          </div>
-          <div className="mt-1 text-[0.86rem] font-semibold text-[var(--color-foreground)]">
-            {formatCountLabel(report.resolvedConfirmations)}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={() => onView(report)}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[0.82rem] font-medium text-[var(--color-foreground)]"
-        >
-          <Eye className="h-3.25 w-3.25" />
-          <span className="whitespace-nowrap">View</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onConfirm(report.id)}
-          disabled={hasConfirmed || isResolved || isBusy}
-          className={cn(
-            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-1.5 text-[0.82rem] font-medium",
-            hasConfirmed || isResolved || isBusy
-              ? "border-[rgba(148,163,184,0.2)] bg-[rgba(148,163,184,0.12)] text-slate-500"
-              : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+            {primaryOpensDetails ? (
+              <Eye className="h-3.25 w-3.25" />
+            ) : (
+              <ThumbsUp className="h-3.25 w-3.25" />
+            )}
+            <span className="whitespace-nowrap">{primaryActionLabel}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolve(report.id)}
+            disabled={!canResolve}
+            className={cn(
+              "inline-flex h-7 items-center justify-center gap-1.25 whitespace-nowrap rounded-[9px] border px-2.5 text-[0.74rem] font-medium leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]",
+              canResolve
+                ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                : "border-[rgba(148,163,184,0.18)] bg-transparent text-[var(--color-muted-foreground)] opacity-55",
+            )}
+          >
+            <Check className="h-3.25 w-3.25" />
+            <span className="whitespace-nowrap">Receded</span>
+          </button>
+          {primaryOpensDetails ? null : (
+            <button
+              type="button"
+              onClick={() => onView(report)}
+              className="inline-flex h-7 items-center justify-center gap-1.25 whitespace-nowrap rounded-[9px] px-1.5 text-[0.72rem] font-medium leading-none text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+            >
+              <Eye className="h-3.25 w-3.25" />
+              <span className="whitespace-nowrap">View details</span>
+            </button>
           )}
-        >
-          <ThumbsUp className="h-3.25 w-3.25" />
-          <span className="whitespace-nowrap">{hasConfirmed ? "Confirmed" : "Confirm"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onResolve(report.id)}
-          disabled={hasResolved || isResolved || isBusy}
-          className={cn(
-            "flex h-9 items-center justify-center gap-1.5 rounded-[11px] border px-1.5 text-[0.82rem] font-medium",
-            hasResolved || isResolved || isBusy
-              ? "border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.12)] text-slate-500"
-              : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
-          )}
-        >
-          <Check className="h-3.25 w-3.25" />
-          <span className="whitespace-nowrap">{hasResolved ? "Reported" : "Receded"}</span>
-        </button>
+        </div>
       </div>
     </article>
   );
@@ -1504,8 +1494,8 @@ export function IncidentReportsContent() {
 
             <div className="flex min-h-0 flex-col gap-4">
               <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                  COMMUNITY ACTIVITY
+                <div className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+                  Community activity
                 </div>
                 <div className="mt-4 space-y-3">
                   {activityStats.map((stat) => {
@@ -1539,7 +1529,7 @@ export function IncidentReportsContent() {
 
               <div className="rounded-[18px] border border-[var(--color-border)] bg-[rgba(37,99,235,0.06)] p-4 shadow-[var(--shadow-soft)]">
                 <div className="text-[0.96rem] font-semibold text-[var(--color-primary)]">
-                  Community Reports
+                  Community reports
                 </div>
                 <p className="mt-2 text-[0.84rem] leading-6 text-[var(--color-primary)]">
                   Community reports are not official advisories. Follow LGU and PAGASA updates.
@@ -1551,12 +1541,12 @@ export function IncidentReportsContent() {
 
               <div className="rounded-[18px] border border-[var(--color-border)] bg-transparent">
                 <div className="px-1 pb-4 pt-3">
-                  <div className="px-3 pb-3 pt-1 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    ACTIVE REPORTS
+                  <div className="px-3 pb-3 pt-1 text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+                    Active reports
                   </div>
                   {loadingReports ? (
                     <div className="activeReportsScrollArea px-2 pb-3 sm:px-3">
-                      <div className="space-y-3 px-1 py-3">
+                      <div className="space-y-2.5 px-1 py-3">
                         {Array.from({ length: 3 }).map((_, index) => (
                           <ReportCardSkeleton key={`active-skeleton-${index}`} />
                         ))}
@@ -1568,7 +1558,7 @@ export function IncidentReportsContent() {
                     </div>
                   ) : (
                     <div className="activeReportsScrollArea px-2 pb-3 sm:px-3">
-                      <div className="space-y-3 px-1 py-3">
+                      <div className="space-y-2.5 px-1 py-3">
                         {activeReports.length > 0 ? (
                           activeReports.map((report) => (
                             <ReportCard
@@ -1595,45 +1585,45 @@ export function IncidentReportsContent() {
                   )}
 
                   <div className="mx-3 mt-1 border-t border-[rgba(148,163,184,0.14)]" />
-                  <div className="px-3 pb-3 pt-4 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    RECENTLY RECEDED REPORTS
+                  <div className="px-3 pb-3 pt-4 text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+                    Recently receded reports
                   </div>
                   {loadingReports ? (
-                    <div className="space-y-3 px-2 pb-3 sm:px-3">
+                    <div className="space-y-2.5 px-2 pb-3 sm:px-3">
                       {Array.from({ length: 2 }).map((_, index) => (
                         <ReportCardSkeleton key={`resolved-skeleton-${index}`} />
                       ))}
                     </div>
                   ) : reportLoadError ? (
-                    <div className="space-y-3 px-2 pb-3 sm:px-3">
+                    <div className="space-y-2.5 px-2 pb-3 sm:px-3">
                       <div className="rounded-[14px] border border-[rgba(239,68,68,0.18)] bg-[rgba(254,242,242,0.7)] px-4 py-3 text-[0.88rem] text-[#991b1b]">
                         {reportLoadError}
                       </div>
                     </div>
                   ) : (
-                  <div className="space-y-3 px-2 pb-3 sm:px-3">
-                    {resolvedReports.length > 0 ? (
-                      resolvedReports.map((report) => (
-                        <ReportCard
-                          key={report.id}
-                          report={report}
-                          hasConfirmed={Boolean(confirmedReportIds[report.id])}
-                          hasResolved={Boolean(resolvedReportIds[report.id])}
-                          actionLoadingId={actionLoadingId}
-                          onConfirm={handleConfirmReport}
-                          onResolve={handleResolveReport}
-                          onView={(nextReport) => {
-                            setSelectedReportId(nextReport.id);
-                            setModalOpen(true);
-                          }}
-                        />
-                      ))
-                    ) : (
-                      <div className="rounded-[14px] border border-[rgba(148,163,184,0.14)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                        No recently receded reports yet.
-                      </div>
-                    )}
-                  </div>
+                    <div className="space-y-2.5 px-2 pb-3 sm:px-3">
+                      {resolvedReports.length > 0 ? (
+                        resolvedReports.map((report) => (
+                          <ReportCard
+                            key={report.id}
+                            report={report}
+                            hasConfirmed={Boolean(confirmedReportIds[report.id])}
+                            hasResolved={Boolean(resolvedReportIds[report.id])}
+                            actionLoadingId={actionLoadingId}
+                            onConfirm={handleConfirmReport}
+                            onResolve={handleResolveReport}
+                            onView={(nextReport) => {
+                              setSelectedReportId(nextReport.id);
+                              setModalOpen(true);
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <div className="rounded-[14px] border border-[rgba(148,163,184,0.14)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
+                          No recently receded reports yet.
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
