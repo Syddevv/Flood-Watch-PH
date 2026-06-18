@@ -323,6 +323,7 @@ export function EvacuationCentersContent() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const coverageSummary = `Showing ${EVACUATION_CENTERS.length} static evacuation center references across Bulacan, NCR, and Rizal.`;
 
   useEffect(() => {
     const centerId = searchParams.get("center");
@@ -495,7 +496,7 @@ export function EvacuationCentersContent() {
           </h1>
           <p className="mt-2 max-w-[820px] text-[0.96rem] leading-7 text-slate-300">
             Find evacuation centers, emergency contacts, and flood safety guidance in one
-            public-facing page. Center information below uses static seeded data so people
+            public-facing page. Center information below uses static reference data so people
             can plan quickly even when live occupancy systems are unavailable.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.8rem] leading-6 text-slate-300">
@@ -552,6 +553,10 @@ export function EvacuationCentersContent() {
                     {nearestMessage}
                   </div>
                 ) : null}
+
+                <p className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                  {coverageSummary}
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   {STATUS_FILTERS.map((status) => (

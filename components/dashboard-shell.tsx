@@ -18,6 +18,7 @@ import { WeatherMonitoringContent } from "@/components/weather-monitoring-conten
 import {
   EMERGENCY_HOTLINES,
   EVACUATION_CENTERS,
+  EVACUATION_FEATURED_CENTERS,
   FLOOD_LEGEND,
   FLOOD_POLYGONS,
   HOTLINE_NOTICE,
@@ -860,7 +861,7 @@ export function DashboardShell({
               weatherError={weatherError}
               alertsLoading={weatherLoading}
               alertsError={weatherError}
-              centers={EVACUATION_CENTERS.slice(0, 4)}
+               centers={EVACUATION_FEATURED_CENTERS}
               hotlines={EMERGENCY_HOTLINES}
               hotlineNotice={HOTLINE_NOTICE}
               timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
@@ -894,7 +895,7 @@ export function DashboardShell({
           weatherError={weatherError}
           alertsLoading={weatherLoading}
           alertsError={weatherError}
-          centers={EVACUATION_CENTERS.slice(0, 4)}
+           centers={EVACUATION_FEATURED_CENTERS}
           hotlines={EMERGENCY_HOTLINES}
           hotlineNotice={HOTLINE_NOTICE}
           timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
