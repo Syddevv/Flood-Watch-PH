@@ -49,9 +49,10 @@ import {
 import { getSidebarWeatherOverview } from "@/lib/weather";
 import {
   hasValidCoordinates,
-  matchesFilter,
-  reportFilterOptions,
-  type ReportFilterId,
+  matchesHighSeverityFilter,
+  matchesReportStatusFilter,
+  reportStatusFilterOptions,
+  type ReportStatusFilterId,
 } from "@/components/flood-map";
 
 type FloodMapToastState = {
@@ -190,9 +191,11 @@ export function DashboardShell({
   const [floodMapUpdatesByReportId, setFloodMapUpdatesByReportId] = useState<Record<string, ReportDetailResponse["data"]["updates"]>>({});
   const [floodMapLoadingReports, setFloodMapLoadingReports] = useState(false);
   const [floodMapReportLoadError, setFloodMapReportLoadError] = useState<string | null>(null);
-  const [floodMapSelectedFilter, setFloodMapSelectedFilter] = useState<ReportFilterId>(
-    reportFilterOptions[0].id,
-  );
+  const [floodMapSelectedReportStatus, setFloodMapSelectedReportStatus] =
+    useState<ReportStatusFilterId>(
+      reportStatusFilterOptions[0].id,
+    );
+  const [floodMapHighSeverityOnly, setFloodMapHighSeverityOnly] = useState(false);
   const [floodMapShowReports, setFloodMapShowReports] = useState(true);
   const [floodMapShowEvacuationCenters, setFloodMapShowEvacuationCenters] = useState(true);
   const [floodMapShowRiskOverlays, setFloodMapShowRiskOverlays] = useState(false);
@@ -438,10 +441,18 @@ export function DashboardShell({
 
   const floodMapFilteredReports = useMemo(
     () =>
-      floodMapMappedReports.filter((report) =>
-        matchesFilter(report, floodMapSelectedFilter),
-      ),
-    [floodMapMappedReports, floodMapSelectedFilter],
+      floodMapMappedReports.filter((report) => {
+        if (!matchesReportStatusFilter(report, floodMapSelectedReportStatus)) {
+          return false;
+        }
+
+        if (floodMapHighSeverityOnly && !matchesHighSeverityFilter(report)) {
+          return false;
+        }
+
+        return true;
+      }),
+    [floodMapHighSeverityOnly, floodMapMappedReports, floodMapSelectedReportStatus],
   );
 
   const floodMapReportMarkers = useMemo<ReportMapMarker[]>(
@@ -489,9 +500,6 @@ export function DashboardShell({
     () => getSidebarWeatherOverview(weatherOverview),
     [weatherOverview],
   );
-  const effectiveShowEvacuationCenters =
-    floodMapShowEvacuationCenters || Boolean(focusedCenterId);
-
   const toggleTheme = () => {
     setTheme((currentTheme) => {
       const nextTheme: Theme = currentTheme === "light" ? "dark" : "light";
@@ -808,14 +816,24 @@ export function DashboardShell({
                   reportMarkers={floodMapReportMarkers}
                   evacuationCenterMarkers={floodMapEvacuationCenterMarkers}
                   showFloodReports={floodMapShowReports}
-                  showEvacuationCenters={effectiveShowEvacuationCenters}
+                  showEvacuationCenters={floodMapShowEvacuationCenters}
                   onToggleFloodReports={() => setFloodMapShowReports((current) => !current)}
                   onToggleEvacuationCenters={() =>
-                    setFloodMapShowEvacuationCenters((current) => !current)
+                    setFloodMapShowEvacuationCenters((current) => {
+                      const next = !current;
+                      if (!next) {
+                        setFocusedCenterId(null);
+                      }
+                      return next;
+                    })
                   }
                   focusedCenterId={focusedCenterId}
-                  selectedFilter={floodMapSelectedFilter}
-                  onSelectFilter={setFloodMapSelectedFilter}
+                  selectedReportStatus={floodMapSelectedReportStatus}
+                  onSelectReportStatus={setFloodMapSelectedReportStatus}
+                  highSeverityOnly={floodMapHighSeverityOnly}
+                  onToggleHighSeverityOnly={() =>
+                    setFloodMapHighSeverityOnly((current) => !current)
+                  }
                   loadingReports={floodMapLoadingReports}
                   reportLoadError={floodMapReportLoadError}
                   onOpenReportDetails={(reportId) => {

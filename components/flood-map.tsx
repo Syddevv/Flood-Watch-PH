@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
 import type {
@@ -26,15 +26,14 @@ const DynamicFloodMap = dynamic(
   },
 );
 
-export const reportFilterOptions = [
-  { id: "active", label: "Active Reports" },
+export const reportStatusFilterOptions = [
+  { id: "active", label: "Active" },
   { id: "likely-receded", label: "Likely Receded" },
   { id: "resolved", label: "Resolved" },
-  { id: "all", label: "All Reports" },
-  { id: "critical-high", label: "Critical / High Severity" },
+  { id: "all", label: "All" },
 ] as const;
 
-export type ReportFilterId = (typeof reportFilterOptions)[number]["id"];
+export type ReportStatusFilterId = (typeof reportStatusFilterOptions)[number]["id"];
 
 export function hasValidCoordinates(report: IncidentReport) {
   return (
@@ -45,7 +44,10 @@ export function hasValidCoordinates(report: IncidentReport) {
   );
 }
 
-export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
+export function matchesReportStatusFilter(
+  report: IncidentReport,
+  filter: ReportStatusFilterId,
+) {
   if (filter === "all") {
     return true;
   }
@@ -62,6 +64,10 @@ export function matchesFilter(report: IncidentReport, filter: ReportFilterId) {
     return report.status === "Resolved";
   }
 
+  return false;
+}
+
+export function matchesHighSeverityFilter(report: IncidentReport) {
   return report.severity === "high" || report.severity === "severe";
 }
 
@@ -78,8 +84,10 @@ type FloodMapProps = {
   onToggleFloodReports: () => void;
   onToggleEvacuationCenters: () => void;
   focusedCenterId?: string | null;
-  selectedFilter: ReportFilterId;
-  onSelectFilter: (filter: ReportFilterId) => void;
+  selectedReportStatus: ReportStatusFilterId;
+  onSelectReportStatus: (filter: ReportStatusFilterId) => void;
+  highSeverityOnly: boolean;
+  onToggleHighSeverityOnly: () => void;
   loadingReports: boolean;
   reportLoadError: string | null;
   onOpenReportDetails: (reportId: string) => void;
@@ -98,13 +106,70 @@ export function FloodMap({
   onToggleFloodReports,
   onToggleEvacuationCenters,
   focusedCenterId = null,
-  selectedFilter,
-  onSelectFilter,
+  selectedReportStatus,
+  onSelectReportStatus,
+  highSeverityOnly,
+  onToggleHighSeverityOnly,
   loadingReports,
   reportLoadError,
   onOpenReportDetails,
 }: FloodMapProps) {
-  const [mobileReportsPanelOpen, setMobileReportsPanelOpen] = useState(false);
+  const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (window.innerWidth < 768) {
+      setIsLayerPanelCollapsed(true);
+    }
+  }, []);
+
+  const layerSummary = useMemo(() => {
+    if (loadingReports) {
+      return "Loading map layers...";
+    }
+
+    if (reportLoadError) {
+      return reportLoadError;
+    }
+
+    const parts: string[] = [];
+
+    if (showFloodReports) {
+      parts.push(`${reportMarkers.length} report${reportMarkers.length === 1 ? "" : "s"} visible`);
+    }
+
+    if (showEvacuationCenters) {
+      parts.push(
+        `${evacuationCenterMarkers.length} center${evacuationCenterMarkers.length === 1 ? "" : "s"} visible`,
+      );
+    } else if (showFloodReports) {
+      parts.push("centers hidden");
+    }
+
+    if (parts.length === 0) {
+      return "Map layers are hidden. Turn on a layer to view markers.";
+    }
+
+    return parts.join(" · ");
+  }, [
+    evacuationCenterMarkers.length,
+    loadingReports,
+    reportLoadError,
+    reportMarkers.length,
+    showEvacuationCenters,
+    showFloodReports,
+  ]);
+
+  const helperText = showFloodReports
+    ? showEvacuationCenters
+      ? "Showing community reports and evacuation centers."
+      : "Showing community reports only."
+    : showEvacuationCenters
+      ? "Showing evacuation centers only."
+      : "Choose which map layers to show.";
 
   return (
     <div className="relative h-full min-h-0 w-full">
@@ -119,26 +184,29 @@ export function FloodMap({
         focusedCenterId={focusedCenterId}
       />
 
-      <div className="pointer-events-auto absolute left-4 top-4 z-[470] max-w-[calc(100%-6rem)] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[360px]">
+      <div className="pointer-events-auto absolute left-4 top-4 z-[470] max-w-[calc(100%-6rem)] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_90%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[340px]">
         <div className="flex items-center justify-between gap-3">
           <div className="text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-            LIVE COMMUNITY REPORTS
+            MAP LAYERS
           </div>
           <button
             type="button"
-            aria-label={mobileReportsPanelOpen ? "Collapse community report filters" : "Expand community report filters"}
-            aria-expanded={mobileReportsPanelOpen}
-            onClick={() => setMobileReportsPanelOpen((current) => !current)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
+            aria-label={isLayerPanelCollapsed ? "Expand map layers panel" : "Collapse map layers panel"}
+            aria-expanded={!isLayerPanelCollapsed}
+            onClick={() => setIsLayerPanelCollapsed((current) => !current)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]"
           >
-            {mobileReportsPanelOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
+            {isLayerPanelCollapsed ? (
               <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
             )}
           </button>
         </div>
-        <div className={cn("hidden md:block", mobileReportsPanelOpen && "block")}>
+        <div className="mt-3 rounded-[12px] bg-[var(--color-panel)] px-3 py-2 text-[0.82rem] text-[var(--color-foreground)]">
+          {layerSummary}
+        </div>
+        <div className={cn("mt-3 space-y-3", isLayerPanelCollapsed && "hidden")}>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -150,7 +218,7 @@ export function FloodMap({
                   : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
               )}
             >
-              Flood Reports
+              Reports
             </button>
             <button
               type="button"
@@ -158,7 +226,7 @@ export function FloodMap({
               className={cn(
                 "inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
                 showEvacuationCenters
-                  ? "border-[var(--color-success)] bg-[rgba(34,197,94,0.14)] text-[var(--color-success)]"
+                  ? "border-[var(--color-success)] bg-[rgba(34,197,94,0.16)] text-[var(--color-success)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
               )}
             >
@@ -166,27 +234,41 @@ export function FloodMap({
               <span>Evacuation Centers</span>
             </button>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {reportFilterOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => onSelectFilter(option.id)}
-                disabled={!showFloodReports}
-                className={cn(
-                  "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
-                  selectedFilter === option.id
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
-                  !showFloodReports && "cursor-not-allowed opacity-45",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className={cn("space-y-2", !showFloodReports && "opacity-45")}>
+            <label className="block text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+              Status
+            </label>
+            <select
+              value={selectedReportStatus}
+              onChange={(event) =>
+                onSelectReportStatus(event.target.value as ReportStatusFilterId)
+              }
+              disabled={!showFloodReports}
+              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[0.84rem] text-[var(--color-foreground)] outline-none"
+            >
+              {reportStatusFilterOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-          {allowPolygonToggle ? (
-            <div className="mt-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onToggleHighSeverityOnly}
+              disabled={!showFloodReports}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-[0.76rem] font-medium",
+                highSeverityOnly
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+                !showFloodReports && "cursor-not-allowed opacity-45",
+              )}
+            >
+              High severity only
+            </button>
+            {allowPolygonToggle ? (
               <button
                 type="button"
                 onClick={onToggleRiskOverlays}
@@ -197,22 +279,13 @@ export function FloodMap({
                     : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
                 )}
               >
-                {showRiskOverlays ? "Hide Risk Overlays" : "Show Risk Overlays"}
+                Risk overlays
               </button>
-            </div>
-          ) : null}
-          <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
-            Active reports show current community hazard signals. Use the Likely Receded or Resolved filters to review clearing reports separately.
-          </p>
-          <div className="mt-3 rounded-[12px] bg-[var(--color-panel)] px-3 py-2 text-[0.82rem] text-[var(--color-foreground)]">
-            {loadingReports
-              ? "Loading flood reports..."
-              : reportLoadError
-                ? reportLoadError
-                : !showFloodReports && !showEvacuationCenters
-                  ? "Map layers are hidden. Turn on a layer to view markers."
-                  : `${showFloodReports ? `${reportMarkers.length} report${reportMarkers.length === 1 ? "" : "s"}` : "0 reports"} · ${showEvacuationCenters ? `${evacuationCenterMarkers.length} center${evacuationCenterMarkers.length === 1 ? "" : "s"}` : "0 centers"} visible`}
+            ) : null}
           </div>
+          <p className="text-[0.78rem] leading-5 text-[var(--color-muted-foreground)]">
+            {helperText}
+          </p>
         </div>
       </div>
 
