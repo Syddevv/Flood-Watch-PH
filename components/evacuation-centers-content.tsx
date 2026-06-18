@@ -257,6 +257,11 @@ function NearestCenterCard({
 
       <div className="mt-3 text-[0.78rem] text-slate-300">Source: {sourceMeta.label}</div>
 
+      <p className="mt-3 text-[0.76rem] leading-5 text-slate-300">
+        Distances are approximate direct distances. Actual travel distance may be longer.
+        Use directions for the best route.
+      </p>
+
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Link
           href={buildCenterMapHref(nearest.center.id)}

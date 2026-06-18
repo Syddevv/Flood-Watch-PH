@@ -256,5 +256,5 @@ export function calculateDistanceKm(
 }
 
 export function formatDistanceKm(distanceKm: number) {
-  return `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km`;
+  return `~${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km direct distance`;
 }

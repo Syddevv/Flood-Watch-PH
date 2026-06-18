@@ -200,14 +200,29 @@ export function FloodMapClient({
       return;
     }
 
-    const targetMarker = centerMarkerRefs.current[focusedCenterId];
-    if (!targetMarker) {
-      return;
-    }
+    let frameId = 0;
+    let timeoutId = 0;
 
-    const targetLatLng = targetMarker.getLatLng();
-    targetMarker.openPopup();
-    targetMarker._map?.flyTo(targetLatLng, 13, { duration: 1.1 });
+    const focusTargetMarker = () => {
+      const targetMarker = centerMarkerRefs.current[focusedCenterId];
+      if (!targetMarker) {
+        timeoutId = window.setTimeout(() => {
+          frameId = window.requestAnimationFrame(focusTargetMarker);
+        }, 120);
+        return;
+      }
+
+      const targetLatLng = targetMarker.getLatLng();
+      targetMarker.openPopup();
+      targetMarker._map?.flyTo(targetLatLng, 13, { duration: 1.1 });
+    };
+
+    frameId = window.requestAnimationFrame(focusTargetMarker);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
   }, [focusedCenterId, evacuationCenterMarkers]);
 
   return (

@@ -277,9 +277,20 @@ export function DashboardShell({
       return;
     }
 
-    const frameId = window.requestAnimationFrame(() => {
-      setFocusedCenterId(new URLSearchParams(window.location.search).get("center"));
-    });
+    const centerId = new URLSearchParams(window.location.search).get("center");
+    let frameId = 0;
+
+    if (centerId) {
+      setFocusedCenterId(null);
+      frameId = window.requestAnimationFrame(() => {
+        setFocusedCenterId(centerId);
+        setFloodMapShowEvacuationCenters(true);
+      });
+    } else {
+      frameId = window.requestAnimationFrame(() => {
+        setFocusedCenterId(null);
+      });
+    }
 
     return () => {
       window.cancelAnimationFrame(frameId);
