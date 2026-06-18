@@ -40,6 +40,8 @@ import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import type {
   ReportDetailResponse,
+  NearbyReportRecord,
+  NearbyReportsResponse,
   ReportUpdateItem,
   ReportRecord,
   ReportsResponse,
@@ -47,12 +49,18 @@ import type {
 import {
   buildStoredActionKey,
   getReportCommunitySignal,
-  getReportCommunitySummary,
   getStatusPresentation,
   mapReportToIncident,
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import {
+  compareReportsByPriority,
+  getReportActivityLabel,
+  getReportFreshnessBadge,
+  getReportTrustDetail,
+  getReportTrustSummary,
+} from "@/lib/report-trust";
 import {
   createReportActionHeaders,
   REPORT_ACTION_UNDO_WINDOW_MS,
@@ -80,6 +88,12 @@ type ToastState = {
   reportId?: string;
   expiresAt?: number;
   pending?: boolean;
+} | null;
+
+type PendingNearbyDuplicateState = {
+  nearbyReports: NearbyReportRecord[];
+  requestBody: FormData;
+  photoAttached: boolean;
 } | null;
 
 const emptyFormState: FormState = {
@@ -291,11 +305,15 @@ function ReportCard({
   actionLoadingId: string | null;
 }) {
   const statusPresentation = getStatusPresentation(report.status);
+  const freshnessBadge = getReportFreshnessBadge(report);
   const isResolved = report.status === "Resolved";
   const isLikelyReceded = report.status === "Likely Receded";
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
   const communitySignal = getReportCommunitySignal(report);
+  const activityLabel = getReportActivityLabel(report);
+  const trustSummary = getReportTrustSummary(report);
+  const trustDetail = getReportTrustDetail(report);
 
   return (
     <article
@@ -352,19 +370,38 @@ function ReportCard({
           <span className={cn("h-2 w-2 shrink-0 rounded-full", statusPresentation.dotClassName)} />
           <span>{statusPresentation.label}</span>
         </span>
+        {freshnessBadge ? (
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
+              freshnessBadge.tone === "success"
+                ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                : freshnessBadge.tone === "warning"
+                  ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                  : freshnessBadge.tone === "muted"
+                    ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
+                    : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+            )}
+          >
+            {freshnessBadge.label}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-2 flex items-center gap-1.5 text-[0.77rem] text-[var(--color-muted-foreground)]">
         <Clock3 className="h-3.5 w-3.5" />
-        <span>{report.lastActivityAgo ?? report.reportedAgo}</span>
+        <span>{activityLabel}</span>
       </div>
 
       <div className="mt-2 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
-        {getReportCommunitySummary(report)}
+        {trustSummary}
       </div>
 
       <div className="mt-2 rounded-[12px] border border-[rgba(148,163,184,0.16)] bg-[rgba(148,163,184,0.05)] px-3 py-2 text-[0.75rem] leading-5 text-[var(--color-foreground)]">
-        {communitySignal}
+        <div>{communitySignal}</div>
+        <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+          {trustDetail}
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -442,6 +479,8 @@ export function IncidentReportsContent() {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
+  const [pendingNearbyDuplicate, setPendingNearbyDuplicate] =
+    useState<PendingNearbyDuplicateState>(null);
   const today = useSyncExternalStore(emptySubscribe, getTodaySnapshot, () => null);
   const selectedPhoto = formState.photos[0] ?? null;
   const photoPreviewUrl = useMemo(
@@ -463,58 +502,63 @@ export function IncidentReportsContent() {
     };
   }, [photoPreviewUrl]);
 
-  useEffect(() => {
-    let isMounted = true;
+  async function loadReports() {
+    setLoadingReports(true);
+    setReportLoadError(null);
 
-    async function loadReports() {
-      setLoadingReports(true);
-      setReportLoadError(null);
+    try {
+      const response = await fetch("/api/reports?limit=50", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as ReportsResponse | { error: string };
 
-      try {
-        const response = await fetch("/api/reports?limit=50", {
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as ReportsResponse | { error: string };
-
-        if (!response.ok || !("data" in payload)) {
-          throw new Error("error" in payload ? payload.error : "Failed to load reports.");
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        const nextReports = payload.data.map(mapReportToIncident);
-        setReports(nextReports);
-
-        if (typeof window !== "undefined") {
-          const nextConfirmed: Record<string, boolean> = {};
-          const nextResolved: Record<string, boolean> = {};
-
-          for (const report of nextReports) {
-            nextConfirmed[report.id] = localStorage.getItem(buildStoredActionKey("confirmed", report.id)) === "true";
-            nextResolved[report.id] = localStorage.getItem(buildStoredActionKey("resolved", report.id)) === "true";
-          }
-
-          setConfirmedReportIds(nextConfirmed);
-          setResolvedReportIds(nextResolved);
-        }
-      } catch (error) {
-        console.error("Failed to load incident reports.", error);
-        setReportLoadError("Unable to load flood reports. Please check your connection and try again.");
-      } finally {
-        if (isMounted) {
-          setLoadingReports(false);
-        }
+      if (!response.ok || !("data" in payload)) {
+        throw new Error("error" in payload ? payload.error : "Failed to load reports.");
       }
+
+      const nextReports = payload.data.map(mapReportToIncident);
+      setReports(nextReports);
+
+      if (typeof window !== "undefined") {
+        const nextConfirmed: Record<string, boolean> = {};
+        const nextResolved: Record<string, boolean> = {};
+
+        for (const report of nextReports) {
+          nextConfirmed[report.id] =
+            localStorage.getItem(buildStoredActionKey("confirmed", report.id)) === "true";
+          nextResolved[report.id] =
+            localStorage.getItem(buildStoredActionKey("resolved", report.id)) === "true";
+        }
+
+        setConfirmedReportIds(nextConfirmed);
+        setResolvedReportIds(nextResolved);
+      }
+    } catch (error) {
+      console.error("Failed to load incident reports.", error);
+      setReportLoadError("Unable to load flood reports. Please check your connection and try again.");
+    } finally {
+      setLoadingReports(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadReports();
+  }, []);
+
+  useEffect(() => {
+    if (!pendingNearbyDuplicate) {
+      return;
     }
 
-    loadReports();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setPendingNearbyDuplicate(null);
+  }, [
+    formState.category,
+    formState.description,
+    formState.latitude,
+    formState.locationName,
+    formState.longitude,
+    formState.severity,
+  ]);
 
   useEffect(() => {
     if (!selectedReportId || !modalOpen) {
@@ -597,12 +641,18 @@ export function IncidentReportsContent() {
   );
 
   const activeReports = useMemo(
-    () => reports.filter((report) => isActiveLifecycleStatus(report.status)),
+    () =>
+      reports
+        .filter((report) => isActiveLifecycleStatus(report.status))
+        .sort(compareReportsByPriority),
     [reports],
   );
 
   const resolvedReports = useMemo(
-    () => reports.filter((report) => isRecededLifecycleStatus(report.status)),
+    () =>
+      reports
+        .filter((report) => isRecededLifecycleStatus(report.status))
+        .sort(compareReportsByPriority),
     [reports],
   );
 
@@ -650,6 +700,10 @@ export function IncidentReportsContent() {
   }, [reports]);
 
   function updateFormState<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
+    if (pendingNearbyDuplicate) {
+      setPendingNearbyDuplicate(null);
+    }
+
     setFormState((current) => ({
       ...current,
       [key]: value,
@@ -973,7 +1027,31 @@ export function IncidentReportsContent() {
     );
   }
 
-  async function handleSubmitReport() {
+  async function submitPreparedReport(requestBody: FormData, photoAttached: boolean) {
+    const response = await fetch("/api/reports", {
+      method: "POST",
+      body: requestBody,
+    });
+    const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+
+    if (!response.ok || !payload.data) {
+      throw new Error(payload.error ?? "Failed to submit report.");
+    }
+
+    setReports((current) =>
+      [mapReportToIncident(payload.data as ReportRecord), ...current].sort(compareReportsByPriority),
+    );
+    setFormState(emptyFormState);
+    setPendingNearbyDuplicate(null);
+    setToast({
+      tone: "success",
+      message: photoAttached
+        ? "Community report and photo submitted successfully."
+        : "Community report submitted successfully.",
+    });
+  }
+
+  async function handleSubmitReport(skipNearbyDuplicateCheck = false) {
     if (!formState.locationName.trim()) {
       setToast({ tone: "error", message: "Location name is required." });
       return;
@@ -1028,24 +1106,35 @@ export function IncidentReportsContent() {
         requestBody.set("image", selectedPhoto);
       }
 
-      const response = await fetch("/api/reports", {
-        method: "POST",
-        body: requestBody,
-      });
-      const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+      if (!skipNearbyDuplicateCheck) {
+        const nearbyResponse = await fetch(
+          `/api/reports/nearby?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}&radiusMeters=300&limit=3`,
+          {
+            cache: "no-store",
+          },
+        );
+        const nearbyPayload =
+          (await nearbyResponse.json()) as NearbyReportsResponse | { error?: string };
 
-      if (!response.ok || !payload.data) {
-        throw new Error(payload.error ?? "Failed to submit report.");
+        if (!nearbyResponse.ok || !("data" in nearbyPayload)) {
+          throw new Error(
+            "error" in nearbyPayload && nearbyPayload.error
+              ? nearbyPayload.error
+              : "Unable to check nearby reports right now.",
+          );
+        }
+
+        if (nearbyPayload.data.length > 0) {
+          setPendingNearbyDuplicate({
+            nearbyReports: nearbyPayload.data,
+            requestBody,
+            photoAttached: Boolean(selectedPhoto),
+          });
+          return;
+        }
       }
 
-      setReports((current) => [mapReportToIncident(payload.data as ReportRecord), ...current]);
-      setFormState(emptyFormState);
-      setToast({
-        tone: "success",
-        message: selectedPhoto
-          ? "Community report and photo submitted successfully."
-          : "Community report submitted successfully.",
-      });
+      await submitPreparedReport(requestBody, Boolean(selectedPhoto));
     } catch (error) {
       console.error("Failed to submit report.", error);
       setToast({
@@ -1058,6 +1147,43 @@ export function IncidentReportsContent() {
     } finally {
       setSubmittingReport(false);
     }
+  }
+
+  async function handleContinueNewReport() {
+    if (!pendingNearbyDuplicate) {
+      return;
+    }
+
+    setSubmittingReport(true);
+
+    try {
+      await submitPreparedReport(
+        pendingNearbyDuplicate.requestBody,
+        pendingNearbyDuplicate.photoAttached,
+      );
+    } catch (error) {
+      console.error("Failed to submit report after duplicate warning.", error);
+      setToast({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to submit your report right now.",
+      });
+    } finally {
+      setSubmittingReport(false);
+    }
+  }
+
+  async function handleConfirmNearbyDuplicate() {
+    const nearestReportId = pendingNearbyDuplicate?.nearbyReports[0]?.id;
+
+    if (!nearestReportId) {
+      return;
+    }
+
+    setPendingNearbyDuplicate(null);
+    await handleConfirmReport(nearestReportId);
   }
 
   return (
@@ -1297,17 +1423,72 @@ export function IncidentReportsContent() {
                 </label>
               </div>
 
+              {pendingNearbyDuplicate ? (
+                <div className="mt-6 rounded-[16px] border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--color-warning)]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
+                        Nearby active report found within 300 m
+                      </div>
+                      <p className="mt-1 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+                        A nearby community report is already active. Confirm the existing report if it matches this incident, or continue with a separate report.
+                      </p>
+                      <div className="mt-3 space-y-2">
+                        {pendingNearbyDuplicate.nearbyReports.map((nearbyReport) => (
+                          <div
+                            key={nearbyReport.id}
+                            className="rounded-[12px] border border-[rgba(148,163,184,0.18)] bg-[var(--color-surface)] px-3 py-2"
+                          >
+                            <div className="text-[0.86rem] font-semibold text-[var(--color-foreground)]">
+                              {nearbyReport.title}
+                            </div>
+                            <div className="mt-1 text-[0.78rem] text-[var(--color-muted-foreground)]">
+                              {nearbyReport.locationName} · ~{Math.max(1, Math.round(nearbyReport.distanceMeters))} m away
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-[0.78rem] text-[var(--color-muted-foreground)]">
+                        Distances are approximate direct distances. Actual travel distance may be longer.
+                      </p>
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={handleConfirmNearbyDuplicate}
+                          disabled={submittingReport || actionLoadingId !== null}
+                          className="flex h-10 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.9rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          Confirm Existing Nearby Report
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleContinueNewReport}
+                          disabled={submittingReport}
+                          className="flex h-10 items-center justify-center rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          Continue Submitting New Report
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-6 flex items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
                 <button
                   type="button"
-                  onClick={() => setFormState(emptyFormState)}
+                  onClick={() => {
+                    setFormState(emptyFormState);
+                    setPendingNearbyDuplicate(null);
+                  }}
                   className="h-10 rounded-[11px] px-4 text-[0.92rem] font-medium text-[var(--color-foreground)]"
                 >
                   Clear
                 </button>
                 <button
                   type="button"
-                  onClick={handleSubmitReport}
+                  onClick={() => void handleSubmitReport()}
                   disabled={submittingReport || !canSubmitReport}
                   className="flex h-10 items-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.92rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                 >

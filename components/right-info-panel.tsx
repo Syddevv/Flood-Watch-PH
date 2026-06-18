@@ -11,6 +11,11 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import {
+  getReportActivityLabel,
+  getReportFreshnessBadge,
+  getReportTrustSummary,
+} from "@/lib/report-trust";
 import type {
   EmergencyHotline,
   EvacuationCenter,
@@ -50,6 +55,9 @@ function CommunityReportPanelItem({
 }) {
   const statusPresentation = getStatusPresentation(report.status);
   const thumbnailUrl = report.photos[0]?.imageUrl;
+  const freshnessBadge = getReportFreshnessBadge(report);
+  const activityLabel = getReportActivityLabel(report);
+  const trustSummary = getReportTrustSummary(report);
 
   return (
     <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-soft)]">
@@ -88,13 +96,29 @@ function CommunityReportPanelItem({
               <span className={cn("h-1.5 w-1.5 rounded-full", statusPresentation.dotClassName)} />
               <span>{statusPresentation.label}</span>
             </span>
+            {freshnessBadge ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[0.66rem] font-medium",
+                  freshnessBadge.tone === "success"
+                    ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                    : freshnessBadge.tone === "warning"
+                      ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                      : freshnessBadge.tone === "muted"
+                        ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
+                        : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+                )}
+              >
+                {freshnessBadge.label}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
 
       <div className="mt-2 flex items-center gap-1.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
         <Clock3 className="h-3.5 w-3.5" />
-        <span>{report.lastActivityAgo ?? report.reportedAgo}</span>
+        <span>{activityLabel}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-[0.72rem] text-[var(--color-muted-foreground)]">
@@ -113,7 +137,8 @@ function CommunityReportPanelItem({
       </div>
 
       <div className="mt-2 text-[0.75rem] text-[var(--color-muted-foreground)]">
-        {getReportCommunitySignal(report)}
+        <div>{trustSummary}</div>
+        <div className="mt-1">{getReportCommunitySignal(report)}</div>
       </div>
 
       <button

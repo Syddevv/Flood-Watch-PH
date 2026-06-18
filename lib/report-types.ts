@@ -31,6 +31,8 @@ export type ReportRecord = {
   officialSummary?: string | null;
   confirmationCount: number;
   resolvedCount: number;
+  lastConfirmedAt?: string | null;
+  lastResolvedConfirmationAt?: string | null;
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
@@ -54,4 +56,12 @@ export type ReportsResponse = {
 
 export type ReportDetailResponse = {
   data: ReportDetailRecord;
+};
+
+export type NearbyReportRecord = ReportRecord & {
+  distanceMeters: number;
+};
+
+export type NearbyReportsResponse = {
+  data: NearbyReportRecord[];
 };

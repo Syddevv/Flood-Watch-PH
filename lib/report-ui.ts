@@ -138,6 +138,8 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     lastActivityAgo: formatRelativeTime(report.lastActivityAt),
     confirmations: report.confirmationCount,
     resolvedConfirmations: report.resolvedCount,
+    lastConfirmedAt: report.lastConfirmedAt ?? null,
+    lastResolvedConfirmationAt: report.lastResolvedConfirmationAt ?? null,
     sourceType: report.sourceType,
     sourceCategory: getSourceCategoryFromReportType(report.sourceType),
     sourceLabel: getSourceLabelFromReportType(report.sourceType),

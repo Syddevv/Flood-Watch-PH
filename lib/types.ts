@@ -236,6 +236,8 @@ export type IncidentReport = {
   lastActivityAgo?: string;
   confirmations: number;
   resolvedConfirmations: number;
+  lastConfirmedAt?: string | null;
+  lastResolvedConfirmationAt?: string | null;
   sourceType: "Community" | "Official" | "System";
   sourceCategory: Exclude<SourceCategory, "provider">;
   sourceLabel: SourceLabel;

@@ -33,6 +33,7 @@ import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
+import { compareReportsByPriority } from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
   IncidentReport,
@@ -462,7 +463,7 @@ export function DashboardShell({
         }
 
         return true;
-      }),
+      }).sort(compareReportsByPriority),
     [floodMapHighSeverityOnly, floodMapMappedReports, floodMapSelectedReportStatus],
   );
 

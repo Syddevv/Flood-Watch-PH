@@ -1,10 +1,13 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
+import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
+import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Clock3, Eye, Layers3, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
 import L from "leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import {
   MapContainer,
   Marker,
@@ -27,6 +30,12 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import {
+  getReportActivityLabel,
+  getReportFreshnessBadge,
+  getReportTrustDetail,
+  getReportTrustSummary,
+} from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
   LegendItem,
@@ -253,101 +262,134 @@ export function FloodMapClient({
           />
         ))}
 
-        {reportMarkers.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={marker.coordinates}
-            icon={iconForReportMarker(marker)}
-            title={marker.title}
-            ref={(instance: ReportMarkerInstance | null) => {
-              reportMarkerRefs.current[marker.reportId] = instance;
-            }}
-            eventHandlers={{
-              click: () => {
-                const targetMarker = reportMarkerRefs.current[marker.reportId];
-                if (!targetMarker) {
-                  return;
-                }
+        <MarkerClusterGroup
+          chunkedLoading
+          maxClusterRadius={56}
+          showCoverageOnHover={false}
+          spiderfyOnMaxZoom
+        >
+          {reportMarkers.map((marker) => {
+            const statusPresentation = getStatusPresentation(marker.report.status);
+            const freshnessBadge = getReportFreshnessBadge(marker.report);
+            const activityLabel = getReportActivityLabel(marker.report);
+            const trustSummary = getReportTrustSummary(marker.report);
+            const trustDetail = getReportTrustDetail(marker.report);
 
-                const targetLatLng = targetMarker.getLatLng();
-                targetMarker.openPopup();
-                targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.9 });
-              },
-            }}
-          >
-            <Popup>
-              <div className="w-[248px] space-y-3">
-                <div>
-                  <div className="text-[0.98rem] font-semibold text-slate-900">
-                    {marker.report.title}
-                  </div>
-                  <div className="mt-1 text-[0.8rem] text-slate-600">
-                    {marker.report.location}
-                  </div>
-                </div>
+            return (
+              <Marker
+                key={marker.id}
+                position={marker.coordinates}
+                icon={iconForReportMarker(marker)}
+                title={marker.title}
+                ref={(instance: ReportMarkerInstance | null) => {
+                  reportMarkerRefs.current[marker.reportId] = instance;
+                }}
+                eventHandlers={{
+                  click: () => {
+                    const targetMarker = reportMarkerRefs.current[marker.reportId];
+                    if (!targetMarker) {
+                      return;
+                    }
 
-                <div className="flex flex-wrap gap-2">
-                  <span
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
-                      severityBadgeClasses[marker.report.severity],
-                    )}
-                  >
-                    {severityLabels[marker.report.severity]}
-                  </span>
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
-                      getStatusPresentation(marker.report.status).textClassName,
-                      getStatusPresentation(marker.report.status).wrapperClassName,
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        getStatusPresentation(marker.report.status).dotClassName,
-                      )}
-                    />
-                    <span>{getStatusPresentation(marker.report.status).label}</span>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[0.74rem] text-slate-600">
-                  <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
-                    <div className="flex items-center gap-1.5">
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                      <span>{formatCountLabel(marker.report.confirmations)}</span>
+                    const targetLatLng = targetMarker.getLatLng();
+                    targetMarker.openPopup();
+                    targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.9 });
+                  },
+                }}
+              >
+                <Popup>
+                  <div className="w-[248px] space-y-3">
+                    <div>
+                      <div className="text-[0.98rem] font-semibold text-slate-900">
+                        {marker.report.title}
+                      </div>
+                      <div className="mt-1 text-[0.8rem] text-slate-600">
+                        {marker.report.location}
+                      </div>
                     </div>
-                  </div>
-                  <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
-                    <div className="flex items-center gap-1.5">
-                      <Check className="h-3.5 w-3.5" />
-                      <span>{formatCountLabel(marker.report.resolvedConfirmations)} receded</span>
+
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
+                          severityBadgeClasses[marker.report.severity],
+                        )}
+                      >
+                        {severityLabels[marker.report.severity]}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
+                          statusPresentation.textClassName,
+                          statusPresentation.wrapperClassName,
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full",
+                            statusPresentation.dotClassName,
+                          )}
+                        />
+                        <span>{statusPresentation.label}</span>
+                      </span>
+                      {freshnessBadge ? (
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
+                            freshnessBadge.tone === "success"
+                              ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                              : freshnessBadge.tone === "warning"
+                                ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                                : freshnessBadge.tone === "muted"
+                                  ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
+                                  : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+                          )}
+                        >
+                          {freshnessBadge.label}
+                        </span>
+                      ) : null}
                     </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[0.74rem] text-slate-600">
+                      <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <ThumbsUp className="h-3.5 w-3.5" />
+                          <span>{formatCountLabel(marker.report.confirmations)}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <Check className="h-3.5 w-3.5" />
+                          <span>{formatCountLabel(marker.report.resolvedConfirmations)} receded</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[0.75rem] text-slate-500">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      <span>{activityLabel}</span>
+                    </div>
+
+                    <div className="text-[0.75rem] leading-5 text-slate-600">
+                      <div>{trustSummary}</div>
+                      <div className="mt-1">{trustDetail}</div>
+                      <div className="mt-1">{getReportCommunitySignal(marker.report)}</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenReportDetails(marker.reportId)}
+                      className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View Details</span>
+                    </button>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[0.75rem] text-slate-500">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  <span>{marker.report.lastActivityAgo ?? marker.report.reportedAgo}</span>
-                </div>
-
-                <div className="text-[0.75rem] leading-5 text-slate-600">
-                  {getReportCommunitySignal(marker.report)}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => onOpenReportDetails(marker.reportId)}
-                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>View Details</span>
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MarkerClusterGroup>
 
         {evacuationCenterMarkers.map((marker) => (
           <Marker

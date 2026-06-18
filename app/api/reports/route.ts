@@ -14,6 +14,7 @@ import {
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
+import { compareReportsByPriority } from "@/lib/report-trust";
 import { prisma } from "@/lib/prisma";
 import { validateReportImageFile } from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
@@ -50,7 +51,40 @@ type ReportListRecord = {
   lastActivityAt: Date;
   resolvedAt: Date | null;
   archivedAt: Date | null;
+  confirmations?: Array<{
+    confirmationType: string;
+    createdAt: Date;
+  }>;
 };
+
+const reportListInclude = {
+  confirmations: {
+    select: {
+      confirmationType: true,
+      createdAt: true,
+    },
+  },
+} satisfies Prisma.FloodReportInclude;
+
+function serializeReportRecord(report: ReportListRecord) {
+  const lastConfirmedAt =
+    report.confirmations
+      ?.filter((entry) => entry.confirmationType === "confirmed")
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
+      ?.createdAt ?? null;
+  const lastResolvedConfirmationAt =
+    report.confirmations
+      ?.filter((entry) => entry.confirmationType === "resolved")
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
+      ?.createdAt ?? null;
+
+  return {
+    ...report,
+    lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
+    lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
+    confirmations: undefined,
+  };
+}
 
 function buildReportWhereClause(filters: {
   severity?: string;
@@ -88,6 +122,7 @@ async function reconcileReportLifecycle(report: ReportListRecord) {
   return prisma.floodReport.update({
     where: { id: report.id },
     data: patch,
+    include: reportListInclude,
   });
 }
 
@@ -116,6 +151,7 @@ export async function GET(request: Request) {
     const reports = await prisma.floodReport.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      include: reportListInclude,
     });
 
     const reconciledReports = await Promise.all(
@@ -132,12 +168,45 @@ export async function GET(request: Request) {
       return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
     });
 
+    filteredReports.sort((left, right) =>
+      compareReportsByPriority(
+        {
+          createdAt: left.createdAt,
+          updatedAt: left.updatedAt,
+          lastActivityAt: left.lastActivityAt,
+          lastConfirmedAt:
+            left.confirmations
+              ?.filter((entry) => entry.confirmationType === "confirmed")
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+              ?.createdAt ?? null,
+          confirmationCount: left.confirmationCount,
+          resolvedCount: left.resolvedCount,
+          severity: left.severity,
+          status: left.status,
+        },
+        {
+          createdAt: right.createdAt,
+          updatedAt: right.updatedAt,
+          lastActivityAt: right.lastActivityAt,
+          lastConfirmedAt:
+            right.confirmations
+              ?.filter((entry) => entry.confirmationType === "confirmed")
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+              ?.createdAt ?? null,
+          confirmationCount: right.confirmationCount,
+          resolvedCount: right.resolvedCount,
+          severity: right.severity,
+          status: right.status,
+        },
+      ),
+    );
+
     const total = filteredReports.length;
     const skip = (page - 1) * limit;
     const paginatedReports = filteredReports.slice(skip, skip + limit);
 
     return Response.json({
-      data: paginatedReports,
+      data: paginatedReports.map((report) => serializeReportRecord(report as ReportListRecord)),
       pagination: {
         page,
         limit,
@@ -257,9 +326,10 @@ export async function POST(request: Request) {
         resolvedCount: 0,
         lastActivityAt: new Date(),
       },
+      include: reportListInclude,
     });
 
-    return Response.json({ data: report }, { status: 201 });
+    return Response.json({ data: serializeReportRecord(report as ReportListRecord) }, { status: 201 });
   } catch (error) {
     console.error("Failed to create report.", error);
     return errorResponse(

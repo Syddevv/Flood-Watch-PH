@@ -25,6 +25,12 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import {
+  getReportActivityLabel,
+  getReportFreshnessBadge,
+  getReportTrustDetail,
+  getReportTrustSummary,
+} from "@/lib/report-trust";
 import { fetchWeatherLocation } from "@/lib/weather-client";
 
 type IncidentReportModalProps = {
@@ -135,6 +141,10 @@ export function IncidentReportModal({
   const confirmDisabled = actionLoading || hasConfirmed || isResolved;
   const resolveDisabled = actionLoading || hasResolved || isResolved;
   const communitySignal = getReportCommunitySignal(report);
+  const freshnessBadge = getReportFreshnessBadge(report);
+  const activityLabel = getReportActivityLabel(report);
+  const trustSummary = getReportTrustSummary(report);
+  const trustDetail = getReportTrustDetail(report);
   const sourceBadgeClasses =
     report.sourceCategory === "official"
       ? "border-[rgba(37,99,235,0.22)] bg-[rgba(37,99,235,0.08)] text-[#1d4ed8]"
@@ -230,6 +240,22 @@ export function IncidentReportModal({
               >
                 {report.sourceLabel}
               </span>
+              {freshnessBadge ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.75 text-[0.66rem] font-medium md:px-2.5 md:py-1 md:text-[0.74rem]",
+                    freshnessBadge.tone === "success"
+                      ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                      : freshnessBadge.tone === "warning"
+                        ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                        : freshnessBadge.tone === "muted"
+                          ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
+                          : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+                  )}
+                >
+                  {freshnessBadge.label}
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-2.5 md:mt-3">
@@ -256,7 +282,7 @@ export function IncidentReportModal({
               <SummaryMetric
                 icon={<Waves className="h-3.5 w-3.5" />}
                 label="Last activity"
-                value={report.lastActivityAgo ?? report.reportedAgo}
+                value={activityLabel}
               />
               <SummaryMetric
                 icon={<ThumbsUp className="h-3.5 w-3.5" />}
@@ -272,9 +298,15 @@ export function IncidentReportModal({
 
             <div className="mt-3 rounded-[12px] bg-[rgba(148,163,184,0.06)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-muted-foreground)] md:mt-4 md:rounded-[14px] md:border md:border-[rgba(148,163,184,0.18)] md:px-3.5 md:py-3">
               <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)] md:text-[0.74rem]">
-                Community signal
+                Trust and freshness
               </div>
               <p className="mt-1 text-[0.78rem] leading-5 text-[var(--color-foreground)] md:text-[0.86rem] md:leading-6">
+                {trustSummary}
+              </p>
+              <p className="mt-1 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem]">
+                {trustDetail}
+              </p>
+              <p className="mt-1 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem]">
                 {communitySignal}
               </p>
             </div>
