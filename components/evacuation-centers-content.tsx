@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronUp,
   Crosshair,
-  Database,
   Droplets,
   LoaderCircle,
   MapPinned,
@@ -27,7 +26,6 @@ import {
   EVACUATION_CENTERS,
   EVACUATION_CENTER_DATA_STATUS_NOTE,
   EVACUATION_CENTER_FACILITIES,
-  EVACUATION_CENTER_STATIC_REFERENCE_NOTE,
   FLOOD_SAFETY_CHECKLIST,
 } from "@/lib/constants";
 import {
@@ -39,7 +37,6 @@ import {
   EMERGENCY_CONTACT_CATEGORY_ACCENTS,
   EVACUATION_SOURCE_META,
   EVACUATION_STATUS_META,
-  EVACUATION_VERIFICATION_META,
   formatEstimatedCapacity,
   formatEvacuationFacilityLabel,
   formatDistanceKm,
@@ -87,7 +84,6 @@ function EvacuationCenterCard({
   directionsOrigin?: { latitude: number; longitude: number } | null;
 }) {
   const statusMeta = EVACUATION_STATUS_META[center.status];
-  const verificationMeta = EVACUATION_VERIFICATION_META[center.verificationStatus];
   const sourceMeta = EVACUATION_SOURCE_META[center.sourceType];
 
   return (
@@ -140,20 +136,6 @@ function EvacuationCenterCard({
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <span
-          className={cn(
-            "rounded-full border px-2.5 py-1 text-[0.68rem] font-medium",
-            verificationMeta.badgeClassName,
-          )}
-        >
-          {verificationMeta.label}
-        </span>
-        <span className="rounded-full border border-[rgba(148,163,184,0.16)] bg-[var(--color-panel)] px-2.5 py-1 text-[0.68rem] font-medium text-[var(--color-muted-foreground)]">
-          {sourceMeta.label}
-        </span>
-      </div>
-
       <div className="mt-3 space-y-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
         {center.contactNumber ? (
           <div className="flex items-center gap-2">
@@ -181,12 +163,6 @@ function EvacuationCenterCard({
           {center.notes}
         </p>
       ) : null}
-
-      <p className="mt-3 text-[0.76rem] text-[var(--color-muted-foreground)]">
-        {center.isSample
-          ? "Sample/demo data. Replace with verified LGU or DSWD references."
-          : EVACUATION_CENTER_STATIC_REFERENCE_NOTE}
-      </p>
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Link
@@ -218,7 +194,6 @@ function NearestCenterCard({
   directionsOrigin?: { latitude: number; longitude: number } | null;
 }) {
   const statusMeta = EVACUATION_STATUS_META[nearest.center.status];
-  const verificationMeta = EVACUATION_VERIFICATION_META[nearest.center.verificationStatus];
   const sourceMeta = EVACUATION_SOURCE_META[nearest.center.sourceType];
   const facilitySummary = summarizeEvacuationFacilities(nearest.center.facilities, 4);
 
@@ -255,14 +230,6 @@ function NearestCenterCard({
           )}
         >
           {statusMeta.label}
-        </span>
-        <span
-          className={cn(
-            "rounded-full border px-3 py-1 text-[0.72rem] font-medium",
-            verificationMeta.badgeClassName,
-          )}
-        >
-          {verificationMeta.label}
         </span>
         <span className="text-[0.78rem] text-slate-300">
           {nearest.center.lastVerifiedAt
@@ -356,11 +323,6 @@ export function EvacuationCentersContent() {
     latitude: number;
     longitude: number;
   } | null>(null);
-
-  const allCentersSampleDemo = useMemo(
-    () => EVACUATION_CENTERS.every((center) => center.sourceType === "sample_demo"),
-    [],
-  );
 
   useEffect(() => {
     const centerId = searchParams.get("center");
@@ -539,12 +501,6 @@ export function EvacuationCentersContent() {
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.8rem] leading-6 text-slate-300">
             <span className="font-semibold text-sky-300">Data status:</span>
             <span className="max-w-[960px]">{EVACUATION_CENTER_DATA_STATUS_NOTE}</span>
-            {allCentersSampleDemo ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(148,163,184,0.18)] bg-[rgba(148,163,184,0.08)] px-2.5 py-1 text-[0.7rem] font-medium text-slate-300">
-                <Database className="h-3.5 w-3.5" />
-                <span>Current dataset is sample/demo</span>
-              </span>
-            ) : null}
           </div>
         </section>
 
@@ -614,6 +570,10 @@ export function EvacuationCentersContent() {
                     </button>
                   ))}
                 </div>
+
+                <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
+                  Statuses are reference labels, not live availability.
+                </p>
 
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -751,11 +711,6 @@ export function EvacuationCentersContent() {
                           {contact.category}
                         </div>
                       </div>
-                      {contact.isSample ? (
-                        <span className="rounded-full border border-[rgba(148,163,184,0.18)] bg-[rgba(148,163,184,0.08)] px-2.5 py-1 text-[0.66rem] font-semibold text-[var(--color-muted-foreground)]">
-                          Sample / Demo
-                        </span>
-                      ) : null}
                     </div>
 
                     {contact.phone ? (

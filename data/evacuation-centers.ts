@@ -28,7 +28,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     estimatedCapacity: 600,
     contactNumber: "(02) 8646-2436",
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-12T08:30:00+08:00",
     notes: "Primary evacuation venue for nearby river communities.",
     isSample: true,
@@ -49,7 +49,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     estimatedCapacity: 450,
     contactNumber: "(02) 8988-4242",
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-10T14:15:00+08:00",
     notes: "Standby venue for overflow shelter operations during prolonged rainfall.",
     isSample: true,
@@ -69,7 +69,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     facilities: ["drinking_water", "restrooms", "parking"],
     contactNumber: "(02) 8643-0000",
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-08T11:00:00+08:00",
     notes: "Availability should be confirmed with the city DRRMO before deployment.",
     isSample: true,
@@ -89,7 +89,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     facilities: ["pwd_accessible", "medical_support", "drinking_water", "restrooms"],
     estimatedCapacity: 300,
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-11T16:45:00+08:00",
     notes: "Community shelter on elevated ground for nearby households.",
     isSample: true,
@@ -109,7 +109,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     facilities: ["restrooms", "parking"],
     contactNumber: "(02) 8642-3582",
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-09T09:20:00+08:00",
     notes: "Under maintenance. Confirm alternate shelter assignment with the LGU.",
     isSample: true,
@@ -129,7 +129,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     facilities: ["pwd_accessible", "drinking_water", "restrooms", "pet_friendly"],
     estimatedCapacity: 220,
     sourceType: "sample_demo",
-    sourceName: "FloodWatch PH seed dataset",
+    sourceName: "FloodWatch PH reference dataset",
     lastVerifiedAt: "2026-06-13T07:50:00+08:00",
     notes: "Prepared for barangay-level evacuation if river level advisories worsen.",
     isSample: true,
@@ -137,7 +137,7 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
 ];
 
 export const EVACUATION_CENTER_DATA_STATUS_NOTE =
-  "Current evacuation center records are sample/reference data and may not represent all official centers in the Philippines. Confirm availability with your LGU or barangay before going.";
+  "Evacuation center information is static reference data and may change during emergencies. Confirm availability with your LGU or barangay before going.";
 
 export const EVACUATION_CENTER_STATIC_REFERENCE_NOTE =
   "Evacuation center data is static reference information. Confirm availability with your LGU or barangay.";

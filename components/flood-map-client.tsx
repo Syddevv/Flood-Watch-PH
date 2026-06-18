@@ -15,8 +15,6 @@ import {
 } from "react-leaflet";
 
 import {
-  formatEvacuationSourceLabel,
-  formatEvacuationVerificationLabel,
   buildCenterDetailsHref,
   buildDirectionsUrl,
   EVACUATION_STATUS_META,
@@ -390,11 +388,6 @@ export function FloodMapClient({
                           +{facilitySummary.remaining} more
                         </span>
                       ) : null}
-                    </div>
-
-                    <div className="space-y-1 text-[0.72rem] text-slate-500">
-                      <div>{formatEvacuationVerificationLabel(marker.center.verificationStatus)}</div>
-                      <div>{formatEvacuationSourceLabel(marker.center.sourceType)}</div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-2">
