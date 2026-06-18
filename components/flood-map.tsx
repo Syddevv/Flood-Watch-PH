@@ -84,6 +84,7 @@ type FloodMapProps = {
   onToggleFloodReports: () => void;
   onToggleEvacuationCenters: () => void;
   focusedCenterId?: string | null;
+  focusedReportId?: string | null;
   selectedReportStatus: ReportStatusFilterId;
   onSelectReportStatus: (filter: ReportStatusFilterId) => void;
   highSeverityOnly: boolean;
@@ -106,6 +107,7 @@ export function FloodMap({
   onToggleFloodReports,
   onToggleEvacuationCenters,
   focusedCenterId = null,
+  focusedReportId = null,
   selectedReportStatus,
   onSelectReportStatus,
   highSeverityOnly,
@@ -206,6 +208,7 @@ export function FloodMap({
         legend={legend}
         onOpenReportDetails={onOpenReportDetails}
         focusedCenterId={focusedCenterId}
+        focusedReportId={focusedReportId}
       />
 
       <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[344px]">

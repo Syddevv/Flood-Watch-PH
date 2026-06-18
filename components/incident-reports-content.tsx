@@ -35,6 +35,7 @@ import {
 import type { IncidentReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
+import { IncidentLocationPicker } from "@/components/incident-location-picker";
 import type {
   ReportDetailResponse,
   NearbyReportRecord,
@@ -517,6 +518,7 @@ export function IncidentReportsContent() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
   const [pendingNearbyDuplicate, setPendingNearbyDuplicate] =
@@ -1067,6 +1069,24 @@ export function IncidentReportsContent() {
     );
   }
 
+  function handleUsePickedLocation(location: {
+    locationName: string;
+    latitude: string;
+    longitude: string;
+  }) {
+    if (pendingNearbyDuplicate) {
+      setPendingNearbyDuplicate(null);
+    }
+
+    setFormState((current) => ({
+      ...current,
+      locationName: location.locationName,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }));
+    setLocationPickerOpen(false);
+  }
+
   async function submitPreparedReport(requestBody: FormData, photoAttached: boolean) {
     const response = await fetch("/api/reports", {
       method: "POST",
@@ -1315,10 +1335,11 @@ export function IncidentReportsContent() {
                     <div className="flex items-end">
                       <button
                         type="button"
+                        onClick={() => setLocationPickerOpen(true)}
                         className="flex h-11 w-full items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_78%,transparent)] px-4 text-[0.88rem] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-panel)] xl:w-auto"
                       >
                         <MapIcon className="h-4 w-4" />
-                        <span>Show map</span>
+                        <span>Pick on map</span>
                       </button>
                     </div>
                   </div>
@@ -1773,6 +1794,17 @@ export function IncidentReportsContent() {
           }
         }}
       />
+
+      {locationPickerOpen ? (
+        <IncidentLocationPicker
+          open={locationPickerOpen}
+          initialLocationName={formState.locationName}
+          initialLatitude={formState.latitude}
+          initialLongitude={formState.longitude}
+          onClose={() => setLocationPickerOpen(false)}
+          onConfirm={handleUsePickedLocation}
+        />
+      ) : null}
 
       {toast ? <UndoToast toast={toast} onUndo={handleUndoAction} /> : null}
     </>

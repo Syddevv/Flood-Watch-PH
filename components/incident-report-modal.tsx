@@ -461,7 +461,7 @@ export function IncidentReportModal({
                 onClick={() => onConfirm(report.id)}
                 disabled={confirmDisabled}
                 className={cn(
-                  "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-[0.8rem] font-semibold md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
+                  "flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-2.5 text-center text-[0.78rem] font-semibold leading-tight md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
                   confirmDisabled
                     ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
                     : "floodwatch-primary-action",
@@ -475,14 +475,15 @@ export function IncidentReportModal({
                 onClick={() => onResolve(report.id)}
                 disabled={resolveDisabled}
                 className={cn(
-                  "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-3 text-[0.8rem] font-medium md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
+                  "flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-2.5 text-center text-[0.78rem] font-medium leading-tight md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
                   resolveDisabled
                     ? "border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
                     : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
                 )}
               >
                 <Check className="h-4 w-4" />
-                <span>{hasResolved ? "Reported receded" : "Report receded"}</span>
+                <span className="md:hidden">{hasResolved ? "Receded" : "Mark receded"}</span>
+                <span className="hidden md:inline">{hasResolved ? "Reported receded" : "Report receded"}</span>
               </button>
               <button
                 type="button"

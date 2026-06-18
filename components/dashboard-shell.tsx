@@ -11,6 +11,7 @@ import { FloodMap } from "@/components/flood-map";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
 import { IncidentReportsContent } from "@/components/incident-reports-content";
+import { LiveAlertsPanel } from "@/components/live-alerts-panel";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
@@ -33,7 +34,11 @@ import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
-import { compareReportsByPriority } from "@/lib/report-trust";
+import {
+  compareReportsByPriority,
+  getReportFreshnessBadge,
+  isRecentlyConfirmedReport,
+} from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
   IncidentReport,
@@ -64,6 +69,13 @@ type FloodMapToastState = {
   expiresAt?: number;
   pending?: boolean;
 } | null;
+
+type LiveAlertGroup = {
+  id: string;
+  title: string;
+  description: string;
+  reports: IncidentReport[];
+};
 
 type DashboardShellProps = {
   pageMode?:
@@ -175,6 +187,7 @@ export function DashboardShell({
   const [theme, setTheme] = useState<Theme>("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [liveAlertsOpen, setLiveAlertsOpen] = useState(false);
   const activeItem = getActiveItemFromPageMode(pageMode);
   const isFloodMapView = pageMode === "flood-map";
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
@@ -210,6 +223,7 @@ export function DashboardShell({
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [focusedCenterId, setFocusedCenterId] = useState<string | null>(null);
+  const [focusedReportId, setFocusedReportId] = useState<string | null>(null);
 
   useEffect(() => {
     let frameId = 0;
@@ -503,6 +517,74 @@ export function DashboardShell({
     [floodMapFilteredReports],
   );
 
+  const floodMapLiveAlertGroups = useMemo<LiveAlertGroup[]>(() => {
+    const activeReports = floodMapMappedReports
+      .filter((report) => matchesReportStatusFilter(report, "active"))
+      .sort(compareReportsByPriority);
+    const assigned = new Set<string>();
+
+    const take = (predicate: (report: IncidentReport) => boolean) => {
+      const matches = activeReports.filter(
+        (report) => !assigned.has(report.id) && predicate(report),
+      );
+
+      for (const report of matches) {
+        assigned.add(report.id);
+      }
+
+      return matches;
+    };
+
+    return [
+      {
+        id: "critical",
+        title: "Critical",
+        description: "Highest-severity active reports that need immediate review.",
+        reports: take((report) => report.severity === "severe"),
+      },
+      {
+        id: "high-risk",
+        title: "High risk",
+        description: "Serious active reports with elevated flood impact.",
+        reports: take((report) => report.severity === "high"),
+      },
+      {
+        id: "recently-confirmed",
+        title: "Recently confirmed",
+        description: "Reports with fresh community confirmation.",
+        reports: take((report) => isRecentlyConfirmedReport(report)),
+      },
+      {
+        id: "needs-update",
+        title: "Needs update",
+        description: "Older active reports that may need a fresh community check.",
+        reports: take((report) => {
+          const freshness = getReportFreshnessBadge(report);
+          return (
+            freshness?.label === "Needs update" ||
+            freshness?.label === "Likely outdated"
+          );
+        }),
+      },
+    ];
+  }, [floodMapMappedReports]);
+
+  const liveAlertsCount = useMemo(() => {
+    const urgentIds = new Set<string>();
+
+    for (const group of floodMapLiveAlertGroups) {
+      if (group.id === "needs-update") {
+        continue;
+      }
+
+      for (const report of group.reports) {
+        urgentIds.add(report.id);
+      }
+    }
+
+    return urgentIds.size;
+  }, [floodMapLiveAlertGroups]);
+
   const floodMapSelectedReport = useMemo(
     () => floodMapReports.find((report) => report.id === floodMapSelectedReportId) ?? null,
     [floodMapReports, floodMapSelectedReportId],
@@ -523,6 +605,7 @@ export function DashboardShell({
   const handleSelect = (id: string) => {
     setSheetOpen(false);
     setSidebarOpen(false);
+    setLiveAlertsOpen(false);
 
     if (id === "flood-map") {
       router.push("/");
@@ -554,6 +637,33 @@ export function DashboardShell({
       return;
     }
     setSheetOpen(false);
+  };
+
+  const focusFloodMapReport = (reportId: string) => {
+    setSheetOpen(false);
+    setLiveAlertsOpen(false);
+    setFloodMapModalOpen(false);
+    setFloodMapSelectedReportId(null);
+    setFloodMapShowReports(true);
+    setFloodMapHighSeverityOnly(false);
+    setFloodMapSelectedReportStatus("active");
+    setFocusedCenterId(null);
+    setFocusedReportId(null);
+
+    window.requestAnimationFrame(() => {
+      setFocusedReportId(reportId);
+    });
+  };
+
+  const openFloodMapReportDetails = (reportId: string) => {
+    setSheetOpen(false);
+    setLiveAlertsOpen(false);
+    setFloodMapShowReports(true);
+    setFloodMapHighSeverityOnly(false);
+    setFloodMapSelectedReportStatus("active");
+    setFocusedCenterId(null);
+    setFloodMapSelectedReportId(reportId);
+    setFloodMapModalOpen(true);
   };
 
   async function applyUpdatedFloodMapReport(
@@ -764,6 +874,16 @@ export function DashboardShell({
       <AppHeader
         activeItemLabel={NAV_ITEMS.find((item) => item.id === activeItem)?.label ?? "Flood Map"}
         theme={theme}
+        liveAlertsCount={isFloodMapView ? liveAlertsCount : 0}
+        liveAlertsEnabled={isFloodMapView}
+        onOpenLiveAlerts={() => {
+          if (!isFloodMapView) {
+            return;
+          }
+
+          setSheetOpen(false);
+          setLiveAlertsOpen(true);
+        }}
         onToggleTheme={toggleTheme}
         onOpenSidebar={() => setSidebarOpen(true)}
         onReportFlood={() => router.push("/incident-reports")}
@@ -841,6 +961,7 @@ export function DashboardShell({
                     })
                   }
                   focusedCenterId={focusedCenterId}
+                  focusedReportId={focusedReportId}
                   selectedReportStatus={floodMapSelectedReportStatus}
                   onSelectReportStatus={setFloodMapSelectedReportStatus}
                   highSeverityOnly={floodMapHighSeverityOnly}
@@ -849,10 +970,7 @@ export function DashboardShell({
                   }
                   loadingReports={floodMapLoadingReports}
                   reportLoadError={floodMapReportLoadError}
-                  onOpenReportDetails={(reportId) => {
-                    setFloodMapSelectedReportId(reportId);
-                    setFloodMapModalOpen(true);
-                  }}
+                  onOpenReportDetails={openFloodMapReportDetails}
                 />
               </div>
             )}
@@ -905,10 +1023,7 @@ export function DashboardShell({
               communityReports={floodMapSidebarReports}
               communityReportsLoading={floodMapLoadingReports}
               communityReportsError={floodMapReportLoadError}
-              onViewCommunityReport={(reportId) => {
-                setFloodMapSelectedReportId(reportId);
-                setFloodMapModalOpen(true);
-              }}
+              onViewCommunityReport={openFloodMapReportDetails}
               communityReportsDisclaimer="Community reports may be unverified."
               className="hidden md:flex"
             />
@@ -939,12 +1054,21 @@ export function DashboardShell({
           communityReports={floodMapSidebarReports}
           communityReportsLoading={floodMapLoadingReports}
           communityReportsError={floodMapReportLoadError}
-          onViewCommunityReport={(reportId) => {
-            setFloodMapSelectedReportId(reportId);
-            setFloodMapModalOpen(true);
-            setSheetOpen(false);
-          }}
+          onViewCommunityReport={openFloodMapReportDetails}
           communityReportsDisclaimer="Community reports may be unverified."
+        />
+      ) : null}
+
+      {isFloodMapView ? (
+        <LiveAlertsPanel
+          open={liveAlertsOpen}
+          loading={floodMapLoadingReports}
+          error={floodMapReportLoadError}
+          groups={floodMapLiveAlertGroups}
+          urgentCount={liveAlertsCount}
+          onClose={() => setLiveAlertsOpen(false)}
+          onViewOnMap={focusFloodMapReport}
+          onViewDetails={openFloodMapReportDetails}
         />
       ) : null}
 

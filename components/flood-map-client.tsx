@@ -98,6 +98,10 @@ type CenterMarkerInstance = {
       zoom: number,
       options?: Record<string, unknown>,
     ) => void;
+    panBy?: (
+      offset: [number, number],
+      options?: Record<string, unknown>,
+    ) => void;
   };
 };
 
@@ -108,6 +112,10 @@ type ReportMarkerInstance = {
     flyTo: (
       center: { lat: number; lng: number },
       zoom: number,
+      options?: Record<string, unknown>,
+    ) => void;
+    panBy?: (
+      offset: [number, number],
       options?: Record<string, unknown>,
     ) => void;
   };
@@ -185,6 +193,7 @@ type FloodMapClientProps = {
   legend: LegendItem[];
   onOpenReportDetails: (reportId: string) => void;
   focusedCenterId?: string | null;
+  focusedReportId?: string | null;
 };
 
 export function FloodMapClient({
@@ -193,6 +202,7 @@ export function FloodMapClient({
   polygons,
   onOpenReportDetails,
   focusedCenterId = null,
+  focusedReportId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
   const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
@@ -228,6 +238,42 @@ export function FloodMapClient({
       window.clearTimeout(timeoutId);
     };
   }, [focusedCenterId, evacuationCenterMarkers]);
+
+  useEffect(() => {
+    if (!focusedReportId) {
+      return;
+    }
+
+    let frameId = 0;
+    let timeoutId = 0;
+
+    const focusTargetMarker = () => {
+      const targetMarker = reportMarkerRefs.current[focusedReportId];
+      if (!targetMarker) {
+        timeoutId = window.setTimeout(() => {
+          frameId = window.requestAnimationFrame(focusTargetMarker);
+        }, 120);
+        return;
+      }
+
+      const targetLatLng = targetMarker.getLatLng();
+      targetMarker.openPopup();
+      targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.95 });
+
+      const verticalOffset = window.innerWidth < 768 ? 144 : 92;
+      window.setTimeout(() => {
+        targetMarker.openPopup();
+        targetMarker._map?.panBy?.([0, verticalOffset], { animate: true, duration: 0.35 });
+      }, 220);
+    };
+
+    frameId = window.requestAnimationFrame(focusTargetMarker);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [focusedReportId, reportMarkers]);
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden">

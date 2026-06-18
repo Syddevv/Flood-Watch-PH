@@ -19,6 +19,9 @@ import { ThemeToggle } from "./theme-toggle";
 type AppHeaderProps = {
   activeItemLabel: string;
   theme: Theme;
+  liveAlertsCount: number;
+  liveAlertsEnabled?: boolean;
+  onOpenLiveAlerts: () => void;
   onToggleTheme: () => void;
   onOpenSidebar: () => void;
   onReportFlood: () => void;
@@ -27,6 +30,9 @@ type AppHeaderProps = {
 export function AppHeader({
   activeItemLabel,
   theme,
+  liveAlertsCount,
+  liveAlertsEnabled = true,
+  onOpenLiveAlerts,
   onToggleTheme,
   onOpenSidebar,
   onReportFlood,
@@ -64,12 +70,19 @@ export function AppHeader({
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
-            className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_8%,var(--color-surface))] px-2.5 text-[0.72rem] font-semibold text-[var(--color-danger)] sm:px-3"
+            onClick={onOpenLiveAlerts}
+            disabled={!liveAlertsEnabled}
+            className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_8%,var(--color-surface))] px-2.5 text-[0.72rem] font-semibold text-[var(--color-danger)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:border-[var(--color-border)] disabled:bg-[var(--color-surface)] disabled:text-[var(--color-muted-foreground)] sm:px-3"
           >
             <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
             <AlertTriangle className="hidden h-[13px] w-[13px] sm:block" />
             <span className="hidden sm:inline">{ACTIVE_ALERTS_LABEL}</span>
             <span className="sm:hidden">Alerts</span>
+            {liveAlertsCount > 0 ? (
+              <span className="rounded-full bg-[var(--color-danger)] px-1.5 py-0.5 font-mono text-[0.66rem] leading-none text-white tabular-nums">
+                {liveAlertsCount}
+              </span>
+            ) : null}
           </button>
 
           <button
