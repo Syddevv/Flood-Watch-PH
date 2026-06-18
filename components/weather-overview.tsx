@@ -20,6 +20,22 @@ function formatWindSpeed(windSpeed: number | null) {
   return windSpeed === null ? null : `${windSpeed.toFixed(1)} km/h wind`;
 }
 
+function getRiskSummaryTone(riskLevel: FloodRiskLevel) {
+  if (riskLevel === "Critical") {
+    return "text-[var(--color-danger)]";
+  }
+
+  if (riskLevel === "High") {
+    return "text-[var(--color-high)]";
+  }
+
+  if (riskLevel === "Moderate") {
+    return "text-[var(--color-warning)]";
+  }
+
+  return "text-[var(--color-success)]";
+}
+
 function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
   if (riskLevel === "Critical") {
     return "severe";
@@ -38,24 +54,24 @@ function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
 
 export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
   return (
-    <section className="grid grid-cols-1 gap-3">
+    <section className="grid grid-cols-1 gap-2">
       {weather.locations.map((location) => (
         <article
           key={location.name}
-          className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]"
+          className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3.5 py-3"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="truncate text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+              <div className="truncate text-[0.86rem] font-semibold text-[var(--color-foreground)]">
                 {location.name}
               </div>
-              <p className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
+              <p className="mt-0.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
                 {location.condition ?? "Weather conditions unavailable"}
               </p>
             </div>
             <span
               className={cn(
-                "rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold",
+                "rounded-full border px-2 py-0.5 text-[0.62rem] font-semibold",
                 severityBadgeClasses[getSeverityTone(location.riskLevel)],
               )}
             >
@@ -63,38 +79,48 @@ export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
             </span>
           </div>
 
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div className="font-mono text-[1.5rem] font-semibold leading-none text-[var(--color-foreground)]">
-              {formatTemperature(location.temperature)}
+          <div className="mt-2.5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div className="min-w-0">
+              <div
+                className={cn(
+                  "text-[0.8rem] font-semibold",
+                  getRiskSummaryTone(location.riskLevel),
+                )}
+              >
+                {location.riskLevel} flood risk
+              </div>
+              <div className="mt-0.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
+                Updated <span className="font-mono tabular-nums">{location.updatedAt}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[0.76rem] text-[var(--color-muted-foreground)]">
+            <div className="flex items-center gap-1.5 whitespace-nowrap text-[0.74rem] text-[var(--color-muted-foreground)]">
               <CloudDrizzle className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-              <span>{formatPrecipitation(location.precipitation)}</span>
+              <span className="font-mono tabular-nums">{formatPrecipitation(location.precipitation)}</span>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2 text-[0.72rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
+            <span className="font-mono tabular-nums text-[0.92rem] font-semibold leading-none text-[var(--color-foreground)]">
+              {formatTemperature(location.temperature)}
+            </span>
             {formatHumidity(location.humidity) ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-panel)] px-2 py-1">
+              <span className="inline-flex items-center gap-1">
                 <Droplets className="h-3 w-3" />
                 <span>{formatHumidity(location.humidity)}</span>
               </span>
             ) : null}
             {formatWindSpeed(location.windSpeed) ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-panel)] px-2 py-1">
+              <span className="inline-flex items-center gap-1">
                 <Wind className="h-3 w-3" />
                 <span>{formatWindSpeed(location.windSpeed)}</span>
               </span>
             ) : null}
           </div>
 
-          <div className="mt-3 text-[0.72rem] text-[var(--color-muted-foreground)]">
-            Updated {location.updatedAt}
-          </div>
-          <div className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-2 border-t border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pt-2 text-[0.68rem] text-[var(--color-muted-foreground)]">
             Source: {location.source.name}
           </div>
-          <div className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-0.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
             Official reference: {location.officialReference.name}
           </div>
         </article>

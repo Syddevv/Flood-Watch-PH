@@ -46,13 +46,13 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-[18px] border bg-[var(--color-surface)] shadow-[var(--shadow-soft)]",
+        "overflow-hidden rounded-[10px] border bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)]",
         severityClasses[alert.severity],
       )}
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-2.5 border-b border-[color:color-mix(in_srgb,var(--color-border)_65%,transparent)] px-4 py-2.5",
+          "flex items-center justify-between gap-2.5 border-b border-[color:color-mix(in_srgb,var(--color-border)_65%,transparent)] px-3.5 py-2.25",
           headerClasses[alert.severity],
         )}
       >
@@ -62,7 +62,7 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
           />
           <h3
             className={cn(
-              "text-[0.92rem] font-semibold leading-none tracking-[-0.02em]",
+              "text-[0.86rem] font-semibold leading-none tracking-[-0.02em]",
               titleClasses[alert.severity],
             )}
           >
@@ -71,7 +71,7 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
         </div>
         <span
           className={cn(
-            "rounded-full px-2.5 py-1 text-[0.6rem] font-semibold leading-none",
+            "rounded-full px-2 py-0.75 text-[0.58rem] font-semibold leading-none",
             badgeClasses[alert.severity],
           )}
         >
@@ -79,27 +79,27 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
         </span>
       </div>
 
-      <div className="px-4 py-3.5">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
+      <div className="px-3.5 py-2.75">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 text-[0.74rem] text-[var(--color-muted-foreground)]">
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="font-semibold text-[0.92rem] text-[var(--color-foreground)]">
+            <span className="font-semibold text-[0.84rem] text-[var(--color-foreground)]">
               {alert.location}
             </span>
           </div>
           <div className="flex items-center gap-1.5 whitespace-nowrap">
             <span>Precipitation</span>
-            <span className="font-mono text-[0.95rem] font-semibold text-[var(--color-foreground)]">
+            <span className="font-mono text-[0.82rem] font-semibold text-[var(--color-foreground)]">
               {formatPrecipitation(alert.precipitation)}
             </span>
           </div>
         </div>
 
-        <p className="mt-3 text-[0.8rem] leading-7 text-[var(--color-muted-foreground)]">
+        <p className="mt-2.5 text-[0.74rem] leading-6 text-[var(--color-muted-foreground)]">
           {alert.description}
         </p>
 
-        <div className="mt-3 space-y-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <div className="mt-2.5 space-y-0.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
           <div>
             <span className="font-medium text-[var(--color-foreground)]">Source:</span>{" "}
             <span>{alert.source.label ?? alert.source.name}</span>
@@ -111,7 +111,7 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
           <div>{alert.disclaimer}</div>
         </div>
 
-        <div className="mt-2 flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <div className="mt-2 flex items-center gap-1.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
           <Clock3 className="h-3.25 w-3.25 shrink-0" />
           <span>Updated {alert.updatedAt}</span>
         </div>

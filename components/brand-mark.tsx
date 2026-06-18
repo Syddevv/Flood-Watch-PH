@@ -6,7 +6,7 @@ export function BrandMark({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative h-8.5 w-8.5 overflow-hidden rounded-[16px] shadow-[0_10px_24px_rgba(37,99,235,0.18)]",
+        "relative h-9 w-9 overflow-hidden rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface-raised)] shadow-[var(--shadow-primary)]",
         className,
       )}
     >

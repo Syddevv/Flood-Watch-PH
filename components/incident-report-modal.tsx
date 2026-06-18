@@ -147,20 +147,20 @@ export function IncidentReportModal({
   const trustDetail = getReportTrustDetail(report);
   const sourceBadgeClasses =
     report.sourceCategory === "official"
-      ? "border-[rgba(37,99,235,0.22)] bg-[rgba(37,99,235,0.08)] text-[#1d4ed8]"
+      ? "border-[var(--color-info-border)] bg-[var(--color-info-surface)] text-[var(--color-info-text)]"
       : report.sourceCategory === "system"
-        ? "border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.08)] text-[#b45309]"
-        : "border-[rgba(100,116,139,0.2)] bg-[rgba(100,116,139,0.08)] text-[#475569]";
+        ? "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
+        : "border-[var(--color-muted-border)] bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]";
 
   return (
     <>
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-[1200] bg-slate-950/42 backdrop-blur-[2px]"
+        className="floodwatch-scrim fixed inset-0 z-[var(--layer-modal-backdrop)] backdrop-blur-[2px]"
         onClick={() => onOpenChange(false)}
       />
-      <div className="fixed inset-0 z-[1210] flex items-center justify-center p-2.5 sm:p-4">
-        <div className="flex max-h-[92dvh] w-full max-w-[680px] flex-col overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_24px_80px_rgba(15,23,42,0.26)] md:max-h-[94vh] md:rounded-[18px]">
+      <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center p-2.5 sm:p-4">
+        <div className="flex max-h-[92dvh] w-full max-w-[680px] flex-col overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-floating)] md:max-h-[94vh] md:rounded-[18px]">
           <div className="relative h-[160px] overflow-hidden bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto">
             {currentPhoto?.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -245,12 +245,12 @@ export function IncidentReportModal({
                   className={cn(
                     "rounded-full px-2 py-0.75 text-[0.66rem] font-medium md:px-2.5 md:py-1 md:text-[0.74rem]",
                     freshnessBadge.tone === "success"
-                      ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                      ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
                       : freshnessBadge.tone === "warning"
-                        ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                        ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
                         : freshnessBadge.tone === "muted"
-                          ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
-                          : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
+                          ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
+                          : "bg-[var(--color-info-surface)] text-[var(--color-info-text)]",
                   )}
                 >
                   {freshnessBadge.label}
@@ -296,8 +296,8 @@ export function IncidentReportModal({
               />
             </div>
 
-            <div className="mt-3 rounded-[12px] bg-[rgba(148,163,184,0.06)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-muted-foreground)] md:mt-4 md:rounded-[14px] md:border md:border-[rgba(148,163,184,0.18)] md:px-3.5 md:py-3">
-              <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)] md:text-[0.74rem]">
+            <div className="mt-3 rounded-[12px] bg-[var(--color-muted-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-muted-text)] md:mt-4 md:rounded-[14px] md:border md:border-[var(--color-muted-border)] md:px-3.5 md:py-3">
+              <div className="text-[0.68rem] font-semibold text-[var(--color-muted-foreground)] md:text-[0.74rem]">
                 Trust and freshness
               </div>
               <p className="mt-1 text-[0.78rem] leading-5 text-[var(--color-foreground)] md:text-[0.86rem] md:leading-6">
@@ -364,8 +364,8 @@ export function IncidentReportModal({
             {report.officialSource?.officialSummary ||
             report.officialSource?.officialSourceUrl ||
             report.officialSource?.officialIssuedAt ? (
-              <div className="mt-3 rounded-[12px] border border-[rgba(37,99,235,0.18)] bg-[rgba(37,99,235,0.06)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
-                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[#1d4ed8] md:text-[0.74rem]">
+              <div className="mt-3 rounded-[12px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
+                <div className="text-[0.68rem] font-semibold text-[var(--color-info-text)] md:text-[0.74rem]">
                   Official source metadata
                 </div>
                 {report.officialSource?.officialSummary ? (
@@ -380,7 +380,7 @@ export function IncidentReportModal({
                       href={report.officialSource.officialSourceUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex text-[#1d4ed8] underline underline-offset-2"
+                      className="inline-flex text-[var(--color-info-text)] underline underline-offset-2"
                     >
                       View official source
                     </a>
@@ -413,12 +413,12 @@ export function IncidentReportModal({
             ) : null}
 
             {report.resolvedAgo ? (
-              <div className="mt-3 rounded-[12px] border border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.08)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
+              <div className="mt-3 rounded-[12px] border border-[var(--color-muted-border)] bg-[var(--color-muted-surface)] px-3 py-2 text-[0.76rem] text-[var(--color-foreground)] md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3 md:text-[0.84rem]">
                 {report.resolvedAgo}
               </div>
             ) : null}
 
-            <div className="mt-3 rounded-[12px] border border-[rgba(245,158,11,0.16)] bg-[rgba(245,158,11,0.06)] px-3 py-2 md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3">
+            <div className="mt-3 rounded-[12px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-3 py-2 md:mt-4 md:rounded-[14px] md:px-3.5 md:py-3">
               <div className="flex items-start gap-2">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-warning)]" />
                 <p className="text-[0.74rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem] md:leading-6">
@@ -463,8 +463,8 @@ export function IncidentReportModal({
                 className={cn(
                   "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-[0.8rem] font-semibold md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
                   confirmDisabled
-                    ? "bg-[rgba(148,163,184,0.16)] text-slate-500"
-                    : "bg-[var(--color-primary)] text-white",
+                    ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
+                    : "floodwatch-primary-action",
                 )}
               >
                 <ThumbsUp className="h-4 w-4" />
@@ -477,7 +477,7 @@ export function IncidentReportModal({
                 className={cn(
                   "flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-3 text-[0.8rem] font-medium md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
                   resolveDisabled
-                    ? "border-[rgba(148,163,184,0.2)] bg-[rgba(148,163,184,0.12)] text-slate-500"
+                    ? "border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
                     : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
                 )}
               >

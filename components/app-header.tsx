@@ -17,6 +17,7 @@ import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 
 type AppHeaderProps = {
+  activeItemLabel: string;
   theme: Theme;
   onToggleTheme: () => void;
   onOpenSidebar: () => void;
@@ -24,58 +25,65 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({
+  activeItemLabel,
   theme,
   onToggleTheme,
   onOpenSidebar,
   onReportFlood,
 }: AppHeaderProps) {
   return (
-    <header className="fixed inset-x-0 top-0 z-[1000] flex h-[var(--header-height)] items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-sidebar)] px-4 sm:px-5 md:px-6">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <button
-          type="button"
-          aria-label="Open navigation"
-          onClick={onOpenSidebar}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
-        >
-          <Menu className="h-4 w-4" />
-        </button>
-        <div className="hidden md:flex md:items-center md:gap-2.5">
-          <BrandMark />
-          <div>
-            <div className="text-[1.06rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-              FloodWatch PH
-            </div>
-            <div className="text-[0.72rem] leading-none text-[var(--color-muted-foreground)]">
-              {HEADER_SUBTITLE}
+    <header className="fixed inset-x-0 top-0 z-[var(--layer-header)] border-b border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[var(--color-sidebar)] px-3 sm:px-5 md:px-6">
+      <div className="flex h-[var(--header-height)] items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
+          <button
+            type="button"
+            aria-label="Open navigation"
+            onClick={onOpenSidebar}
+            className="flex h-9 w-9 items-center justify-center rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-surface)] text-[var(--color-foreground)] md:hidden"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
+          <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
+            <BrandMark className="h-9 w-9 shrink-0" />
+            <div className="min-w-0">
+              <div className="truncate text-[0.95rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)] md:text-[1.04rem]">
+                FloodWatch PH
+              </div>
+              <div className="hidden text-[0.7rem] leading-none text-[var(--color-muted-foreground)] sm:block">
+                {HEADER_SUBTITLE}
+              </div>
+              <div className="text-[0.66rem] leading-none text-[var(--color-muted-foreground)] sm:hidden">
+                {activeItemLabel}
+              </div>
             </div>
           </div>
+
         </div>
-        <div className="flex items-center gap-2.5 md:hidden">
-          <BrandMark />
+
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-danger)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_8%,var(--color-surface))] px-2.5 text-[0.72rem] font-semibold text-[var(--color-danger)] sm:px-3"
+          >
+            <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
+            <AlertTriangle className="hidden h-[13px] w-[13px] sm:block" />
+            <span className="hidden sm:inline">{ACTIVE_ALERTS_LABEL}</span>
+            <span className="sm:hidden">Alerts</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onReportFlood}
+            className="floodwatch-primary-action hidden h-9 items-center gap-1.5 rounded-[11px] px-3 text-[0.76rem] font-semibold transition hover:brightness-105 md:flex"
+          >
+            <Plus className="h-[13px] w-[13px]" />
+            <span className="hidden xl:inline">{REPORT_LABEL}</span>
+            <span className="xl:hidden">Report</span>
+          </button>
+
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        <button
-          type="button"
-          className="flex h-8.5 items-center gap-1 rounded-full border border-[color:color-mix(in_srgb,var(--color-danger)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_10%,var(--color-surface))] px-2.5 text-[0.66rem] font-semibold text-[var(--color-danger)] sm:h-9 sm:gap-1.5 sm:px-3.5 sm:text-[0.78rem]"
-        >
-          <span className="h-2 w-2 rounded-full bg-[var(--color-danger)]" />
-          <AlertTriangle className="hidden h-[13px] w-[13px] sm:block" />
-          <span>{ACTIVE_ALERTS_LABEL}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onReportFlood}
-          className="hidden h-9 items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-4 text-[0.78rem] font-semibold text-white transition hover:brightness-105 lg:flex"
-        >
-          <Plus className="h-[13px] w-[13px]" />
-          <span>{REPORT_LABEL}</span>
-        </button>
-
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </header>
   );

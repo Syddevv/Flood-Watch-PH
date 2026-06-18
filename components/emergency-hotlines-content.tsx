@@ -125,8 +125,8 @@ function HotlineActionButton({
   const className = cn(
     "inline-flex h-11 items-center justify-center gap-2 rounded-[11px] px-4 text-[0.92rem] font-medium leading-5 whitespace-nowrap transition",
     variant === "critical"
-      ? "bg-[#ff4d43] text-white shadow-[0_14px_30px_rgba(255,77,67,0.18)] hover:brightness-105"
-      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] hover:bg-[var(--color-panel)]",
+      ? "border border-[color:color-mix(in_srgb,var(--color-danger)_34%,transparent)] bg-[var(--color-danger)] text-white shadow-[var(--shadow-accent)] hover:brightness-105"
+      : "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-foreground)] hover:bg-[var(--color-panel)]",
   );
 
   return (
@@ -149,9 +149,9 @@ function HotlineCard({
   const Icon = hotline.icon;
 
   return (
-    <article className="flex h-full flex-col rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
+    <article className="flex h-full flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-4 shadow-[var(--shadow-soft)]">
       <div className="flex flex-1 items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[rgba(37,99,235,0.1)] text-[var(--color-primary)]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[var(--color-info-surface)] text-[var(--color-primary)]">
           <Icon className="h-5 w-5" />
         </div>
 
@@ -160,7 +160,7 @@ function HotlineCard({
             <h3 className="text-[1rem] font-semibold leading-6 text-[var(--color-foreground)]">
               {hotline.name}
             </h3>
-            <span className="rounded-full bg-[var(--color-panel)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
+            <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-panel)_86%,transparent)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
               {hotline.coverage}
             </span>
           </div>
@@ -176,9 +176,9 @@ function HotlineCard({
             {hotline.statusBadges.map((badge) => (
               <span
                 key={badge}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(34,197,94,0.1)] px-2.5 py-1 text-[0.7rem] font-semibold text-[#15803d]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-surface)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-success-text)]"
               >
-                <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+                <span className="h-2 w-2 rounded-full bg-[var(--color-success)]" />
                 {badge}
               </span>
             ))}
@@ -224,9 +224,9 @@ function QuickContactCard({
   icon: React.ReactNode;
 }) {
   return (
-    <article className="flex h-full flex-col rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
+    <article className="flex h-full flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-4 shadow-[var(--shadow-soft)]">
       <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[rgba(37,99,235,0.12)] text-[var(--color-primary)]">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[var(--color-info-surface)] text-[var(--color-primary)]">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
@@ -246,7 +246,7 @@ function QuickContactCard({
 
       <a
         href={`tel:${number.replace(/[^\d+]/g, "")}`}
-        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.98rem] font-semibold text-white shadow-[0_18px_36px_rgba(37,99,235,0.2)]"
+        className="floodwatch-primary-action mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] px-4 text-[0.98rem] font-semibold"
       >
         <Phone className="h-4 w-4" />
         <span>Call Now</span>
@@ -370,8 +370,8 @@ export function EmergencyHotlinesContent() {
           </p>
         </section>
 
-        <section className="rounded-[22px] border border-[rgba(239,68,68,0.26)] bg-[linear-gradient(135deg,rgba(255,248,248,0.96),rgba(255,255,255,0.98))] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex items-center gap-2 text-[0.82rem] font-semibold uppercase tracking-[0.1em] text-[#ef4444]">
+        <section className="rounded-[22px] border border-[var(--color-danger-border)] bg-[color:color-mix(in_srgb,var(--color-danger)_6%,var(--color-surface))] p-5 shadow-[var(--shadow-soft)]">
+          <div className="flex items-center gap-2 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-danger)]">
             <ShieldAlert className="h-4 w-4" />
             <span>Quick Emergency Contacts</span>
           </div>
@@ -389,7 +389,7 @@ export function EmergencyHotlinesContent() {
           </div>
         </section>
 
-        <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)]">
+        <section className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
@@ -403,7 +403,7 @@ export function EmergencyHotlinesContent() {
             <button
               type="button"
               onClick={() => setLocationEnabled(true)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)]"
             >
               <LocateFixed className="h-4 w-4" />
               <span>{locationEnabled ? "Location Enabled" : "Enable Location Services"}</span>
@@ -415,11 +415,11 @@ export function EmergencyHotlinesContent() {
               {NEARBY_CONTACTS.map((service) => (
                 <div
                   key={service.id}
-                  className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-panel)] p-4"
+                  className="rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] p-4"
                 >
                   <div className="flex items-center gap-2 text-[var(--color-primary)]">
                     <MapPinned className="h-4 w-4" />
-                    <span className="text-[0.76rem] font-semibold uppercase tracking-[0.08em]">
+                    <span className="text-[0.76rem] font-semibold tracking-[0.05em]">
                       Nearby
                     </span>
                   </div>
@@ -430,7 +430,7 @@ export function EmergencyHotlinesContent() {
                     {service.detail}
                   </p>
                   <div className="mt-3">
-                    <span className="rounded-full bg-[var(--color-surface)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
+                    <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
                       {service.coverage}
                     </span>
                   </div>
@@ -438,13 +438,13 @@ export function EmergencyHotlinesContent() {
               ))}
             </div>
           ) : (
-            <div className="mt-4 rounded-[16px] border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
+            <div className="mt-4 rounded-[16px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
               Enable location services to view nearby emergency contacts.
             </div>
           )}
         </section>
 
-        <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)]">
+        <section className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
@@ -456,14 +456,14 @@ export function EmergencyHotlinesContent() {
             </div>
 
             {copiedId ? (
-              <div className="rounded-full bg-[rgba(34,197,94,0.1)] px-3 py-1.5 text-[0.76rem] font-semibold text-[#15803d]">
+              <div className="rounded-full bg-[var(--color-success-surface)] px-3 py-1.5 text-[0.76rem] font-semibold text-[var(--color-success-text)]">
                 Number copied to clipboard
               </div>
             ) : null}
           </div>
 
           <div className="mt-4">
-            <label className="flex min-h-12 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
+            <label className="flex min-h-12 items-center gap-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4">
               <Phone className="h-4 w-4 text-[var(--color-muted-foreground)]" />
               <input
                 type="search"
@@ -485,7 +485,7 @@ export function EmergencyHotlinesContent() {
                   "rounded-full px-3.5 py-2 text-[0.8rem] font-semibold transition",
                   activeFilter === filter
                     ? "bg-[var(--color-primary)] text-white"
-                    : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
+                    : "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
                 )}
               >
                 {filter}
@@ -501,7 +501,7 @@ export function EmergencyHotlinesContent() {
             return (
               <div
                 key={group.category}
-                className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)]"
+                className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]"
               >
                 <div className="flex items-center gap-2">
                   <div className={cn("flex items-center gap-2", meta.accentClassName)}>
@@ -527,7 +527,7 @@ export function EmergencyHotlinesContent() {
           })}
         </section>
 
-        <section className="rounded-[22px] border border-[rgba(37,99,235,0.18)] bg-[linear-gradient(135deg,rgba(239,246,255,0.92),rgba(255,255,255,0.98))] p-5 shadow-[var(--shadow-soft)]">
+        <section className="rounded-[22px] border border-[var(--color-info-border)] bg-[color:color-mix(in_srgb,var(--color-info)_8%,var(--color-surface))] p-5 shadow-[var(--shadow-soft)]">
           <div className="flex items-center gap-2 text-[var(--color-primary)]">
             <CloudRain className="h-5 w-5" />
             <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
@@ -545,9 +545,9 @@ export function EmergencyHotlinesContent() {
             ].map((tip) => (
               <div
                 key={tip}
-                className="flex items-start gap-2 rounded-[16px] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-[0.9rem] text-[var(--color-foreground)]"
+                className="flex items-start gap-2 rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 py-3 text-[0.9rem] text-[var(--color-foreground)]"
               >
-                <span className="mt-0.5 text-[#16a34a]">✓</span>
+                <span className="mt-0.5 text-[var(--color-success)]">✓</span>
                 <span>{tip}</span>
               </div>
             ))}
@@ -555,7 +555,7 @@ export function EmergencyHotlinesContent() {
 
           <button
             type="button"
-            className="mt-4 inline-flex h-11 items-center justify-center rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.92rem] font-semibold text-[var(--color-foreground)]"
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.92rem] font-semibold text-[var(--color-foreground)]"
           >
             View Full Safety Guide
           </button>

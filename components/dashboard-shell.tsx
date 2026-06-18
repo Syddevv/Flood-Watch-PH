@@ -112,13 +112,13 @@ function FloodMapUndoToast({
   const countdownSeconds = Math.ceil(timeRemainingMs / 1000);
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[1300] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
+    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[var(--layer-toast)] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
       <div
         className={cn(
-          "pointer-events-auto w-full max-w-[560px] rounded-[14px] border px-4 py-3 text-[0.92rem] shadow-[var(--shadow-floating)] backdrop-blur-md",
+          "floodwatch-toast pointer-events-auto w-full max-w-[560px] px-4 py-3 text-[0.92rem]",
           toast.tone === "success"
-            ? "border-[rgba(34,197,94,0.28)] bg-[rgba(240,253,244,0.94)] text-[#166534]"
-            : "border-[rgba(239,68,68,0.28)] bg-[rgba(254,242,242,0.96)] text-[#991b1b]",
+            ? "floodwatch-toast--success"
+            : "floodwatch-toast--error",
         )}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -133,10 +133,10 @@ function FloodMapUndoToast({
                 onClick={onUndo}
                 disabled={toast.pending}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-[0.78rem] font-semibold",
+                  "floodwatch-toast-action",
                   toast.tone === "success"
-                    ? "border-[rgba(22,101,52,0.24)] bg-white/85 text-[#166534]"
-                    : "border-[rgba(153,27,27,0.24)] bg-white/85 text-[#991b1b]",
+                    ? "floodwatch-toast-action--success"
+                    : "floodwatch-toast-action--error",
                   toast.pending && "cursor-not-allowed opacity-60",
                 )}
               >
@@ -762,6 +762,7 @@ export function DashboardShell({
   return (
     <div className="h-[100dvh] overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
       <AppHeader
+        activeItemLabel={NAV_ITEMS.find((item) => item.id === activeItem)?.label ?? "Flood Map"}
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -856,12 +857,12 @@ export function DashboardShell({
               </div>
             )}
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[500] flex items-end justify-between px-4 md:hidden">
+            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[var(--layer-mobile-fab)] flex items-end justify-between px-4 md:hidden">
               {!isContentOnlyView || isFloodMapView ? (
                 <button
                   type="button"
                   onClick={() => setSheetOpen(true)}
-                  className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(37,99,235,0.38)]"
+                  className="floodwatch-primary-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
                 >
                   <SquareStack className="h-4 w-4" />
                   <span>Live Info</span>
@@ -874,7 +875,7 @@ export function DashboardShell({
                 <button
                   type="button"
                   onClick={() => router.push("/incident-reports")}
-                  className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-[#ff695f] px-5 text-sm font-semibold text-slate-950 shadow-[0_18px_40px_rgba(255,105,95,0.32)]"
+                  className="floodwatch-accent-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
                 >
                   <Plus className="h-4 w-4" />
                   <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
@@ -897,8 +898,8 @@ export function DashboardShell({
               timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
               officialAlertsTitle={
                 isFloodMapView
-                  ? "Official / System Flood Alerts"
-                  : "ACTIVE FLOOD ALERTS"
+                  ? "Official and system flood alerts"
+                  : "Official flood alerts"
               }
               showCommunityReportsSection={isFloodMapView}
               communityReports={floodMapSidebarReports}
@@ -931,8 +932,8 @@ export function DashboardShell({
           timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
           officialAlertsTitle={
             isFloodMapView
-              ? "Official / System Flood Alerts"
-              : "ACTIVE FLOOD ALERTS"
+              ? "Official and system flood alerts"
+              : "Official flood alerts"
           }
           showCommunityReportsSection={isFloodMapView}
           communityReports={floodMapSidebarReports}

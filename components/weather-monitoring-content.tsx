@@ -46,6 +46,22 @@ function formatWindSpeed(windSpeed: number | null) {
   return windSpeed === null ? "Unavailable" : `${windSpeed.toFixed(1)} km/h`;
 }
 
+function getRiskSummaryTone(riskLevel: FloodRiskLevel) {
+  if (riskLevel === "Critical") {
+    return "text-[var(--color-danger)]";
+  }
+
+  if (riskLevel === "High") {
+    return "text-[var(--color-high)]";
+  }
+
+  if (riskLevel === "Moderate") {
+    return "text-[var(--color-warning)]";
+  }
+
+  return "text-[var(--color-success)]";
+}
+
 function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
   if (riskLevel === "Critical") {
     return "severe";
@@ -72,20 +88,20 @@ function SelectedLocationWeatherCard({
   const { location, fetchedAt, advisoryMessage } = result;
 
   return (
-    <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)]">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="rounded-[18px] bg-[var(--color-panel)] p-3 text-[var(--color-primary)]">
-            <CloudRain className="h-12 w-12" strokeWidth={1.9} />
+    <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="rounded-[16px] bg-[var(--color-panel)] p-3 text-[var(--color-primary)]">
+            <CloudRain className="h-10 w-10" strokeWidth={1.9} />
           </div>
-          <div>
-            <div className="text-[0.74rem] font-semibold tracking-[0.06em] text-[var(--color-section-heading)]">
+          <div className="min-w-0">
+            <div className="text-[0.74rem] font-semibold text-[var(--color-section-heading)]">
               {title}
             </div>
-            <div className="mt-1 text-[1.3rem] font-semibold text-[var(--color-foreground)]">
+            <div className="mt-1 text-[1.2rem] font-semibold text-[var(--color-foreground)]">
               {location.name}
             </div>
-            <div className="mt-1 text-[0.92rem] text-[var(--color-muted-foreground)]">
+            <div className="mt-1 text-[0.86rem] text-[var(--color-muted-foreground)]">
               {location.condition ?? "Weather conditions unavailable"}
             </div>
           </div>
@@ -94,63 +110,94 @@ function SelectedLocationWeatherCard({
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
+              "rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold",
               severityBadgeClasses[getSeverityTone(location.riskLevel)],
             )}
           >
             {location.riskLevel}
           </span>
-          <span className="text-[0.76rem] text-[var(--color-muted-foreground)]">
-            Updated {fetchedAt}
+          <span className="text-[0.74rem] text-[var(--color-muted-foreground)]">
+            Updated <span className="font-mono tabular-nums">{fetchedAt}</span>
           </span>
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Temperature" value={formatTemperature(location.temperature)} />
-        <MetricCard label="Precipitation" value={formatPrecipitation(location.precipitation)} />
-        <MetricCard label="Humidity" value={formatHumidity(location.humidity)} />
-        <MetricCard label="Wind Speed" value={formatWindSpeed(location.windSpeed)} />
-        <MetricCard label="Source" value={location.source.name} />
-      </div>
-
-      <div className="mt-4 space-y-1 text-[0.76rem] text-[var(--color-muted-foreground)]">
-        <div>
-          Official reference:{" "}
-          <span className="font-medium text-[var(--color-foreground)]">
-            {location.officialReference.label ?? location.officialReference.name}
-          </span>
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+        <div className="rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_54%,transparent)] px-4 py-3.5">
+          <div className={cn("text-[0.9rem] font-semibold", getRiskSummaryTone(location.riskLevel))}>
+            {location.riskLevel} flood risk
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <CloudRain className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+              <span>Rainfall</span>
+              <span className="font-mono tabular-nums font-semibold text-[var(--color-foreground)]">
+                {formatPrecipitation(location.precipitation)}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <TriangleAlert className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+              <span>Updated</span>
+              <span className="font-mono tabular-nums font-semibold text-[var(--color-foreground)]">
+                {fetchedAt}
+              </span>
+            </span>
+          </div>
+          <p className="mt-3 text-[0.78rem] leading-6 text-[var(--color-muted-foreground)]">
+            {advisoryMessage}
+          </p>
         </div>
-        <div>{advisoryMessage}</div>
+
+        <div className="rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-surface)] px-4 py-3.5">
+          <div className="text-[0.74rem] font-medium text-[var(--color-muted-foreground)]">
+            Secondary weather details
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.74rem] text-[var(--color-muted-foreground)]">
+            <span className="font-mono tabular-nums text-[1.05rem] font-semibold leading-none text-[var(--color-foreground)]">
+              {formatTemperature(location.temperature)}
+            </span>
+            <span className="inline-flex items-center gap-1.25 whitespace-nowrap">
+              <span>Humidity</span>
+              <span className="font-mono tabular-nums">{formatHumidity(location.humidity)}</span>
+            </span>
+            <span className="inline-flex items-center gap-1.25 whitespace-nowrap">
+              <span>Wind</span>
+              <span className="font-mono tabular-nums">{formatWindSpeed(location.windSpeed)}</span>
+            </span>
+          </div>
+          <div className="mt-3 border-t border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pt-3 text-[0.72rem] text-[var(--color-muted-foreground)]">
+            <div>
+              Source:{" "}
+              <span className="font-medium text-[var(--color-foreground)]">{location.source.name}</span>
+            </div>
+            <div className="mt-1">
+              Official reference:{" "}
+              <span className="font-medium text-[var(--color-foreground)]">
+                {location.officialReference.label ?? location.officialReference.name}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3">
-      <div className="text-[0.75rem] text-[var(--color-muted-foreground)]">{label}</div>
-      <div className="mt-1 text-[0.98rem] font-semibold text-[var(--color-foreground)]">{value}</div>
-    </article>
-  );
-}
-
 function MonitoredLocationCard({ location }: { location: WeatherLocation }) {
   return (
-    <article className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
+    <article className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-[0.95rem] font-semibold text-[var(--color-foreground)]">
+          <div className="truncate text-[0.92rem] font-semibold text-[var(--color-foreground)]">
             {location.name}
           </div>
-          <div className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-0.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
             {location.condition ?? "Weather conditions unavailable"}
           </div>
         </div>
         <span
           className={cn(
-            "rounded-full border px-2.5 py-1 text-[0.65rem] font-semibold",
+            "rounded-full border px-2 py-0.5 text-[0.62rem] font-semibold",
             severityBadgeClasses[getSeverityTone(location.riskLevel)],
           )}
         >
@@ -158,23 +205,36 @@ function MonitoredLocationCard({ location }: { location: WeatherLocation }) {
         </span>
       </div>
 
-      <div className="mt-4 text-[1.3rem] font-semibold text-[var(--color-foreground)]">
-        {formatTemperature(location.temperature)}
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <div className={cn("text-[0.82rem] font-semibold", getRiskSummaryTone(location.riskLevel))}>
+            {location.riskLevel} flood risk
+          </div>
+          <div className="mt-1 inline-flex items-center gap-1.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
+            <CloudRain className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            <span>Rainfall</span>
+            <span className="font-mono tabular-nums font-semibold text-[var(--color-foreground)]">
+              {formatPrecipitation(location.precipitation)}
+            </span>
+          </div>
+        </div>
+        <div className="text-[0.68rem] text-[var(--color-muted-foreground)]">
+          Updated <span className="font-mono tabular-nums">{location.updatedAt}</span>
+        </div>
       </div>
 
-      <div className="mt-3 space-y-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-        <div>Precipitation: {formatPrecipitation(location.precipitation)}</div>
-        <div>Humidity: {formatHumidity(location.humidity)}</div>
-        <div>Wind speed: {formatWindSpeed(location.windSpeed)}</div>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <span className="font-mono tabular-nums text-[0.98rem] font-semibold leading-none text-[var(--color-foreground)]">
+          {formatTemperature(location.temperature)}
+        </span>
+        <span className="whitespace-nowrap">Humidity <span className="font-mono tabular-nums">{formatHumidity(location.humidity)}</span></span>
+        <span className="whitespace-nowrap">Wind <span className="font-mono tabular-nums">{formatWindSpeed(location.windSpeed)}</span></span>
       </div>
 
-      <div className="mt-3 text-[0.74rem] text-[var(--color-muted-foreground)]">
-        Last updated {location.updatedAt}
-      </div>
-      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+      <div className="mt-2.5 border-t border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pt-2.5 text-[0.7rem] text-[var(--color-muted-foreground)]">
         Source: {location.source.name}
       </div>
-      <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
+      <div className="mt-0.5 text-[0.7rem] text-[var(--color-muted-foreground)]">
         Official reference: {location.officialReference.name}
       </div>
     </article>
@@ -189,11 +249,11 @@ function OfficialAdvisoriesSection({
   advisoryMessage: string;
 }) {
   return (
-    <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-soft)]">
+    <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 shadow-[var(--shadow-soft)]">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 className="text-[1.1rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-            Official Advisories
+          <h2 className="text-[1.02rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+            Official advisories
           </h2>
           <p className="mt-1 text-[0.84rem] text-[var(--color-muted-foreground)]">
             {weatherSources?.advisoryMessage ?? advisoryMessage}
@@ -213,7 +273,7 @@ function OfficialAdvisoriesSection({
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1.5 text-[0.78rem] font-medium text-[var(--color-foreground)]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1.5 text-[0.76rem] font-medium text-[var(--color-foreground)]"
               >
                 <span>{link.title}</span>
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -385,7 +445,7 @@ export function WeatherMonitoringContent({
           </p>
         </section>
 
-        <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+        <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
           <form
             onSubmit={handleSearchSubmit}
             className="flex flex-col gap-3 lg:flex-row lg:items-center"
@@ -408,7 +468,7 @@ export function WeatherMonitoringContent({
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-primary)] px-5 text-[0.86rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {searchLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                <span>{searchLoading ? "Searching..." : "Search Weather"}</span>
+                    <span>{searchLoading ? "Searching..." : "Search weather"}</span>
               </button>
 
               <button
@@ -422,7 +482,7 @@ export function WeatherMonitoringContent({
                 ) : (
                   <LocateFixed className="h-4 w-4" />
                 )}
-                <span>Use My Location</span>
+                  <span>Use my location</span>
               </button>
             </div>
           </form>
@@ -447,20 +507,20 @@ export function WeatherMonitoringContent({
         />
 
         {weatherLoading ? (
-          <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
-            Loading weather data...
-          </section>
-        ) : weatherError ? (
-          <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
-            {weatherError}
-          </section>
-        ) : (
+            <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
+              Loading weather data...
+            </section>
+          ) : weatherError ? (
+            <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 shadow-[var(--shadow-soft)] text-[0.95rem] text-[var(--color-muted-foreground)]">
+              {weatherError}
+            </section>
+          ) : (
           <>
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
-              <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
                 <div>
-                  <h2 className="text-[1.5rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-                    Official / System Flood Alerts
+                  <h2 className="text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+                    Official and system flood alerts
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
                     Weather-based system alerts are estimated and do not replace official advisories.
@@ -468,7 +528,7 @@ export function WeatherMonitoringContent({
                 </div>
 
                 {weather.alerts.length === 0 ? (
-                  <div className="mt-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
+                  <div className="mt-5 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
                     No major weather-based flood alerts right now.
                   </div>
                 ) : (
@@ -480,13 +540,13 @@ export function WeatherMonitoringContent({
                 )}
               </div>
 
-              <aside className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
-                <h2 className="text-[1.2rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-                  Monitoring Notes
+              <aside className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
+                <h2 className="text-[1.08rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+                  Risk notes
                 </h2>
 
-                <div className="mt-4 space-y-2.5 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
-                  <div className="rounded-[14px] bg-[var(--color-panel)] px-4 py-2.5">
+                <div className="mt-4 space-y-3 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
+                  <div className="border-b border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pb-3">
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
                       <span className="font-semibold">Monitored locations</span>
@@ -496,10 +556,10 @@ export function WeatherMonitoringContent({
                     </p>
                   </div>
 
-                  <div className="rounded-[14px] bg-[var(--color-panel)] px-4 py-2.5">
+                  <div>
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <TriangleAlert className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span className="font-semibold">Risk explanation</span>
+                      <span className="font-semibold">Advisory</span>
                     </div>
                     <p className="mt-2">{weather.advisoryMessage}</p>
                   </div>
@@ -510,15 +570,15 @@ export function WeatherMonitoringContent({
             <section>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-[1.5rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-                    Monitored Philippine Locations
+                  <h2 className="text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
+                    Monitored Philippine locations
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
                     Default monitored areas remain visible for quick weather-based flood risk monitoring.
                   </p>
                 </div>
                 <div className="text-[0.76rem] text-[var(--color-muted-foreground)]">
-                  Updated {weather.fetchedAt}
+                  Updated <span className="font-mono tabular-nums">{weather.fetchedAt}</span>
                 </div>
               </div>
 

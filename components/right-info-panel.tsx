@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, Clock3, Info, ThumbsUp } from "lucide-react";
 
 import { AlertCard } from "@/components/alert-card";
@@ -57,27 +58,36 @@ function CommunityReportPanelItem({
   const thumbnailUrl = report.photos[0]?.imageUrl;
   const freshnessBadge = getReportFreshnessBadge(report);
   const activityLabel = getReportActivityLabel(report);
-  const trustSummary = getReportTrustSummary(report);
 
   return (
-    <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-soft)]">
-      <div className="flex gap-3">
-        {thumbnailUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={thumbnailUrl}
-            alt={report.title}
-            className="h-14 w-14 shrink-0 rounded-[12px] object-cover"
-          />
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[0.92rem] font-semibold text-[var(--color-foreground)]">
-            {report.title}
-          </div>
-          <div className="mt-1 truncate text-[0.78rem] text-[var(--color-muted-foreground)]">
-            {report.location}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+    <article className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3 py-2.5">
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-2.5">
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-[9px] bg-[var(--color-panel)]">
+          {thumbnailUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={thumbnailUrl}
+              alt={report.title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span
+              className={cn(
+                "h-2.5 w-2.5 rounded-full",
+                report.severity === "severe"
+                  ? "bg-[var(--color-danger)]"
+                  : report.severity === "high"
+                    ? "bg-[var(--color-high)]"
+                    : report.severity === "moderate"
+                      ? "bg-[var(--color-warning)]"
+                      : "bg-[var(--color-success)]",
+              )}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <span
               className={cn(
                 "rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold",
@@ -113,42 +123,89 @@ function CommunityReportPanelItem({
               </span>
             ) : null}
           </div>
-        </div>
-      </div>
 
-      <div className="mt-2 flex items-center gap-1.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
-        <Clock3 className="h-3.5 w-3.5" />
-        <span>{activityLabel}</span>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[0.72rem] text-[var(--color-muted-foreground)]">
-        <div className="rounded-[10px] bg-[var(--color-panel)] px-2 py-2">
-          <div className="flex items-center gap-1.5">
-            <ThumbsUp className="h-3.5 w-3.5" />
-            <span>{formatCountLabel(report.confirmations)}</span>
+          <div className="mt-1 truncate text-[0.92rem] font-semibold text-[var(--color-foreground)]">
+            {report.title}
+          </div>
+          <div className="mt-0.5 truncate text-[0.76rem] text-[var(--color-muted-foreground)]">
+            {report.location}
           </div>
         </div>
-        <div className="rounded-[10px] bg-[var(--color-panel)] px-2 py-2">
-          <div className="flex items-center gap-1.5">
-            <Check className="h-3.5 w-3.5" />
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span className="inline-flex items-center gap-1.25 whitespace-nowrap">
+            <Clock3 className="h-3.25 w-3.25 shrink-0" />
+            <span className="font-mono tabular-nums">{activityLabel}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.25 whitespace-nowrap font-mono tabular-nums">
+            <ThumbsUp className="h-3.25 w-3.25 shrink-0" />
+            <span>{report.confirmations} confirmed</span>
+          </span>
+          <span className="inline-flex items-center gap-1.25 whitespace-nowrap font-mono tabular-nums">
+            <Check className="h-3.25 w-3.25 shrink-0" />
             <span>{formatCountLabel(report.resolvedConfirmations)} receded</span>
-          </div>
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onView?.(report.id)}
+          className="ml-auto inline-flex h-7 items-center justify-center rounded-[9px] border border-[var(--color-border)] px-2.5 text-[0.74rem] font-medium text-[var(--color-foreground)]"
+        >
+          View details
+        </button>
+      </div>
+
+      <div className="mt-1.5 text-[0.72rem] leading-5 text-[var(--color-muted-foreground)]">
+        <div>{getReportTrustSummary(report)}</div>
+        <div className="mt-0.5">{getReportCommunitySignal(report)}</div>
+      </div>
+    </article>
+  );
+}
+
+function SidebarEmptyState({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3.5 py-3 text-[0.82rem] text-[var(--color-muted-foreground)]">
+      {children}
+    </div>
+  );
+}
+
+function PanelSection({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "border-t border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] pt-4",
+        className,
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+            {title}
+          </h3>
+          {description ? (
+            <p className="mt-1 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)]">
+              {description}
+            </p>
+          ) : null}
         </div>
       </div>
-
-      <div className="mt-2 text-[0.75rem] text-[var(--color-muted-foreground)]">
-        <div>{trustSummary}</div>
-        <div className="mt-1">{getReportCommunitySignal(report)}</div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => onView?.(report.id)}
-        className="mt-3 flex h-9 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-3 text-[0.82rem] font-semibold text-white"
-      >
-        View Details
-      </button>
-    </article>
+      <div className="mt-2.5">{children}</div>
+    </section>
   );
 }
 
@@ -159,7 +216,7 @@ export function RightInfoPanel({
   hotlines,
   hotlineNotice,
   timestamp,
-  officialAlertsTitle = "ACTIVE FLOOD ALERTS",
+  officialAlertsTitle = "Active flood alerts",
   weatherLoading = false,
   weatherError = null,
   alertsLoading = false,
@@ -176,67 +233,36 @@ export function RightInfoPanel({
     <aside
       className={`flex h-full min-h-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-sidebar)] ${className ?? ""}`}
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-4 md:px-5">
-        <div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 md:px-5">
+        <div className="pb-0.5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[1.16rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-              Live Information
+            <h2 className="text-[1.1rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)]">
+              Live information
             </h2>
             <div className="flex items-center gap-1.5 self-center text-[0.72rem] text-[var(--color-muted-foreground)]">
               <Clock3 className="h-3.25 w-3.25" />
               <span className="font-mono">{timestamp}</span>
             </div>
           </div>
-
-          <div className="mt-5 text-[0.73rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
-            {officialAlertsTitle}
-          </div>
-          <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-            Weather-based system alerts are estimated and do not replace official advisories.
+          <p className="mt-1 max-w-[28rem] text-[0.75rem] leading-5 text-[var(--color-muted-foreground)]">
+            Active reports first, then weather-based flood risk and nearby shelter references.
           </p>
-          {alertsLoading ? (
-            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-              Checking weather-based flood alerts...
-            </div>
-          ) : alertsError ? (
-            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-              {alertsError}
-            </div>
-          ) : alerts.length === 0 ? (
-            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-              No major weather-based flood alerts right now.
-            </div>
-          ) : (
-            <div className="mt-3 space-y-3">
-              {alerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} />
-              ))}
-            </div>
-          )}
         </div>
 
         {showCommunityReportsSection ? (
-          <div>
-            <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
-              LIVE COMMUNITY REPORTS
-            </div>
-            <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-              {communityReportsDisclaimer}
-            </p>
+          <PanelSection
+            title="Active reports"
+            description={communityReportsDisclaimer}
+            className="border-t-0 pt-0"
+          >
             {communityReportsLoading ? (
-              <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-                Loading community reports...
-              </div>
+              <SidebarEmptyState>Loading community reports...</SidebarEmptyState>
             ) : communityReportsError ? (
-              <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-                Unable to load community reports.
-              </div>
+              <SidebarEmptyState>Unable to load community reports.</SidebarEmptyState>
             ) : communityReports.length === 0 ? (
-              <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-                No mapped community reports right now.
-              </div>
+              <SidebarEmptyState>No mapped community reports right now.</SidebarEmptyState>
             ) : (
-              <div className="mt-3 space-y-3">
+              <div className="space-y-2">
                 {communityReports.map((report) => (
                   <CommunityReportPanelItem
                     key={report.id}
@@ -246,59 +272,63 @@ export function RightInfoPanel({
                 ))}
               </div>
             )}
-          </div>
+          </PanelSection>
         ) : null}
 
-        <div>
-          <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
-            WEATHER OVERVIEW
-          </div>
-          {weatherLoading ? (
-            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-              Loading weather data...
-            </div>
-          ) : weatherError ? (
-            <div className="mt-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.86rem] text-[var(--color-muted-foreground)]">
-              {weatherError}
-            </div>
+        <PanelSection
+          title={officialAlertsTitle}
+          description="Weather-based system alerts are estimated and do not replace official advisories."
+        >
+          {alertsLoading ? (
+            <SidebarEmptyState>Checking weather-based flood alerts...</SidebarEmptyState>
+          ) : alertsError ? (
+            <SidebarEmptyState>{alertsError}</SidebarEmptyState>
+          ) : alerts.length === 0 ? (
+            <SidebarEmptyState>No major weather-based flood alerts right now.</SidebarEmptyState>
           ) : (
-            <div className="mt-3">
-              <WeatherOverview weather={weather} />
+            <div className="space-y-2">
+              {alerts.map((alert) => (
+                <AlertCard key={alert.id} alert={alert} />
+              ))}
             </div>
           )}
-        </div>
+        </PanelSection>
 
-        <div>
-          <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
-            NEARBY EVACUATION CENTERS
-          </div>
-          <p className="mt-2 text-[0.76rem] text-[var(--color-muted-foreground)]">
-            Static shelter references only. Confirm availability with your LGU or barangay.
-          </p>
-          <div className="mt-3 space-y-3">
+        <PanelSection title="Weather overview">
+          {weatherLoading ? (
+            <SidebarEmptyState>Loading weather data...</SidebarEmptyState>
+          ) : weatherError ? (
+            <SidebarEmptyState>{weatherError}</SidebarEmptyState>
+          ) : (
+            <WeatherOverview weather={weather} />
+          )}
+        </PanelSection>
+
+        <PanelSection
+          title="Nearby evacuation centers"
+          description="Static shelter references only. Confirm availability with your LGU or barangay."
+        >
+          <div className="space-y-2">
             {centers.map((center) => (
               <EvacuationCenterCard key={center.id} center={center} />
             ))}
           </div>
-        </div>
+        </PanelSection>
 
-        <div>
-          <div className="text-[0.72rem] font-semibold tracking-[0.08em] text-[var(--color-section-heading)]">
-            EMERGENCY HOTLINES
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+        <PanelSection title="Emergency hotlines">
+          <div className="grid grid-cols-2 gap-2">
             {hotlines.map((hotline) => (
               <EmergencyHotlineCard key={hotline.id} hotline={hotline} />
             ))}
           </div>
 
-          <div className="mt-5 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3.5">
+          <div className="mt-3 rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_72%,transparent)] px-3.5 py-3">
             <div className="flex items-start gap-2.5 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{hotlineNotice}</p>
             </div>
           </div>
-        </div>
+        </PanelSection>
       </div>
     </aside>
   );

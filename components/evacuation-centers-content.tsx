@@ -288,7 +288,7 @@ function NearestCenterCard({
             {suggestions.map((entry) => (
               <div
                 key={entry.center.id}
-                className="flex items-center justify-between rounded-[14px] border border-[rgba(148,163,184,0.18)] bg-[rgba(15,23,42,0.28)] px-3 py-2"
+                className="flex flex-col gap-1.5 rounded-[14px] border border-[rgba(148,163,184,0.18)] bg-[rgba(15,23,42,0.28)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
                 <div className="min-w-0">
                   <div className="truncate text-[0.84rem] font-medium text-slate-100">
@@ -298,7 +298,7 @@ function NearestCenterCard({
                     {entry.center.city}
                   </div>
                 </div>
-                <div className="text-[0.8rem] font-semibold text-sky-300">
+                <div className="text-[0.8rem] font-semibold text-sky-300 sm:shrink-0 sm:text-right">
                   {formatDistanceKm(entry.distanceKm)}
                 </div>
               </div>

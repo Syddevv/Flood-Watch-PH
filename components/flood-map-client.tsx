@@ -5,7 +5,7 @@ import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronUp, Clock3, Eye, Layers3, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
+import { Check, Clock3, Eye, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
 import L from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {
@@ -56,35 +56,35 @@ const SATELLITE_TILES = {
 };
 
 const severityColorMap = {
-  safe: "#22c55e",
-  moderate: "#f59e0b",
-  high: "#f97316",
-  severe: "#ef4444",
+  safe: "var(--color-success)",
+  moderate: "var(--color-warning)",
+  high: "var(--color-high)",
+  severe: "var(--color-danger)",
 };
 
 const reportMarkerStatusStyles = {
   "Needs More Confirmation": {
-    color: "#f59e0b",
-    ring: "rgba(245,158,11,0.18)",
-    border: "rgba(245,158,11,0.55)",
+    color: "var(--color-warning)",
+    ring: "color-mix(in srgb, var(--color-warning) 18%, transparent)",
+    border: "color-mix(in srgb, var(--color-warning) 55%, white)",
     opacity: 1,
   },
   "Confirmed by Community": {
-    color: "#ef4444",
-    ring: "rgba(239,68,68,0.18)",
-    border: "rgba(239,68,68,0.55)",
+    color: "var(--color-danger)",
+    ring: "color-mix(in srgb, var(--color-danger) 18%, transparent)",
+    border: "color-mix(in srgb, var(--color-danger) 55%, white)",
     opacity: 1,
   },
   "Likely Receded": {
-    color: "#64748b",
-    ring: "rgba(100,116,139,0.16)",
-    border: "rgba(148,163,184,0.48)",
+    color: "var(--color-muted-foreground)",
+    ring: "color-mix(in srgb, var(--color-muted-foreground) 16%, transparent)",
+    border: "color-mix(in srgb, var(--color-border) 72%, transparent)",
     opacity: 0.72,
   },
   Resolved: {
-    color: "#94a3b8",
-    ring: "rgba(148,163,184,0.12)",
-    border: "rgba(148,163,184,0.4)",
+    color: "var(--color-disabled-text)",
+    ring: "color-mix(in srgb, var(--color-disabled-text) 12%, transparent)",
+    border: "color-mix(in srgb, var(--color-disabled-border) 88%, transparent)",
     opacity: 0.58,
   },
 } as const;
@@ -161,9 +161,6 @@ function MapZoomControls({
       <button type="button" aria-label="Zoom out" onClick={() => map.zoomOut()}>
         -
       </button>
-      <button type="button" aria-label="Map layers">
-        <Layers3 className="h-4.5 w-4.5" />
-      </button>
       <button
         type="button"
         aria-label={satelliteMode ? "Disable satellite mode" : "Enable satellite mode"}
@@ -194,12 +191,10 @@ export function FloodMapClient({
   reportMarkers,
   evacuationCenterMarkers,
   polygons,
-  legend,
   onOpenReportDetails,
   focusedCenterId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(true);
   const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
   const reportMarkerRefs = useRef<Record<string, ReportMarkerInstance | null>>({});
   const tileConfig = satelliteMode ? SATELLITE_TILES : STREET_TILES;
@@ -337,14 +332,14 @@ export function FloodMapClient({
                           className={cn(
                             "rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
                             freshnessBadge.tone === "success"
-                              ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                              ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
                               : freshnessBadge.tone === "warning"
-                                ? "bg-[rgba(245,158,11,0.12)] text-[#b45309]"
+                                ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
                                 : freshnessBadge.tone === "muted"
-                                  ? "bg-[rgba(148,163,184,0.14)] text-[#475569]"
-                                  : "bg-[rgba(37,99,235,0.12)] text-[#1d4ed8]",
-                          )}
-                        >
+                                  ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
+                                  : "bg-[var(--color-info-surface)] text-[var(--color-info-text)]",
+                            )}
+                          >
                           {freshnessBadge.label}
                         </span>
                       ) : null}
@@ -379,7 +374,7 @@ export function FloodMapClient({
                     <button
                       type="button"
                       onClick={() => onOpenReportDetails(marker.reportId)}
-                      className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold text-white shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                      className="floodwatch-primary-action inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] px-3 text-[0.75rem] font-semibold"
                     >
                       <Eye className="h-3.5 w-3.5" />
                       <span>View Details</span>
@@ -458,7 +453,7 @@ export function FloodMapClient({
                         href={buildDirectionsUrl(marker.center)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-9 items-center justify-center rounded-[10px] bg-[#2563eb] px-3 text-[0.75rem] font-semibold !text-white no-underline shadow-[0_10px_22px_rgba(37,99,235,0.18)]"
+                        className="floodwatch-primary-action inline-flex h-9 items-center justify-center rounded-[10px] px-3 text-[0.75rem] font-semibold !text-white no-underline"
                       >
                         Get Directions
                       </a>
@@ -475,70 +470,6 @@ export function FloodMapClient({
           onToggleSatellite={() => setSatelliteMode((current) => !current)}
         />
       </MapContainer>
-
-      <div className="pointer-events-none absolute inset-0 z-[380] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_18%,transparent_80%,rgba(15,23,42,0.06))]" />
-
-      <div className="pointer-events-auto absolute bottom-24 left-4 z-[450] w-[216px] rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_52%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_46%,transparent)] px-4 py-3 shadow-[0_14px_32px_rgba(15,23,42,0.08)] backdrop-blur-md md:bottom-4">
-        <div className="flex items-center justify-between gap-2 text-[0.7rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-          <div>MAP MARKERS</div>
-          <button
-            type="button"
-            aria-label={legendOpen ? "Collapse map markers legend" : "Expand map markers legend"}
-            aria-expanded={legendOpen}
-            onClick={() => setLegendOpen((current) => !current)}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_72%,transparent)] text-[var(--color-foreground)]"
-          >
-            {legendOpen ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronUp className="h-3.5 w-3.5" />
-            )}
-          </button>
-        </div>
-        {legendOpen ? (
-          <>
-            <div className="mt-2 space-y-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(37,99,235,0.16)]">
-                  R
-                </span>
-                <span>Active Flood Report</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#64748b] text-[0.72rem] font-bold leading-none text-white opacity-80 shadow-[0_0_0_3px_rgba(100,116,139,0.16)]">
-                  R
-                </span>
-                <span>Likely Receded Report</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex aspect-square h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#22c55e] text-[0.72rem] font-bold leading-none text-white shadow-[0_0_0_3px_rgba(34,197,94,0.16)]">
-                  E
-                </span>
-                <span>Evacuation Center</span>
-              </div>
-            </div>
-            <div className="mt-3 text-[0.68rem] font-semibold tracking-[0.06em] text-[var(--color-muted-foreground)]">
-              RISK OVERLAY SEVERITY
-            </div>
-            <div className="mt-1 space-y-1.25">
-              {legend.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-2 text-[0.8rem] leading-5 text-[var(--color-foreground)]"
-                >
-                  <span
-                    className="h-2.75 w-2.75 rounded-full"
-                    style={{ backgroundColor: severityColorMap[item.severity] }}
-                  />
-                  <span>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : null}
-      </div>
-
-      <div className="pointer-events-none absolute inset-0 z-[360] bg-[linear-gradient(rgba(255,255,255,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.25)_1px,transparent_1px)] bg-[size:230px_230px] opacity-[0.22] mix-blend-screen" />
     </div>
   );
 }

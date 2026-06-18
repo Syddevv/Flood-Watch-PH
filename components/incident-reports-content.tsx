@@ -141,13 +141,13 @@ function UndoToast({
   const countdownSeconds = Math.ceil(timeRemainingMs / 1000);
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[1300] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
+    <div className="pointer-events-none fixed inset-x-4 top-[calc(var(--header-height)+1rem)] z-[var(--layer-toast)] flex justify-center md:left-[calc(var(--sidebar-width)+2rem)] md:right-6 md:justify-end">
       <div
         className={cn(
-          "pointer-events-auto w-full max-w-[560px] rounded-[14px] border px-4 py-3 text-[0.92rem] shadow-[var(--shadow-floating)] backdrop-blur-md",
+          "floodwatch-toast pointer-events-auto w-full max-w-[560px] px-4 py-3 text-[0.92rem]",
           toast.tone === "success"
-            ? "border-[rgba(34,197,94,0.28)] bg-[rgba(240,253,244,0.94)] text-[#166534]"
-            : "border-[rgba(239,68,68,0.28)] bg-[rgba(254,242,242,0.96)] text-[#991b1b]",
+            ? "floodwatch-toast--success"
+            : "floodwatch-toast--error",
         )}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -162,10 +162,10 @@ function UndoToast({
                 onClick={onUndo}
                 disabled={toast.pending}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-[0.78rem] font-semibold",
+                  "floodwatch-toast-action",
                   toast.tone === "success"
-                    ? "border-[rgba(22,101,52,0.24)] bg-white/85 text-[#166534]"
-                    : "border-[rgba(153,27,27,0.24)] bg-white/85 text-[#991b1b]",
+                    ? "floodwatch-toast-action--success"
+                    : "floodwatch-toast-action--error",
                   toast.pending && "cursor-not-allowed opacity-60",
                 )}
               >
@@ -236,7 +236,7 @@ function SelectField({
   options: readonly string[];
 }) {
   return (
-    <label className="flex h-10 items-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] text-[var(--color-foreground)] shadow-[var(--shadow-soft)]">
+    <label className="flex h-11 items-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.9rem] text-[var(--color-foreground)] transition focus-within:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]">
       {icon}
       <select
         value={value}
@@ -250,6 +250,56 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+function FormSection({
+  step,
+  title,
+  description,
+  tone = "default",
+  children,
+  optional = false,
+}: {
+  step: string;
+  title: string;
+  description: string;
+  tone?: "default" | "muted";
+  children: React.ReactNode;
+  optional?: boolean;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-[18px] border p-4 shadow-[var(--shadow-soft)] md:p-5",
+        tone === "muted"
+          ? "border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_62%,transparent)]"
+          : "border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)]",
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--color-primary-soft)] px-2 text-[0.72rem] font-semibold text-[var(--color-primary)]">
+              {step}
+            </span>
+            {optional ? (
+              <span className="text-[0.72rem] font-medium text-[var(--color-muted-foreground)]">
+                Optional
+              </span>
+            ) : null}
+          </div>
+          <h2 className="mt-2 text-[1.08rem] font-semibold text-[var(--color-foreground)]">
+            {title}
+          </h2>
+          <p className="mt-1 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4">{children}</div>
+    </section>
   );
 }
 
@@ -314,9 +364,9 @@ function ReportCard({
       className={cn(
         "w-full rounded-[12px] border bg-[var(--color-surface)] px-3 py-2.5 transition-colors",
         isResolved
-          ? "border-[rgba(148,163,184,0.22)] opacity-72"
+          ? "border-[var(--color-disabled-border)] opacity-72"
           : isLikelyReceded
-            ? "border-[rgba(71,85,105,0.28)]"
+            ? "border-[color:color-mix(in_srgb,var(--color-muted-text)_28%,transparent)]"
             : "border-[var(--color-border)] bg-[var(--color-surface)]",
       )}
     >
@@ -370,11 +420,11 @@ function ReportCard({
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[0.66rem] font-medium leading-4",
                   freshnessBadge.tone === "success"
-                    ? "bg-[rgba(34,197,94,0.12)] text-[var(--color-success)]"
+                    ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
                     : freshnessBadge.tone === "warning"
-                      ? "bg-[rgba(245,158,11,0.12)] text-[var(--color-warning)]"
+                      ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
                       : freshnessBadge.tone === "muted"
-                        ? "bg-[rgba(148,163,184,0.14)] text-[var(--color-muted-foreground)]"
+                        ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
                         : "bg-[var(--color-primary-soft)] text-[var(--color-primary)]",
                 )}
               >
@@ -415,7 +465,7 @@ function ReportCard({
                 ? "border border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                 : canConfirm
                   ? "bg-[var(--color-primary)] text-white"
-                  : "border border-[rgba(148,163,184,0.24)] bg-[rgba(148,163,184,0.1)] text-[var(--color-muted-foreground)]",
+                  : "border border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]",
             )}
           >
             {primaryOpensDetails ? (
@@ -433,7 +483,7 @@ function ReportCard({
               "inline-flex h-7 items-center justify-center gap-1.25 whitespace-nowrap rounded-[9px] border px-2.5 text-[0.74rem] font-medium leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]",
               canResolve
                 ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                : "border-[rgba(148,163,184,0.18)] bg-transparent text-[var(--color-muted-foreground)] opacity-55",
+                : "border-[var(--color-disabled-border)] bg-transparent text-[var(--color-disabled-text)] opacity-55",
             )}
           >
             <Check className="h-3.25 w-3.25" />
@@ -1189,86 +1239,102 @@ export function IncidentReportsContent() {
             </p>
           </section>
 
-          <section className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
-            <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-soft)]">
-              <div className="rounded-[14px] border border-[rgba(245,158,11,0.38)] bg-[rgba(245,158,11,0.08)] px-4 py-3 text-[0.94rem] text-[var(--color-foreground)]">
+          <section className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
+            <div className="space-y-4">
+              <section className="rounded-[18px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--color-warning)]" />
-                  <p>
-                    <span className="font-semibold">Safety First:</span> Do not enter flooded or dangerous areas to take photos. Your safety comes first.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <h2 className="text-[1.35rem] font-semibold text-[var(--color-foreground)]">
-                  Location
-                </h2>
-                <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
-                  <label className="flex h-10 flex-1 items-center gap-3 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 shadow-[var(--shadow-soft)]">
-                    <MapPin className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                    <input
-                      type="text"
-                      value={formState.locationName}
-                      onChange={(event) => updateFormState("locationName", event.target.value)}
-                      placeholder="Street, barangay, city"
-                      className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleUseCurrentLocation}
-                    disabled={loadingCurrentLocation}
-                    className="flex h-10 items-center justify-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] shadow-[var(--shadow-soft)] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {loadingCurrentLocation ? (
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Phone className="h-4 w-4" />
-                    )}
-                    <span>
-                      {loadingCurrentLocation ? "Detecting Location..." : "Current Location"}
-                    </span>
-                  </button>
-                </div>
-                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    value={formState.latitude}
-                    onChange={(event) => updateFormState("latitude", event.target.value)}
-                    placeholder="Latitude"
-                    className="h-10 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] shadow-[var(--shadow-soft)]"
-                  />
-                  <input
-                    type="text"
-                    value={formState.longitude}
-                    onChange={(event) => updateFormState("longitude", event.target.value)}
-                    placeholder="Longitude"
-                    className="h-10 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] shadow-[var(--shadow-soft)]"
-                  />
-                </div>
-                <p className="mt-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                  Provide a public location name and coordinates so the report can be shown on the live map.
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 flex items-center gap-2 text-[0.9rem] font-medium text-[var(--color-primary)]"
-                >
-                  <MapIcon className="h-4 w-4" />
-                  <span>Show interactive map</span>
-                </button>
-              </div>
-
-              <div className="mt-8">
-                <h2 className="text-[1.35rem] font-semibold text-[var(--color-foreground)]">
-                  Incident Details
-                </h2>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div>
-                    <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                      Incident Type
+                  <AlertTriangle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-[var(--color-warning)]" />
+                  <div className="min-w-0">
+                    <div className="text-[0.88rem] font-semibold text-[var(--color-foreground)]">
+                      Safety notice
                     </div>
+                    <p className="mt-1 text-[0.82rem] leading-6 text-[var(--color-foreground)]">
+                      Do not enter flooded or dangerous areas to collect photos or coordinates. Report from a safe location whenever possible.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <FormSection
+                step="1"
+                title="Location"
+                description="Enter a public place name and coordinates so the report can appear accurately on the live map."
+              >
+                <div className="grid gap-3">
+                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px]">
+                    <label className="flex h-11 items-center gap-3 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 transition focus-within:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]">
+                      <MapPin className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                      <input
+                        type="text"
+                        value={formState.locationName}
+                        onChange={(event) => updateFormState("locationName", event.target.value)}
+                        placeholder="Street, barangay, city"
+                        className="w-full bg-transparent text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={loadingCurrentLocation}
+                      className="flex h-11 items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.88rem] font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-panel)] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {loadingCurrentLocation ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Phone className="h-4 w-4" />
+                      )}
+                      <span>{loadingCurrentLocation ? "Detecting location..." : "Use current location"}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <label className="grid gap-1.5">
+                      <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                        Latitude
+                      </span>
+                      <input
+                        type="text"
+                        value={formState.latitude}
+                        onChange={(event) => updateFormState("latitude", event.target.value)}
+                        placeholder="14.599500"
+                        className="tabular-nums h-11 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                        Longitude
+                      </span>
+                      <input
+                        type="text"
+                        value={formState.longitude}
+                        onChange={(event) => updateFormState("longitude", event.target.value)}
+                        placeholder="120.984200"
+                        className="tabular-nums h-11 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
+                      />
+                    </label>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_78%,transparent)] px-4 text-[0.88rem] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-panel)] xl:w-auto"
+                      >
+                        <MapIcon className="h-4 w-4" />
+                        <span>Show map</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection
+                step="2"
+                title="Incident details"
+                description="Choose the incident type, severity, and water depth, then add a short factual summary of current conditions."
+              >
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="grid gap-1.5">
+                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      Incident type
+                    </span>
                     <SelectField
                       icon={<Waves className="h-4 w-4 text-[var(--color-primary)]" />}
                       value={formState.category}
@@ -1277,144 +1343,157 @@ export function IncidentReportsContent() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-1">
-                    <div>
-                      <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                        Severity Level
-                      </div>
-                      <SelectField
-                        icon={<span className="h-3.5 w-3.5 rounded-full bg-[var(--color-warning)]" />}
-                        value={formState.severity}
-                        onChange={(value) => updateFormState("severity", value)}
-                        options={REPORT_SEVERITIES}
-                      />
-                    </div>
-                    <div>
-                      <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                        Water Depth
-                      </div>
-                      <SelectField
-                        icon={<Waves className="h-4 w-4 text-[var(--color-primary)]" />}
-                        value={formState.waterDepth}
-                        onChange={(value) => updateFormState("waterDepth", value)}
-                        options={WATER_DEPTH_OPTIONS}
-                      />
-                    </div>
+                  <div className="grid gap-1.5">
+                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      Severity level
+                    </span>
+                    <SelectField
+                      icon={<span className="h-3.5 w-3.5 rounded-full bg-[var(--color-warning)]" />}
+                      value={formState.severity}
+                      onChange={(value) => updateFormState("severity", value)}
+                      options={REPORT_SEVERITIES}
+                    />
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      Water depth
+                    </span>
+                    <SelectField
+                      icon={<Waves className="h-4 w-4 text-[var(--color-primary)]" />}
+                      value={formState.waterDepth}
+                      onChange={(value) => updateFormState("waterDepth", value)}
+                      options={WATER_DEPTH_OPTIONS}
+                    />
                   </div>
                 </div>
 
-                <div className="mt-5">
-                  <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
+                <div className="mt-4 grid gap-1.5">
+                  <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
                     Description
-                  </div>
+                  </span>
                   <textarea
-                    rows={3}
+                    rows={4}
                     value={formState.description}
                     onChange={(event) => updateFormState("description", event.target.value)}
-                    placeholder="Describe the current situation, affected areas, hazards, road conditions, and people needing assistance..."
-                    className="w-full rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] shadow-[var(--shadow-soft)]"
+                    placeholder="Describe the situation, affected roads or neighborhoods, visible hazards, and any people needing assistance."
+                    className="w-full rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
                   />
-                  <p className="mt-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                    Provide accurate and factual information to help your community stay informed.
-                  </p>
+                </div>
+              </FormSection>
+
+              <FormSection
+                step="3"
+                title="Photo evidence"
+                description="Add one optional image to help other residents verify the report. Keep uploads clear and relevant."
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[0.84rem] font-medium text-[var(--color-foreground)]">
+                    Upload image
+                  </div>
+                  <div className="tabular-nums text-[0.78rem] text-[var(--color-muted-foreground)]">
+                    {formState.photos.length} / 1 image
+                  </div>
                 </div>
 
-                <div className="mt-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                      Upload Photo
-                    </div>
-                    <div className="text-[0.82rem] text-[var(--color-muted-foreground)]">
-                      {formState.photos.length} / 1 image
-                    </div>
-                  </div>
-                  <label className="mt-3 flex cursor-pointer flex-col rounded-[14px] border border-dashed border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-10 text-center">
-                    <ImageUp className="mx-auto h-8 w-8 text-[var(--color-muted-foreground)]" />
-                    <div className="mt-4 text-[0.98rem] font-medium text-[var(--color-foreground)]">
-                      Drag & drop a photo here
-                    </div>
-                    <div className="mt-1 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                      or click to browse · JPG, PNG, WEBP up to 5 MB
-                    </div>
-                    <input
-                      type="file"
-                      accept={reportImageAcceptValue}
-                      className="sr-only"
-                      onChange={(event) => handlePhotoSelection(event.target.files)}
-                    />
-                  </label>
-                  {formState.photos[0] ? (
-                    <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-                      {photoPreviewUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={photoPreviewUrl}
-                          alt={formState.photos[0].name}
-                          className="h-16 w-16 rounded-[12px] object-cover"
-                        />
-                      ) : null}
+                <label className="mt-3 flex cursor-pointer flex-col rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[color:color-mix(in_srgb,var(--color-surface)_96%,transparent)] text-[var(--color-muted-foreground)]">
+                        <ImageUp className="h-5 w-5" />
+                      </div>
                       <div className="min-w-0">
-                        <div className="truncate text-[0.9rem] font-medium text-[var(--color-foreground)]">
-                          {formState.photos[0].name}
+                        <div className="text-[0.92rem] font-medium text-[var(--color-foreground)]">
+                          Add a supporting photo
                         </div>
                         <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                          Photo ready to upload with this report.
+                          Click to browse or drop one JPG, PNG, or WEBP image up to 5 MB.
                         </div>
                       </div>
                     </div>
-                  ) : null}
-                  <p className="mt-2 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                    Attach one optional image to help the community verify this report.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 border-t border-[var(--color-border)] pt-6">
-                <h2 className="text-[1.35rem] font-semibold text-[var(--color-foreground)]">
-                  Reporter Information
-                </h2>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div>
-                    <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                      Reporter Name (Optional)
+                    <div className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 py-2 text-[0.8rem] font-medium text-[var(--color-foreground)]">
+                      Choose file
                     </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept={reportImageAcceptValue}
+                    className="sr-only"
+                    onChange={(event) => handlePhotoSelection(event.target.files)}
+                  />
+                </label>
+
+                {formState.photos[0] ? (
+                  <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-3">
+                    {photoPreviewUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={photoPreviewUrl}
+                        alt={formState.photos[0].name}
+                        className="h-16 w-16 rounded-[12px] object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <div className="truncate text-[0.88rem] font-medium text-[var(--color-foreground)]">
+                        {formState.photos[0].name}
+                      </div>
+                      <div className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
+                        Photo ready to upload with this report.
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </FormSection>
+
+              <FormSection
+                step="4"
+                title="Reporter information"
+                description="Add your name or contact number only if follow-up may be needed. You can still submit anonymously."
+                tone="muted"
+                optional
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      Reporter name
+                    </span>
                     <input
                       type="text"
                       value={formState.reportedByName}
                       onChange={(event) => updateFormState("reportedByName", event.target.value)}
                       placeholder="Your name or organization"
-                      className="h-10 w-full rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] shadow-[var(--shadow-soft)]"
+                      className="h-11 w-full rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
                     />
-                  </div>
-                  <div>
-                    <div className="mb-2 text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                      Contact Number (Optional)
-                    </div>
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      Contact number
+                    </span>
                     <input
                       type="text"
                       value={formState.contactNumber}
                       onChange={(event) => updateFormState("contactNumber", event.target.value)}
                       placeholder="09xx xxx xxxx"
-                      className="h-10 w-full rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] shadow-[var(--shadow-soft)]"
+                      className="h-11 w-full rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
                     />
-                  </div>
+                  </label>
                 </div>
 
-                <label className="mt-4 flex items-center gap-2 text-[0.9rem] text-[var(--color-foreground)]">
+                <label className="mt-4 flex items-start gap-3 rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 py-3 text-[0.88rem] text-[var(--color-foreground)]">
                   <input
                     type="checkbox"
                     checked={formState.submitAnonymously}
                     onChange={(event) =>
                       updateFormState("submitAnonymously", event.target.checked)
                     }
-                    className="h-4 w-4 rounded border border-[var(--color-border)]"
+                    className="mt-0.5 h-4 w-4 rounded border border-[var(--color-border)]"
                   />
-                  <span>Submit Anonymously — Your information will be hidden from public view</span>
+                  <span>Submit anonymously. Your personal details will not appear on the public report feed.</span>
                 </label>
-              </div>
+              </FormSection>
 
               {pendingNearbyDuplicate ? (
-                <div className="mt-6 rounded-[16px] border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] px-4 py-4">
+                <div className="rounded-[16px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-0.5 h-5 w-5 text-[var(--color-warning)]" />
                     <div className="min-w-0 flex-1">
@@ -1428,12 +1507,12 @@ export function IncidentReportsContent() {
                         {pendingNearbyDuplicate.nearbyReports.map((nearbyReport) => (
                           <div
                             key={nearbyReport.id}
-                            className="rounded-[12px] border border-[rgba(148,163,184,0.18)] bg-[var(--color-surface)] px-3 py-2"
+                            className="rounded-[12px] border border-[var(--color-disabled-border)] bg-[var(--color-surface)] px-3 py-2"
                           >
                             <div className="text-[0.86rem] font-semibold text-[var(--color-foreground)]">
                               {nearbyReport.title}
                             </div>
-                            <div className="mt-1 text-[0.78rem] text-[var(--color-muted-foreground)]">
+                            <div className="mt-1 tabular-nums text-[0.78rem] text-[var(--color-muted-foreground)]">
                               {nearbyReport.locationName} · ~{Math.max(1, Math.round(nearbyReport.distanceMeters))} m away
                             </div>
                           </div>
@@ -1449,7 +1528,7 @@ export function IncidentReportsContent() {
                           disabled={submittingReport || actionLoadingId !== null}
                           className="flex h-10 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.9rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Confirm Existing Nearby Report
+                          Confirm existing nearby report
                         </button>
                         <button
                           type="button"
@@ -1457,7 +1536,7 @@ export function IncidentReportsContent() {
                           disabled={submittingReport}
                           className="flex h-10 items-center justify-center rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Continue Submitting New Report
+                          Continue submitting new report
                         </button>
                       </div>
                     </div>
@@ -1465,78 +1544,121 @@ export function IncidentReportsContent() {
                 </div>
               ) : null}
 
-              <div className="mt-6 flex items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFormState(emptyFormState);
-                    setPendingNearbyDuplicate(null);
-                  }}
-                  className="h-10 rounded-[11px] px-4 text-[0.92rem] font-medium text-[var(--color-foreground)]"
-                >
-                  Clear
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSubmitReport()}
-                  disabled={submittingReport || !canSubmitReport}
-                  className="flex h-10 items-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.92rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {submittingReport ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  <span>{submittingReport ? "Uploading Report..." : "Submit Report"}</span>
-                </button>
-              </div>
+              <FormSection
+                step="5"
+                title="Submit actions"
+                description="Review the required location and incident fields before sending the report."
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
+                    {!canSubmitReport
+                      ? "Location name, coordinates, and incident description are required before submission."
+                      : "Form ready. Submit the report to publish it to the community incident feed."}
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormState(emptyFormState);
+                        setPendingNearbyDuplicate(null);
+                      }}
+                      className="h-11 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)]"
+                    >
+                      Clear form
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSubmitReport()}
+                      disabled={submittingReport || !canSubmitReport}
+                      className={cn(
+                        "flex h-11 items-center justify-center gap-2 rounded-[11px] px-4 text-[0.92rem] font-semibold text-white",
+                        submittingReport || !canSubmitReport
+                          ? "cursor-not-allowed border border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
+                          : "bg-[var(--color-primary)]",
+                      )}
+                    >
+                      {submittingReport ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      <span>{submittingReport ? "Uploading report..." : "Submit report"}</span>
+                    </button>
+                  </div>
+                </div>
+              </FormSection>
             </div>
 
-            <div className="flex min-h-0 flex-col gap-4">
-              <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
-                  Community activity
-                </div>
-                <div className="mt-4 space-y-3">
-                  {activityStats.map((stat) => {
-                    const Icon = stat.icon;
-                    return (
-                      <div key={stat.id} className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 text-[0.94rem] text-[var(--color-foreground)]">
-                          <Icon className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                          <span>{stat.label}</span>
-                        </div>
-                        <span className="text-[1.4rem] font-semibold text-[var(--color-foreground)]">
-                          {stat.value}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-4 border-t border-[var(--color-border)] pt-3">
-                  <div className="flex items-center gap-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                    <Flame className="h-4 w-4 text-[var(--color-warning)]" />
-                    <span>Trending Areas:</span>
+            <div className="flex min-h-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-var(--header-height)-2rem)] lg:self-start lg:overflow-hidden">
+              <div className="space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
+                  <div className="text-[0.92rem] font-semibold text-[var(--color-foreground)]">
+                    Submission guide
                   </div>
-                  <ul className="mt-2 space-y-1 text-[0.9rem] text-[var(--color-foreground)]">
-                    {(trendingAreas.length > 0 ? trendingAreas : ["No active hotspots yet"]).map((area) => (
-                      <li key={area}>• {area}</li>
+                  <div className="mt-4 space-y-3">
+                    {[
+                      "Add a clear public location and coordinates.",
+                      "Choose the closest incident type, severity, and water depth.",
+                      "Write a short factual description of what people need to know now.",
+                      "Add one photo only if it helps verify the report safely.",
+                    ].map((item, index) => (
+                      <div key={item} className="flex items-start gap-3">
+                        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[0.74rem] font-semibold text-[var(--color-primary)]">
+                          {index + 1}
+                        </span>
+                        <p className="text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+                          {item}
+                        </p>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-[18px] border border-[var(--color-border)] bg-[rgba(37,99,235,0.06)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="text-[0.96rem] font-semibold text-[var(--color-primary)]">
-                  Community reports
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
+                  <div className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+                    Community activity
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {activityStats.map((stat) => {
+                      const Icon = stat.icon;
+                      return (
+                        <div key={stat.id} className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 text-[0.9rem] text-[var(--color-foreground)]">
+                            <Icon className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                            <span>{stat.label}</span>
+                          </div>
+                          <span className="tabular-nums text-[1.18rem] font-semibold text-[var(--color-foreground)]">
+                            {stat.value}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+                    <div className="flex items-center gap-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
+                      <Flame className="h-4 w-4 text-[var(--color-warning)]" />
+                      <span>Trending areas</span>
+                    </div>
+                    <ul className="mt-2 space-y-1 text-[0.88rem] text-[var(--color-foreground)]">
+                      {(trendingAreas.length > 0 ? trendingAreas : ["No active hotspots yet"]).map((area) => (
+                        <li key={area}>• {area}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <p className="mt-2 text-[0.84rem] leading-6 text-[var(--color-primary)]">
-                  Community reports are not official advisories. Follow LGU and PAGASA updates.
-                </p>
-                <p className="mt-1.5 text-[0.78rem] text-[var(--color-muted-foreground)]">
-                  Reports may be hidden after they are resolved or inactive.
-                </p>
+
+                <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-info-surface)] p-4 shadow-[var(--shadow-soft)]">
+                  <div className="text-[0.96rem] font-semibold text-[var(--color-primary)]">
+                    Community reports
+                  </div>
+                  <p className="mt-2 text-[0.84rem] leading-6 text-[var(--color-primary)]">
+                    Community reports are not official advisories. Follow LGU and PAGASA updates.
+                  </p>
+                  <p className="mt-1.5 text-[0.78rem] text-[var(--color-muted-foreground)]">
+                    Reports may be hidden after they are resolved or inactive.
+                  </p>
+                </div>
               </div>
 
               <div className="rounded-[18px] border border-[var(--color-border)] bg-transparent">
@@ -1553,7 +1675,7 @@ export function IncidentReportsContent() {
                       </div>
                     </div>
                   ) : reportLoadError ? (
-                    <div className="rounded-[14px] border border-[rgba(239,68,68,0.18)] bg-[rgba(254,242,242,0.7)] px-4 py-3 text-[0.88rem] text-[#991b1b]">
+                    <div className="rounded-[14px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-4 py-3 text-[0.88rem] text-[var(--color-danger-text)]">
                       {reportLoadError}
                     </div>
                   ) : (
@@ -1584,7 +1706,7 @@ export function IncidentReportsContent() {
                     </div>
                   )}
 
-                  <div className="mx-3 mt-1 border-t border-[rgba(148,163,184,0.14)]" />
+                  <div className="mx-3 mt-1 border-t border-[color:color-mix(in_srgb,var(--color-border)_55%,transparent)]" />
                   <div className="px-3 pb-3 pt-4 text-[0.9rem] font-semibold text-[var(--color-foreground)]">
                     Recently receded reports
                   </div>
@@ -1596,7 +1718,7 @@ export function IncidentReportsContent() {
                     </div>
                   ) : reportLoadError ? (
                     <div className="space-y-2.5 px-2 pb-3 sm:px-3">
-                      <div className="rounded-[14px] border border-[rgba(239,68,68,0.18)] bg-[rgba(254,242,242,0.7)] px-4 py-3 text-[0.88rem] text-[#991b1b]">
+                      <div className="rounded-[14px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-4 py-3 text-[0.88rem] text-[var(--color-danger-text)]">
                         {reportLoadError}
                       </div>
                     </div>
@@ -1619,7 +1741,7 @@ export function IncidentReportsContent() {
                           />
                         ))
                       ) : (
-                        <div className="rounded-[14px] border border-[rgba(148,163,184,0.14)] bg-[rgba(148,163,184,0.06)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-foreground)]">
+                        <div className="rounded-[14px] border border-[var(--color-disabled-border)] bg-[var(--color-muted-surface)] px-4 py-3 text-[0.88rem] text-[var(--color-muted-text)]">
                           No recently receded reports yet.
                         </div>
                       )}

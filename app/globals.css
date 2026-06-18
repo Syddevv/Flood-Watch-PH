@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --header-height: 64px;
-  --sidebar-width: 266px;
+  --header-height: 68px;
+  --sidebar-width: 272px;
   --panel-width: 392px;
-  --radius-card: 20px;
+  --radius-card: 14px;
+  --radius-panel: 12px;
+  --radius-control: 10px;
   --color-primary: #2563eb;
   --color-background: #f8fafc;
   --color-foreground: #0f172a;
   --color-surface: #ffffff;
+  --color-surface-raised: #f8fbff;
   --color-panel: #f1f5f9;
   --color-sidebar: #ffffff;
   --color-border: #e2e8f0;
@@ -20,6 +23,25 @@
   --color-danger: #ef4444;
   --color-primary-soft: #dbeafe;
   --color-map-shell: #d9e5ef;
+  --color-overlay-scrim: rgba(15, 23, 42, 0.4);
+  --color-disabled-surface: rgba(148, 163, 184, 0.1);
+  --color-disabled-border: rgba(148, 163, 184, 0.22);
+  --color-disabled-text: #64748b;
+  --color-success-surface: rgba(240, 253, 244, 0.94);
+  --color-success-border: rgba(34, 197, 94, 0.28);
+  --color-success-text: #166534;
+  --color-warning-surface: rgba(245, 158, 11, 0.1);
+  --color-warning-border: rgba(245, 158, 11, 0.34);
+  --color-warning-text: #b45309;
+  --color-danger-surface: rgba(254, 242, 242, 0.96);
+  --color-danger-border: rgba(239, 68, 68, 0.28);
+  --color-danger-text: #991b1b;
+  --color-info-surface: rgba(37, 99, 235, 0.08);
+  --color-info-border: rgba(37, 99, 235, 0.22);
+  --color-info-text: #1d4ed8;
+  --color-muted-surface: rgba(148, 163, 184, 0.1);
+  --color-muted-border: rgba(148, 163, 184, 0.22);
+  --color-muted-text: #475569;
   --severity-safe-bg: rgba(34, 197, 94, 0.08);
   --severity-safe-border: rgba(34, 197, 94, 0.28);
   --severity-moderate-bg: rgba(245, 158, 11, 0.08);
@@ -28,8 +50,26 @@
   --severity-high-border: rgba(249, 115, 22, 0.38);
   --severity-severe-bg: rgba(239, 68, 68, 0.08);
   --severity-severe-border: rgba(239, 68, 68, 0.32);
+  --layer-map-overlay: 470;
+  --layer-map-controls: 500;
+  --layer-mobile-fab: 500;
+  --layer-sidebar-backdrop: 900;
+  --layer-sidebar: 910;
+  --layer-bottom-nav: 950;
+  --layer-sheet-backdrop: 980;
+  --layer-sheet: 990;
+  --layer-header: 1000;
+  --layer-modal-backdrop: 1200;
+  --layer-modal: 1210;
+  --layer-toast: 1300;
   --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
   --shadow-floating: 0 20px 40px rgba(15, 23, 42, 0.14);
+  --shadow-primary: 0 14px 28px rgba(37, 99, 235, 0.22);
+  --shadow-accent: 0 16px 30px rgba(249, 115, 22, 0.24);
+  --shadow-sheet: 0 -24px 56px rgba(15, 23, 42, 0.26);
+  --scrollbar-track: rgba(15, 23, 42, 0.12);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.42);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.6);
 }
 
 @theme inline {
@@ -45,6 +85,7 @@
   --color-background: #0f172a;
   --color-foreground: #f8fafc;
   --color-surface: #1e293b;
+  --color-surface-raised: #223248;
   --color-panel: #243244;
   --color-sidebar: #182235;
   --color-border: #334155;
@@ -56,6 +97,25 @@
   --color-danger: #ef4444;
   --color-primary-soft: rgba(59, 130, 246, 0.18);
   --color-map-shell: #243040;
+  --color-overlay-scrim: rgba(2, 6, 23, 0.54);
+  --color-disabled-surface: rgba(148, 163, 184, 0.08);
+  --color-disabled-border: rgba(148, 163, 184, 0.18);
+  --color-disabled-text: #7f91a9;
+  --color-success-surface: rgba(20, 83, 45, 0.34);
+  --color-success-border: rgba(34, 197, 94, 0.26);
+  --color-success-text: #bbf7d0;
+  --color-warning-surface: rgba(146, 64, 14, 0.28);
+  --color-warning-border: rgba(245, 158, 11, 0.28);
+  --color-warning-text: #fde68a;
+  --color-danger-surface: rgba(127, 29, 29, 0.32);
+  --color-danger-border: rgba(239, 68, 68, 0.24);
+  --color-danger-text: #fecaca;
+  --color-info-surface: rgba(30, 64, 175, 0.28);
+  --color-info-border: rgba(59, 130, 246, 0.26);
+  --color-info-text: #bfdbfe;
+  --color-muted-surface: rgba(148, 163, 184, 0.08);
+  --color-muted-border: rgba(148, 163, 184, 0.18);
+  --color-muted-text: #cbd5e1;
   --severity-safe-bg: rgba(34, 197, 94, 0.08);
   --severity-safe-border: rgba(34, 197, 94, 0.22);
   --severity-moderate-bg: rgba(245, 158, 11, 0.08);
@@ -66,6 +126,12 @@
   --severity-severe-border: rgba(239, 68, 68, 0.24);
   --shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.24);
   --shadow-floating: 0 22px 48px rgba(2, 6, 23, 0.32);
+  --shadow-primary: 0 16px 32px rgba(37, 99, 235, 0.28);
+  --shadow-accent: 0 18px 34px rgba(249, 115, 22, 0.28);
+  --shadow-sheet: 0 -26px 60px rgba(2, 6, 23, 0.38);
+  --scrollbar-track: rgba(15, 23, 42, 0.18);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.42);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.62);
 }
 
 * {
@@ -82,6 +148,11 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-geist-sans), sans-serif;
+}
+
+:where(time, .tabular-nums, [data-numeric="true"]) {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 button,
@@ -142,30 +213,29 @@ button {
   position: absolute;
   right: 16px;
   top: 16px;
-  z-index: 500;
+  z-index: var(--layer-map-controls);
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
-  background: color-mix(in srgb, var(--color-sidebar) 88%, transparent);
-  box-shadow: var(--shadow-floating);
-  backdrop-filter: blur(10px);
+  border-radius: var(--radius-card);
+  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: color-mix(in srgb, var(--color-sidebar) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(8px);
 }
 
 .map-floating-controls button {
   display: flex;
-  height: 40px;
-  width: 40px;
+  height: 38px;
+  width: 38px;
   align-items: center;
   justify-content: center;
   border-radius: 0;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 58%, transparent);
   background: transparent;
   color: var(--color-foreground);
-  backdrop-filter: blur(8px);
 }
 
 .map-floating-controls button.is-active {
@@ -182,7 +252,7 @@ button {
   overflow-y: auto;
   max-height: clamp(420px, 55vh, 600px);
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.42) rgba(15, 23, 42, 0.12);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -192,17 +262,17 @@ button {
 
 .activeReportsScrollArea::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.18);
+  background: var(--scrollbar-track);
 }
 
 .activeReportsScrollArea::-webkit-scrollbar-thumb {
-  border: 2px solid rgba(15, 23, 42, 0.18);
+  border: 2px solid var(--scrollbar-track);
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.42);
+  background: var(--scrollbar-thumb);
 }
 
 .activeReportsScrollArea::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.6);
+  background: var(--scrollbar-thumb-hover);
 }
 
 .floodwatch-form-select {
@@ -214,6 +284,64 @@ button {
 .floodwatch-form-select optgroup {
   background: var(--color-surface);
   color: var(--color-foreground);
+}
+
+.floodwatch-scrim {
+  background: var(--color-overlay-scrim);
+}
+
+.floodwatch-toast {
+  border-radius: var(--radius-card);
+  border: 1px solid;
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(12px);
+}
+
+.floodwatch-toast--success {
+  border-color: var(--color-success-border);
+  background: var(--color-success-surface);
+  color: var(--color-success-text);
+}
+
+.floodwatch-toast--error {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
+}
+
+.floodwatch-toast-action {
+  border-radius: 999px;
+  border: 1px solid;
+  background: color-mix(in srgb, var(--color-surface) 84%, transparent);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.floodwatch-toast-action--success {
+  border-color: color-mix(in srgb, var(--color-success-text) 24%, transparent);
+  color: var(--color-success-text);
+}
+
+.floodwatch-toast-action--error {
+  border-color: color-mix(in srgb, var(--color-danger-text) 24%, transparent);
+  color: var(--color-danger-text);
+}
+
+.floodwatch-primary-action {
+  background: var(--color-primary);
+  box-shadow: var(--shadow-primary);
+  color: white;
+}
+
+.floodwatch-accent-action {
+  background: var(--color-high);
+  box-shadow: var(--shadow-accent);
+  color: white;
+}
+
+.floodwatch-sheet {
+  box-shadow: var(--shadow-sheet);
 }
 
 @media (max-width: 1279px) {
@@ -229,8 +357,8 @@ button {
   }
 
   .map-floating-controls button {
-    height: 44px;
-    width: 44px;
+    height: 42px;
+    width: 42px;
   }
 
   .activeReportsScrollArea {

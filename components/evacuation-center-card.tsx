@@ -16,23 +16,23 @@ export function EvacuationCenterCard({
   const statusMeta = EVACUATION_STATUS_META[center.status];
 
   return (
-    <article className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-[var(--shadow-soft)]">
+    <article className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3.5 py-2.5">
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <h3 className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
+          <h3 className="text-[0.88rem] font-semibold text-[var(--color-foreground)]">
             {center.name}
           </h3>
-          <div className="mt-1 flex items-center gap-1.5 text-[0.78rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-0.5 flex items-center gap-1.5 text-[0.74rem] text-[var(--color-muted-foreground)]">
             <MapPinned className="h-3.25 w-3.25" />
             <span className="truncate">{center.city}</span>
           </div>
-          <div className="mt-1 truncate text-[0.72rem] text-[var(--color-muted-foreground)]">
+          <div className="mt-0.5 truncate text-[0.68rem] text-[var(--color-muted-foreground)]">
             {buildEvacuationCenterLocationLabel(center)}
           </div>
         </div>
         <span
           className={cn(
-            "shrink-0 rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold",
+            "shrink-0 rounded-full border px-2 py-0.5 text-[0.62rem] font-semibold",
             statusMeta.badgeClassName,
           )}
         >
@@ -41,7 +41,7 @@ export function EvacuationCenterCard({
       </div>
 
       {center.lastVerifiedAt ? (
-        <div className="mt-2 flex items-center gap-1.5 text-[0.72rem] text-[var(--color-muted-foreground)]">
+        <div className="mt-1.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
           <CheckCircle2 className="h-3.25 w-3.25 text-[var(--color-success)]" />
           <span>Last verified {formatLastVerified(center.lastVerifiedAt)}</span>
         </div>
