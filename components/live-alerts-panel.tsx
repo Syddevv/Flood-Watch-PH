@@ -1,9 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { AlertTriangle, Clock3, Eye, MapPinned, ThumbsUp, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  Building2,
+  CloudRain,
+  Clock3,
+  MapPinned,
+  Megaphone,
+  Route,
+  ShieldCheck,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 
 import { formatCountLabel } from "@/lib/reporting";
+import {
+  getStatusPresentation,
+  severityBadgeClasses,
+  severityLabels,
+} from "@/lib/report-ui";
 import {
   getReportActivityLabel,
   getReportFreshnessBadge,
@@ -18,29 +34,65 @@ type LiveAlertGroup = {
   reports: IncidentReport[];
 };
 
+type LiveAlertTabId = "all" | "critical" | "high-risk" | "nearby" | "recent" | "receded";
+
+type LiveAlertSummary = {
+  criticalCount: number;
+  highRiskCount: number;
+  recentlyUpdatedCount: number;
+  nearbyActiveCount?: number;
+};
+
 type LiveAlertsPanelProps = {
   open: boolean;
   loading?: boolean;
   error?: string | null;
   groups: LiveAlertGroup[];
-  urgentCount: number;
+  summary: LiveAlertSummary;
   onClose: () => void;
   onViewOnMap: (reportId: string) => void;
   onViewDetails: (reportId: string) => void;
+  onViewAllReports: () => void;
+  onOpenFloodMap: () => void;
+  onReportFlood: () => void;
+  onFindEvacuationCenters: () => void;
+  onReviewWeatherRisk: () => void;
 };
+
+const filterTabs: { id: LiveAlertTabId; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "critical", label: "Critical" },
+  { id: "high-risk", label: "High Risk" },
+  { id: "nearby", label: "Nearby" },
+  { id: "recent", label: "Recent" },
+  { id: "receded", label: "Receded" },
+];
+
+const safetyReminders = [
+  "Avoid flooded roads",
+  "Do not walk or drive through floodwater",
+  "Move to higher ground if water is rising",
+  "Check nearby evacuation centers",
+];
 
 export function LiveAlertsPanel({
   open,
   loading = false,
   error = null,
   groups,
-  urgentCount,
+  summary,
   onClose,
   onViewOnMap,
   onViewDetails,
+  onViewAllReports,
+  onOpenFloodMap,
+  onReportFlood,
+  onFindEvacuationCenters,
+  onReviewWeatherRisk,
 }: LiveAlertsPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [activeTab, setActiveTab] = useState<LiveAlertTabId>("all");
 
   useEffect(() => {
     if (!open) {
@@ -91,11 +143,29 @@ export function LiveAlertsPanel({
     };
   }, [onClose, open]);
 
-  const summaryItems = useMemo(() => {
-    return groups
-      .filter((group) => group.reports.length > 0)
-      .map((group) => `${group.reports.length} ${group.title.toLowerCase()}`);
-  }, [groups]);
+  const visibleGroups = useMemo(() => {
+    if (activeTab === "all") {
+      return groups.filter((group) => group.reports.length > 0);
+    }
+
+    return groups.filter((group) => group.id === activeTab && group.reports.length > 0);
+  }, [activeTab, groups]);
+
+  const activeReportCount = groups
+    .filter((group) => group.id !== "receded")
+    .reduce((count, group) => count + group.reports.length, 0);
+  const hasAnyVisibleReports = visibleGroups.length > 0;
+  const hasCriticalAlerts = summary.criticalCount > 0;
+  const showNoActiveReportsEmpty = activeReportCount === 0 && activeTab !== "receded";
+  const showNearbyLocationHint =
+    activeTab === "nearby" && (summary.nearbyActiveCount ?? 0) === 0 && activeReportCount > 0;
+
+  const quickActions = [
+    { label: "Check map reports", icon: MapPinned, onClick: onViewAllReports },
+    { label: "Find evacuation centers", icon: Building2, onClick: onFindEvacuationCenters },
+    { label: "Review weather risk", icon: CloudRain, onClick: onReviewWeatherRisk },
+    { label: "Report flooding", icon: Megaphone, onClick: onReportFlood },
+  ];
 
   if (!open) {
     return null;
@@ -108,33 +178,33 @@ export function LiveAlertsPanel({
         className="floodwatch-scrim fixed inset-0 z-[var(--layer-sheet-backdrop)]"
         onClick={onClose}
       />
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[var(--layer-sheet)] flex justify-end md:inset-y-[calc(var(--header-height)+0.75rem)] md:right-4 md:left-auto">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[var(--layer-sheet)] flex justify-end md:inset-y-[calc(var(--header-height)+1rem)] md:right-4 md:left-auto">
         <section
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="live-alerts-title"
-          className="pointer-events-auto flex max-h-[82vh] w-full max-w-[30rem] flex-col rounded-t-[20px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-sidebar)] shadow-[var(--shadow-floating)] md:h-full md:max-h-none md:rounded-[18px]"
+          className="pointer-events-auto flex max-h-[82dvh] w-full max-w-[26rem] flex-col rounded-t-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[var(--color-sidebar)] shadow-[var(--shadow-floating)] md:h-full md:max-h-none md:rounded-[16px]"
         >
-          <div className="border-b border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] px-4 pb-3 pt-3 md:px-5 md:pt-4">
+          <div className="shrink-0 border-b border-[color:color-mix(in_srgb,var(--color-border)_60%,transparent)] px-4 pb-3 pt-3">
             <div className="flex justify-center md:hidden">
-              <div className="h-1.5 w-12 rounded-full bg-[var(--color-border)]" />
+              <div className="h-1 w-10 rounded-full bg-[var(--color-border)]" />
             </div>
-            <div className="mt-2 flex items-start justify-between gap-3 md:mt-0">
+            <div className="mt-2 flex items-center justify-between gap-3 md:mt-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-[11px] bg-[color:color-mix(in_srgb,var(--color-danger)_14%,var(--color-surface))] text-[var(--color-danger)]">
-                    <AlertTriangle className="h-4 w-4" />
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-[10px] bg-[color:color-mix(in_srgb,var(--color-danger)_14%,var(--color-surface))] text-[var(--color-danger)]">
+                    <AlertTriangle className="h-3.5 w-3.5" />
                   </span>
                   <div>
                     <h2
                       id="live-alerts-title"
-                      className="text-[1rem] font-semibold text-[var(--color-foreground)]"
+                      className="text-[0.96rem] font-semibold text-[var(--color-foreground)]"
                     >
                       Live Alerts
                     </h2>
-                    <p className="text-[0.78rem] text-[var(--color-muted-foreground)]">
-                      Urgent and recently updated flood reports.
+                    <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
+                      Active flood updates and safety checks
                     </p>
                   </div>
                 </div>
@@ -144,26 +214,60 @@ export function LiveAlertsPanel({
                 type="button"
                 aria-label="Close live alerts"
                 onClick={onClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)]"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="mt-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_78%,transparent)] px-3 py-2.5">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
-                <span className="font-semibold text-[var(--color-foreground)]">
-                  <span className="font-mono tabular-nums">{urgentCount}</span>{" "}
-                  {urgentCount === 1 ? "urgent alert" : "urgent alerts"}
-                </span>
-                {summaryItems.length > 0 ? (
-                  <span className="font-mono tabular-nums">{summaryItems.join(" · ")}</span>
-                ) : null}
-              </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[
+                { label: "Critical", value: summary.criticalCount },
+                { label: "High risk", value: summary.highRiskCount },
+                { label: "Recent", value: summary.recentlyUpdatedCount },
+                { label: "Nearby", value: summary.nearbyActiveCount ?? 0 },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_66%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_80%,transparent)] px-2.5 py-1 text-[0.72rem] font-medium text-[var(--color-muted-foreground)]"
+                >
+                  <span className="font-mono font-semibold tabular-nums text-[var(--color-foreground)]">
+                    {item.value}
+                  </span>{" "}
+                  {item.label}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "h-7 rounded-full border px-2.5 text-[0.72rem] font-medium",
+                    activeTab === tab.id
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)]",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {!hasCriticalAlerts && !loading && !error && activeReportCount > 0 ? (
+              <div className="mb-2 rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_58%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_72%,transparent)] px-3 py-2 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
+                <span className="font-semibold text-[var(--color-foreground)]">
+                  No critical alerts right now.
+                </span>{" "}
+                Active community reports are still listed below.
+              </div>
+            ) : null}
+
             {loading ? (
               <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-5 text-[0.88rem] text-[var(--color-muted-foreground)]">
                 Loading live alerts...
@@ -172,115 +276,216 @@ export function LiveAlertsPanel({
               <div className="rounded-[14px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-4 py-5 text-[0.88rem] text-[var(--color-danger-text)]">
                 {error}
               </div>
-            ) : groups.every((group) => group.reports.length === 0) ? (
+            ) : showNoActiveReportsEmpty ? (
+              <div className="rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_66%,transparent)] bg-[var(--color-panel)] px-4 py-4 text-center">
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))] text-[var(--color-primary)]">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div className="mt-3 text-[0.94rem] font-semibold text-[var(--color-foreground)]">
+                  No active flood reports right now
+                </div>
+                <p className="mt-1.5 text-[0.8rem] leading-5 text-[var(--color-muted-foreground)]">
+                  There are no urgent community reports at the moment. You can still check the map, review safety reminders, or submit a report if you see flooding.
+                </p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onReportFlood}
+                    className="h-8 rounded-[10px] bg-[var(--color-primary)] px-3 text-[0.74rem] font-semibold text-[var(--color-primary-foreground)]"
+                  >
+                    Report Flood Incident
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenFloodMap}
+                    className="h-8 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[0.74rem] font-medium text-[var(--color-foreground)]"
+                  >
+                    View Flood Map
+                  </button>
+                </div>
+              </div>
+            ) : showNearbyLocationHint ? (
+              <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.84rem] text-[var(--color-muted-foreground)]">
+                Enable location to see nearby flood reports.
+              </div>
+            ) : !hasAnyVisibleReports ? (
               <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-5">
                 <div className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
-                  No critical live alerts right now.
+                  No reports in this filter.
                 </div>
                 <p className="mt-1 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
-                  Check the map for community reports and local updates.
+                  {activeReportCount > 0
+                    ? "Try All, Recent, or another active report filter."
+                    : "Check back later or submit a report if you see flooding."}
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {groups.map((group) =>
-                  group.reports.length > 0 ? (
-                    <section
-                      key={group.id}
-                      className="space-y-2 border-b border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pb-4 last:border-b-0 last:pb-0"
-                    >
-                      <div>
-                        <h3 className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
-                          {group.title}
-                        </h3>
-                        <p className="text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
-                          {group.description}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        {group.reports.map((report) => {
-                          const freshnessBadge = getReportFreshnessBadge(report);
-                          const confirmationLabel =
-                            report.confirmations > 0
-                              ? `${formatCountLabel(report.confirmations, "confirmed", "confirmed")}`
-                              : "No confirmations yet";
+              <div className="space-y-3">
+                {visibleGroups.map((group) => (
+                  <section
+                    key={group.id}
+                    className="space-y-2 border-b border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <div>
+                      <h3 className="text-[0.88rem] font-semibold text-[var(--color-foreground)]">
+                        {group.title}
+                      </h3>
+                      <p className="text-[0.74rem] leading-5 text-[var(--color-muted-foreground)]">
+                        {group.description}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {group.reports.map((report) => {
+                        const freshnessBadge = getReportFreshnessBadge(report);
+                        const statusPresentation = getStatusPresentation(report.status);
+                        const confirmationLabel =
+                          report.confirmations > 0
+                            ? formatCountLabel(report.confirmations, "confirmation", "confirmations")
+                            : "No confirmations yet";
 
-                          return (
-                            <article
-                              key={report.id}
-                              className="rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-panel)] px-3 py-3"
-                            >
+                        return (
+                          <article
+                            key={report.id}
+                            className="rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-panel)] px-3 py-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <span
+                                className={cn(
+                                  "mt-0.5 inline-flex h-5 shrink-0 items-center rounded-full border px-1.5 text-[0.64rem] font-medium",
+                                  severityBadgeClasses[report.severity],
+                                )}
+                              >
+                                {severityLabels[report.severity]}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => onViewOnMap(report.id)}
-                                className="w-full text-left"
+                                className="min-w-0 flex-1 text-left"
                               >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <div className="text-[0.92rem] font-semibold leading-6 text-[var(--color-foreground)]">
-                                      {report.title}
-                                    </div>
-                                    <div className="truncate text-[0.78rem] text-[var(--color-muted-foreground)]">
-                                      {report.location}
-                                    </div>
-                                  </div>
-                                  {freshnessBadge ? (
-                                    <span
-                                      className={cn(
-                                        "shrink-0 rounded-full px-2 py-1 text-[0.68rem] font-medium",
-                                        freshnessBadge.tone === "success"
-                                          ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
-                                          : freshnessBadge.tone === "warning"
-                                            ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
-                                            : freshnessBadge.tone === "muted"
-                                              ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
-                                              : "bg-[var(--color-info-surface)] text-[var(--color-info-text)]",
-                                      )}
-                                    >
-                                      {freshnessBadge.label}
-                                    </span>
-                                  ) : null}
+                                <div className="text-[0.9rem] font-semibold leading-5 text-[var(--color-foreground)]">
+                                  {report.title}
+                                </div>
+                                <div className="mt-0.5 truncate text-[0.76rem] text-[var(--color-muted-foreground)]">
+                                  {report.location}
                                 </div>
                               </button>
+                            </div>
 
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.75rem] text-[var(--color-muted-foreground)]">
-                                <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono tabular-nums">
-                                  <Clock3 className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-                                  {getReportActivityLabel(report)}
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <span
+                                className={cn(
+                                  "inline-flex h-5 items-center rounded-full px-1.5 text-[0.64rem] font-medium",
+                                  statusPresentation.wrapperClassName,
+                                  statusPresentation.textClassName,
+                                )}
+                              >
+                                {statusPresentation.label}
+                              </span>
+                              {freshnessBadge ? (
+                                <span
+                                  className={cn(
+                                    "inline-flex h-5 items-center rounded-full px-1.5 text-[0.64rem] font-medium",
+                                    freshnessBadge.tone === "success"
+                                      ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
+                                      : freshnessBadge.tone === "warning"
+                                        ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
+                                        : freshnessBadge.tone === "muted"
+                                          ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
+                                          : "bg-[var(--color-info-surface)] text-[var(--color-info-text)]",
+                                  )}
+                                >
+                                  {freshnessBadge.label}
                                 </span>
-                                <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-mono tabular-nums">
-                                  <ThumbsUp className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-                                  {confirmationLabel}
-                                </span>
-                              </div>
+                              ) : null}
+                            </div>
 
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => onViewOnMap(report.id)}
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[0.76rem] font-medium text-[var(--color-foreground)]"
-                                >
-                                  <MapPinned className="h-3.5 w-3.5" />
-                                  <span>View on map</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => onViewDetails(report.id)}
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2 text-[0.76rem] font-medium text-[var(--color-muted-foreground)]"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                  <span>View details</span>
-                                </button>
-                              </div>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ) : null,
-                )}
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.73rem] text-[var(--color-muted-foreground)]">
+                              <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                {getReportActivityLabel(report)}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
+                                <ThumbsUp className="h-3.5 w-3.5" />
+                                {confirmationLabel}
+                              </span>
+                            </div>
+
+                            <p className="mt-2 line-clamp-2 text-[0.78rem] leading-5 text-[var(--color-muted-foreground)]">
+                              {report.description}
+                            </p>
+
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => onViewOnMap(report.id)}
+                                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[0.7rem] font-medium text-[var(--color-foreground)]"
+                              >
+                                <MapPinned className="h-3.5 w-3.5" />
+                                <span>View on Map</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onViewDetails(report.id)}
+                                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[0.7rem] font-medium text-[var(--color-foreground)]"
+                              >
+                                <Megaphone className="h-3.5 w-3.5" />
+                                <span>Update</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onFindEvacuationCenters}
+                                className="inline-flex h-7 items-center justify-center gap-1.5 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[0.7rem] font-medium text-[var(--color-foreground)]"
+                              >
+                                <Building2 className="h-3.5 w-3.5" />
+                                <span>Centers</span>
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
+
+            <section className="mt-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_74%,transparent)] px-3 py-3">
+              <div className="text-[0.82rem] font-semibold text-[var(--color-foreground)]">
+                What you can do now
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {quickActions.map((action) => {
+                  const Icon = action.icon;
+
+                  return (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={action.onClick}
+                      className="inline-flex min-h-8 items-center gap-1.5 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-left text-[0.7rem] font-medium leading-4 text-[var(--color-foreground)]"
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--color-primary)]" />
+                      <span>{action.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="mt-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_74%,transparent)] px-3 py-3">
+              <div className="flex items-center gap-2 text-[0.82rem] font-semibold text-[var(--color-foreground)]">
+                <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" />
+                Safety Reminders
+              </div>
+              <ul className="mt-2 space-y-1.5 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)]">
+                {safetyReminders.map((reminder) => (
+                  <li key={reminder} className="flex items-start gap-2">
+                    <Route className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                    <span>{reminder}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         </section>
       </div>

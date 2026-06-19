@@ -77,6 +77,13 @@ type LiveAlertGroup = {
   reports: IncidentReport[];
 };
 
+type LiveAlertSummary = {
+  criticalCount: number;
+  highRiskCount: number;
+  recentlyUpdatedCount: number;
+  nearbyActiveCount: number;
+};
+
 type DashboardShellProps = {
   pageMode?:
     | "flood-map"
@@ -521,6 +528,9 @@ export function DashboardShell({
     const activeReports = floodMapMappedReports
       .filter((report) => matchesReportStatusFilter(report, "active"))
       .sort(compareReportsByPriority);
+    const recededReports = floodMapMappedReports
+      .filter((report) => report.status === "Likely Receded")
+      .sort(compareReportsByPriority);
     const assigned = new Set<string>();
 
     const take = (predicate: (report: IncidentReport) => boolean) => {
@@ -534,6 +544,14 @@ export function DashboardShell({
 
       return matches;
     };
+
+    const hasHigherRiskReports = activeReports.some(
+      (report) =>
+        report.severity === "severe" ||
+        report.severity === "high" ||
+        isRecentlyConfirmedReport(report) ||
+        report.status === "Confirmed by Community",
+    );
 
     return [
       {
@@ -549,41 +567,76 @@ export function DashboardShell({
         reports: take((report) => report.severity === "high"),
       },
       {
-        id: "recently-confirmed",
-        title: "Recently confirmed",
-        description: "Reports with fresh community confirmation.",
-        reports: take((report) => isRecentlyConfirmedReport(report)),
-      },
-      {
-        id: "needs-update",
-        title: "Needs update",
-        description: "Older active reports that may need a fresh community check.",
+        id: "recent",
+        title: "Recently updated",
+        description: "Active reports with fresh reports or community updates.",
         reports: take((report) => {
           const freshness = getReportFreshnessBadge(report);
           return (
-            freshness?.label === "Needs update" ||
-            freshness?.label === "Likely outdated"
+            isRecentlyConfirmedReport(report) ||
+            freshness?.label === "New" ||
+            freshness?.label === "Recent" ||
+            freshness?.label === "Recently confirmed"
           );
         }),
+      },
+      {
+        id: "nearby",
+        title: "Nearby active",
+        description: "Active reports near your location when location context is available.",
+        reports: take((report) => "distanceMeters" in report),
+      },
+      {
+        id: "community-confirmed",
+        title: "Community confirmed",
+        description: "Reports confirmed by community members.",
+        reports: take((report) => report.status === "Confirmed by Community"),
+      },
+      {
+        id: "moderate-low",
+        title: "Moderate and low active",
+        description: "Lower-risk active reports shown when higher-risk alerts are quiet.",
+        reports: hasHigherRiskReports
+          ? []
+          : take((report) => report.severity === "moderate" || report.severity === "safe"),
+      },
+      {
+        id: "receded",
+        title: "Recently receded",
+        description: "Reports marked likely receded by community activity.",
+        reports: recededReports,
       },
     ];
   }, [floodMapMappedReports]);
 
   const liveAlertsCount = useMemo(() => {
-    const urgentIds = new Set<string>();
+    return floodMapMappedReports.filter(
+      (report) =>
+        matchesReportStatusFilter(report, "active") &&
+        (report.severity === "severe" || report.severity === "high"),
+    ).length;
+  }, [floodMapMappedReports]);
 
-    for (const group of floodMapLiveAlertGroups) {
-      if (group.id === "needs-update") {
-        continue;
-      }
+  const liveAlertSummary = useMemo<LiveAlertSummary>(() => {
+    const activeReports = floodMapMappedReports.filter((report) =>
+      matchesReportStatusFilter(report, "active"),
+    );
 
-      for (const report of group.reports) {
-        urgentIds.add(report.id);
-      }
-    }
-
-    return urgentIds.size;
-  }, [floodMapLiveAlertGroups]);
+    return {
+      criticalCount: activeReports.filter((report) => report.severity === "severe").length,
+      highRiskCount: activeReports.filter((report) => report.severity === "high").length,
+      recentlyUpdatedCount: activeReports.filter((report) => {
+        const freshness = getReportFreshnessBadge(report);
+        return (
+          isRecentlyConfirmedReport(report) ||
+          freshness?.label === "New" ||
+          freshness?.label === "Recent" ||
+          freshness?.label === "Recently confirmed"
+        );
+      }).length,
+      nearbyActiveCount: activeReports.filter((report) => "distanceMeters" in report).length,
+    };
+  }, [floodMapMappedReports]);
 
   const floodMapSelectedReport = useMemo(
     () => floodMapReports.find((report) => report.id === floodMapSelectedReportId) ?? null,
@@ -1065,10 +1118,27 @@ export function DashboardShell({
           loading={floodMapLoadingReports}
           error={floodMapReportLoadError}
           groups={floodMapLiveAlertGroups}
-          urgentCount={liveAlertsCount}
+          summary={liveAlertSummary}
           onClose={() => setLiveAlertsOpen(false)}
           onViewOnMap={focusFloodMapReport}
           onViewDetails={openFloodMapReportDetails}
+          onViewAllReports={() => {
+            setLiveAlertsOpen(false);
+            router.push("/incident-reports");
+          }}
+          onOpenFloodMap={() => setLiveAlertsOpen(false)}
+          onReportFlood={() => {
+            setLiveAlertsOpen(false);
+            router.push("/incident-reports");
+          }}
+          onFindEvacuationCenters={() => {
+            setLiveAlertsOpen(false);
+            router.push("/evacuation-centers");
+          }}
+          onReviewWeatherRisk={() => {
+            setLiveAlertsOpen(false);
+            router.push("/weather-monitoring");
+          }}
         />
       ) : null}
 
