@@ -72,6 +72,16 @@ type NearestCenterResult = {
   distanceKm: number;
 };
 
+function rankCentersByDistance(origin: { latitude: number; longitude: number }) {
+  return EVACUATION_CENTERS.map((center) => ({
+    center,
+    distanceKm: calculateDistanceKm(origin, {
+      latitude: center.latitude,
+      longitude: center.longitude,
+    }),
+  })).sort((left, right) => left.distanceKm - right.distanceKm);
+}
+
 function EvacuationCenterCard({
   center,
   highlighted,
@@ -84,7 +94,6 @@ function EvacuationCenterCard({
   directionsOrigin?: { latitude: number; longitude: number } | null;
 }) {
   const statusMeta = EVACUATION_STATUS_META[center.status];
-  const sourceMeta = EVACUATION_SOURCE_META[center.sourceType];
 
   return (
     <article
@@ -328,10 +337,14 @@ export function EvacuationCentersContent() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [fromReportContext, setFromReportContext] = useState(false);
   const coverageSummary = `Showing ${EVACUATION_CENTERS.length} static evacuation center references across Bulacan, NCR, and Rizal.`;
 
   useEffect(() => {
     const centerId = searchParams.get("center");
+    const latitude = Number(searchParams.get("lat"));
+    const longitude = Number(searchParams.get("lng"));
+    const fromReport = searchParams.get("fromReport");
     const hasMatch = centerId
       ? EVACUATION_CENTERS.some((center) => center.id === centerId)
       : false;
@@ -339,10 +352,22 @@ export function EvacuationCentersContent() {
     const frameId = window.requestAnimationFrame(() => {
       setSelectedCenterId(hasMatch ? centerId : null);
       setHighlightedCenterId(hasMatch ? centerId : null);
+
+      if (fromReport && Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        const origin = { latitude, longitude };
+
+        setFromReportContext(true);
+        setDirectionsOrigin(origin);
+        setNearestResults(rankCentersByDistance(origin));
+        setNearestMessage(null);
+        setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
+      } else {
+        setFromReportContext(false);
+      }
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [searchParams]);
+  }, [nearestSearchCycle, searchParams]);
 
   useEffect(() => {
     if (!selectedCenterId) {
@@ -458,15 +483,8 @@ export function EvacuationCentersContent() {
 
         setDirectionsOrigin(origin);
 
-        const rankedCenters = EVACUATION_CENTERS.map((center) => ({
-          center,
-          distanceKm: calculateDistanceKm(origin, {
-            latitude: center.latitude,
-            longitude: center.longitude,
-          }),
-        })).sort((left, right) => left.distanceKm - right.distanceKm);
-
-        setNearestResults(rankedCenters);
+        setFromReportContext(false);
+        setNearestResults(rankCentersByDistance(origin));
         setNearestMessage(null);
         setIsFindingNearest(false);
       },
@@ -556,6 +574,12 @@ export function EvacuationCentersContent() {
                     )}
                   >
                     {nearestMessage}
+                  </div>
+                ) : null}
+
+                {fromReportContext ? (
+                  <div className="rounded-[14px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-3.5 py-2.5 text-[0.82rem] font-medium text-[var(--color-info-text)]">
+                    Showing evacuation centers near the selected flood report.
                   </div>
                 ) : null}
 

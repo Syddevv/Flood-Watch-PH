@@ -5,6 +5,7 @@ import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
+import type { ReportActionLoadingState } from "@/lib/report-actions";
 import type {
   EvacuationCenterMapMarker,
   IncidentReport,
@@ -85,13 +86,21 @@ type FloodMapProps = {
   onToggleEvacuationCenters: () => void;
   focusedCenterId?: string | null;
   focusedReportId?: string | null;
+  selectedReportId?: string | null;
   selectedReportStatus: ReportStatusFilterId;
   onSelectReportStatus: (filter: ReportStatusFilterId) => void;
   highSeverityOnly: boolean;
   onToggleHighSeverityOnly: () => void;
   loadingReports: boolean;
   reportLoadError: string | null;
+  selectionNotice?: string | null;
+  actionLoading: ReportActionLoadingState;
+  confirmedReportIds: Record<string, boolean>;
+  resolvedReportIds: Record<string, boolean>;
+  onSelectReport: (reportId: string) => void;
   onOpenReportDetails: (reportId: string) => void;
+  onConfirmReport: (reportId: string) => void;
+  onResolveReport: (reportId: string) => void;
 };
 
 export function FloodMap({
@@ -108,13 +117,21 @@ export function FloodMap({
   onToggleEvacuationCenters,
   focusedCenterId = null,
   focusedReportId = null,
+  selectedReportId = null,
   selectedReportStatus,
   onSelectReportStatus,
   highSeverityOnly,
   onToggleHighSeverityOnly,
   loadingReports,
   reportLoadError,
+  selectionNotice = null,
+  actionLoading,
+  confirmedReportIds,
+  resolvedReportIds,
+  onSelectReport,
   onOpenReportDetails,
+  onConfirmReport,
+  onResolveReport,
 }: FloodMapProps) {
   const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
 
@@ -123,9 +140,13 @@ export function FloodMap({
       return;
     }
 
-    if (window.innerWidth < 768) {
-      setIsLayerPanelCollapsed(true);
-    }
+    const frameId = window.requestAnimationFrame(() => {
+      if (window.innerWidth < 768) {
+        setIsLayerPanelCollapsed(true);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, []);
 
   const layerSummary = useMemo(() => {
@@ -207,8 +228,15 @@ export function FloodMap({
         polygons={showRiskOverlays ? polygons : []}
         legend={legend}
         onOpenReportDetails={onOpenReportDetails}
+        onSelectReport={onSelectReport}
+        onConfirmReport={onConfirmReport}
+        onResolveReport={onResolveReport}
+        actionLoading={actionLoading}
+        confirmedReportIds={confirmedReportIds}
+        resolvedReportIds={resolvedReportIds}
         focusedCenterId={focusedCenterId}
         focusedReportId={focusedReportId}
+        selectedReportId={selectedReportId}
       />
 
       <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[344px]">
@@ -391,6 +419,14 @@ export function FloodMap({
           </section>
         </div>
       </div>
+
+      {selectionNotice ? (
+        <div className="pointer-events-none absolute inset-x-4 bottom-24 z-[var(--layer-map-overlay)] flex justify-center md:bottom-6">
+          <div className="pointer-events-auto max-w-[360px] rounded-[12px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-3 py-2 text-center text-[0.78rem] font-medium text-[var(--color-warning-text)] shadow-[var(--shadow-soft)]">
+            {selectionNotice}
+          </div>
+        </div>
+      ) : null}
 
     </div>
   );

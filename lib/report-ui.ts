@@ -106,38 +106,45 @@ function createReportPhotos(report: ReportRecord) {
 }
 
 export function mapReportToIncident(report: ReportRecord): IncidentReport {
+  const createdAt = report.createdAt ?? new Date().toISOString();
+  const updatedAt = report.updatedAt ?? createdAt;
+  const lastActivityAt = report.lastActivityAt ?? updatedAt;
+  const locationName = report.locationName || "Unknown location";
+  const description = report.description || "No additional details provided";
+  const confirmationCount = report.confirmationCount ?? 0;
+  const resolvedCount = report.resolvedCount ?? 0;
   const severityTone = getReportSeverityTone(report.severity);
   const derivedStatus = deriveCommunityStatus({
     status: report.status,
     severity: report.severity,
-    confirmationCount: report.confirmationCount,
-    resolvedCount: report.resolvedCount,
-    createdAt: report.createdAt,
-    updatedAt: report.updatedAt,
-    lastActivityAt: report.lastActivityAt,
+    confirmationCount,
+    resolvedCount,
+    createdAt,
+    updatedAt,
+    lastActivityAt,
     resolvedAt: report.resolvedAt,
     archivedAt: report.archivedAt,
   });
 
   return {
     id: report.id,
-    title: report.title,
-    location: report.locationName,
+    title: report.title || "Flood report",
+    location: locationName,
     coordinatesLabel: toCoordinatesLabel(report.latitude, report.longitude),
     coordinates: [report.latitude, report.longitude],
     category: getReportCategoryLabel(report.category),
     severity: severityTone,
     status: derivedStatus,
-    description: report.description,
-    createdAt: report.createdAt,
-    updatedAt: report.updatedAt,
-    lastActivityAt: report.lastActivityAt,
+    description,
+    createdAt,
+    updatedAt,
+    lastActivityAt,
     archivedAt: report.archivedAt,
     resolvedAt: report.resolvedAt,
-    reportedAgo: formatRelativeTime(report.createdAt),
-    lastActivityAgo: formatRelativeTime(report.lastActivityAt),
-    confirmations: report.confirmationCount,
-    resolvedConfirmations: report.resolvedCount,
+    reportedAgo: formatRelativeTime(createdAt),
+    lastActivityAgo: formatRelativeTime(lastActivityAt),
+    confirmations: confirmationCount,
+    resolvedConfirmations: resolvedCount,
     lastConfirmedAt: report.lastConfirmedAt ?? null,
     lastResolvedConfirmationAt: report.lastResolvedConfirmationAt ?? null,
     sourceType: report.sourceType,
@@ -145,9 +152,9 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     sourceLabel: getSourceLabelFromReportType(report.sourceType),
     resolvedAgo:
       derivedStatus === "Resolved" || report.resolvedAt
-        ? `Resolved ${formatRelativeTime(report.resolvedAt ?? report.updatedAt)}`
+        ? `Resolved ${formatRelativeTime(report.resolvedAt ?? updatedAt)}`
         : derivedStatus === "Likely Receded"
-          ? `Likely receded ${formatRelativeTime(report.updatedAt)}`
+          ? `Likely receded ${formatRelativeTime(updatedAt)}`
           : undefined,
     reporter: report.reportedByName ?? "Anonymous Community Reporter",
     sourceUnit: getSourceLabel(report.sourceType),

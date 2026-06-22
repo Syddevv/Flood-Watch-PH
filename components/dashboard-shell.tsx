@@ -31,6 +31,13 @@ import {
 } from "@/lib/constants";
 import type { ReportDetailResponse, ReportRecord, ReportsResponse } from "@/lib/report-types";
 import {
+  buildReportDirectionsUrl,
+  buildReportEvacuationCentersHref,
+  buildReportUpdateHref,
+  REPORT_ACTION_MESSAGES,
+  type ReportActionLoadingState,
+} from "@/lib/report-actions";
+import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
@@ -222,10 +229,12 @@ export function DashboardShell({
   const [floodMapShowRiskOverlays, setFloodMapShowRiskOverlays] = useState(false);
   const [floodMapSelectedReportId, setFloodMapSelectedReportId] = useState<string | null>(null);
   const [floodMapModalOpen, setFloodMapModalOpen] = useState(false);
-  const [floodMapActionLoadingId, setFloodMapActionLoadingId] = useState<string | null>(null);
+  const [floodMapActionLoading, setFloodMapActionLoading] =
+    useState<ReportActionLoadingState>(null);
   const [floodMapConfirmedReportIds, setFloodMapConfirmedReportIds] = useState<Record<string, boolean>>({});
   const [floodMapResolvedReportIds, setFloodMapResolvedReportIds] = useState<Record<string, boolean>>({});
   const [floodMapToast, setFloodMapToast] = useState<FloodMapToastState>(null);
+  const [floodMapSelectionNotice, setFloodMapSelectionNotice] = useState<string | null>(null);
   const [weatherOverview, setWeatherOverview] = useState<WeatherOverviewData>(EMPTY_WEATHER_OVERVIEW);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -303,8 +312,8 @@ export function DashboardShell({
     let frameId = 0;
 
     if (centerId) {
-      setFocusedCenterId(null);
       frameId = window.requestAnimationFrame(() => {
+        setFocusedCenterId(null);
         setFocusedCenterId(centerId);
         setFloodMapShowEvacuationCenters(true);
       });
@@ -425,6 +434,80 @@ export function DashboardShell({
   }, [isFloodMapView]);
 
   useEffect(() => {
+    if (!isFloodMapView || typeof window === "undefined" || floodMapLoadingReports) {
+      return;
+    }
+
+    const reportId = new URLSearchParams(window.location.search).get("reportId");
+
+    if (!reportId) {
+      return;
+    }
+
+    const queryReportId = reportId;
+    let isMounted = true;
+
+    async function focusReportFromQuery() {
+      setSheetOpen(false);
+      setLiveAlertsOpen(false);
+      setFloodMapShowReports(true);
+      setFloodMapHighSeverityOnly(false);
+      setFocusedCenterId(null);
+      setFloodMapSelectedReportId(queryReportId);
+      setFloodMapSelectionNotice(null);
+      setFocusedReportId(null);
+
+      const existingReport = floodMapReports.find((report) => report.id === queryReportId);
+
+      if (!existingReport) {
+        try {
+          const response = await fetch(`/api/reports/${queryReportId}`, {
+            cache: "no-store",
+          });
+          const payload = (await response.json()) as ReportDetailResponse | { error: string };
+
+          if (!response.ok || !("data" in payload)) {
+            throw new Error("Report not found.");
+          }
+
+          if (!isMounted) {
+            return;
+          }
+
+          const nextReport = mapReportToIncident(payload.data);
+          setFloodMapReports((current) =>
+            current.some((report) => report.id === nextReport.id)
+              ? current.map((report) => (report.id === nextReport.id ? nextReport : report))
+              : [nextReport, ...current],
+          );
+          setFloodMapUpdatesByReportId((current) => ({
+            ...current,
+            [queryReportId]: payload.data.updates,
+          }));
+        } catch (error) {
+          console.error("Failed to load report from map query param.", error);
+          if (isMounted) {
+            setFloodMapSelectionNotice("This report may have been removed or archived.");
+          }
+          return;
+        }
+      }
+
+      if (isMounted) {
+        window.requestAnimationFrame(() => {
+          setFocusedReportId(queryReportId);
+        });
+      }
+    }
+
+    focusReportFromQuery();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [floodMapLoadingReports, floodMapReports, isFloodMapView]);
+
+  useEffect(() => {
     if (!isFloodMapView || !floodMapSelectedReportId || !floodMapModalOpen) {
       return;
     }
@@ -472,9 +555,8 @@ export function DashboardShell({
     [floodMapReports],
   );
 
-  const floodMapFilteredReports = useMemo(
-    () =>
-      floodMapMappedReports.filter((report) => {
+  const floodMapFilteredReports = useMemo(() => {
+    const filteredReports = floodMapMappedReports.filter((report) => {
         if (!matchesReportStatusFilter(report, floodMapSelectedReportStatus)) {
           return false;
         }
@@ -484,9 +566,27 @@ export function DashboardShell({
         }
 
         return true;
-      }).sort(compareReportsByPriority),
-    [floodMapHighSeverityOnly, floodMapMappedReports, floodMapSelectedReportStatus],
-  );
+      });
+    const selectedReport = floodMapSelectedReportId
+      ? floodMapMappedReports.find((report) => report.id === floodMapSelectedReportId)
+      : null;
+    const shouldIncludeSelectedReport =
+      selectedReport &&
+      floodMapShowReports &&
+      !filteredReports.some((report) => report.id === selectedReport.id);
+
+    return (
+      shouldIncludeSelectedReport
+        ? [selectedReport, ...filteredReports]
+        : filteredReports
+    ).sort(compareReportsByPriority);
+  }, [
+    floodMapHighSeverityOnly,
+    floodMapMappedReports,
+    floodMapSelectedReportId,
+    floodMapSelectedReportStatus,
+    floodMapShowReports,
+  ]);
 
   const floodMapReportMarkers = useMemo<ReportMapMarker[]>(
     () =>
@@ -643,6 +743,20 @@ export function DashboardShell({
     [floodMapReports, floodMapSelectedReportId],
   );
 
+  useEffect(() => {
+    if (!floodMapSelectedReportId || floodMapLoadingReports) {
+      return;
+    }
+
+    if (floodMapSelectedReport && !hasValidCoordinates(floodMapSelectedReport)) {
+      const frameId = window.requestAnimationFrame(() => {
+        setFloodMapSelectionNotice("This report is hidden by the current filters.");
+      });
+
+      return () => window.cancelAnimationFrame(frameId);
+    }
+  }, [floodMapLoadingReports, floodMapSelectedReport, floodMapSelectedReportId]);
+
   const sidebarWeatherOverview = useMemo(
     () => getSidebarWeatherOverview(weatherOverview),
     [weatherOverview],
@@ -696,10 +810,9 @@ export function DashboardShell({
     setSheetOpen(false);
     setLiveAlertsOpen(false);
     setFloodMapModalOpen(false);
-    setFloodMapSelectedReportId(null);
+    setFloodMapSelectedReportId(reportId);
     setFloodMapShowReports(true);
     setFloodMapHighSeverityOnly(false);
-    setFloodMapSelectedReportStatus("active");
     setFocusedCenterId(null);
     setFocusedReportId(null);
 
@@ -713,10 +826,39 @@ export function DashboardShell({
     setLiveAlertsOpen(false);
     setFloodMapShowReports(true);
     setFloodMapHighSeverityOnly(false);
-    setFloodMapSelectedReportStatus("active");
     setFocusedCenterId(null);
+    setFocusedReportId(reportId);
     setFloodMapSelectedReportId(reportId);
     setFloodMapModalOpen(true);
+  };
+
+  const selectFloodMapReport = (reportId: string) => {
+    setFloodMapSelectionNotice(null);
+    setFloodMapSelectedReportId(reportId);
+    setFocusedCenterId(null);
+    setFocusedReportId(reportId);
+  };
+
+  const handleReportUpdate = (report: IncidentReport) => {
+    router.push(buildReportUpdateHref(report));
+  };
+
+  const handleGetReportDirections = (report: IncidentReport) => {
+    const directionsUrl = buildReportDirectionsUrl(report);
+
+    if (!directionsUrl || typeof window === "undefined") {
+      return;
+    }
+
+    window.open(directionsUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleFindReportEvacuationCenters = (report: IncidentReport) => {
+    const href = buildReportEvacuationCentersHref(report);
+
+    if (href) {
+      router.push(href);
+    }
   };
 
   async function applyUpdatedFloodMapReport(
@@ -756,7 +898,7 @@ export function DashboardShell({
       return;
     }
 
-    setFloodMapActionLoadingId(reportId);
+    setFloodMapActionLoading({ reportId, type: "confirmed" });
 
     try {
       const response = await fetch(`/api/reports/${reportId}/confirm`, {
@@ -766,28 +908,43 @@ export function DashboardShell({
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to confirm the report.");
+          throw new Error(payload.error ?? REPORT_ACTION_MESSAGES.error);
       }
 
       await applyUpdatedFloodMapReport(reportId, payload, "confirmed");
       setFloodMapToast({
         tone: "success",
-        message: "Report confirmed.",
+        message: REPORT_ACTION_MESSAGES.confirmedSuccess,
         actionType: "confirmed",
         reportId,
         expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
       });
     } catch (error) {
       console.error("Failed to confirm report from flood map.", error);
+      if (
+        error instanceof Error &&
+        error.message === "This report has already been updated from this browser."
+      ) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
+        }
+
+        setFloodMapConfirmedReportIds((current) => ({
+          ...current,
+          [reportId]: true,
+        }));
+      }
       setFloodMapToast({
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message
-            : "Unable to confirm this report right now.",
+            ? error.message === "This report has already been updated from this browser."
+              ? REPORT_ACTION_MESSAGES.duplicate
+              : error.message
+            : REPORT_ACTION_MESSAGES.error,
       });
     } finally {
-      setFloodMapActionLoadingId(null);
+      setFloodMapActionLoading(null);
     }
   }
 
@@ -796,7 +953,7 @@ export function DashboardShell({
       return;
     }
 
-    setFloodMapActionLoadingId(reportId);
+    setFloodMapActionLoading({ reportId, type: "resolved" });
 
     try {
       const response = await fetch(`/api/reports/${reportId}/resolve`, {
@@ -806,28 +963,43 @@ export function DashboardShell({
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to update the report.");
+          throw new Error(payload.error ?? REPORT_ACTION_MESSAGES.error);
       }
 
       await applyUpdatedFloodMapReport(reportId, payload, "resolved");
       setFloodMapToast({
         tone: "success",
-        message: "Water receded report submitted.",
+        message: REPORT_ACTION_MESSAGES.resolvedSuccess,
         actionType: "resolved",
         reportId,
         expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
       });
     } catch (error) {
       console.error("Failed to resolve report from flood map.", error);
+      if (
+        error instanceof Error &&
+        error.message === "This report has already been updated from this browser."
+      ) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(buildStoredActionKey("resolved", reportId), "true");
+        }
+
+        setFloodMapResolvedReportIds((current) => ({
+          ...current,
+          [reportId]: true,
+        }));
+      }
       setFloodMapToast({
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message
-            : "Unable to submit a water receded report right now.",
+            ? error.message === "This report has already been updated from this browser."
+              ? REPORT_ACTION_MESSAGES.duplicate
+              : error.message
+            : REPORT_ACTION_MESSAGES.error,
       });
     } finally {
-      setFloodMapActionLoadingId(null);
+      setFloodMapActionLoading(null);
     }
   }
 
@@ -906,10 +1078,7 @@ export function DashboardShell({
 
       setFloodMapToast({
         tone: "success",
-        message:
-          actionType === "confirmed"
-            ? "Confirmation removed."
-            : "Water receded report removed.",
+        message: REPORT_ACTION_MESSAGES.undoSuccess,
       });
     } catch (error) {
       setFloodMapToast({
@@ -1015,6 +1184,7 @@ export function DashboardShell({
                   }
                   focusedCenterId={focusedCenterId}
                   focusedReportId={focusedReportId}
+                  selectedReportId={floodMapSelectedReportId}
                   selectedReportStatus={floodMapSelectedReportStatus}
                   onSelectReportStatus={setFloodMapSelectedReportStatus}
                   highSeverityOnly={floodMapHighSeverityOnly}
@@ -1023,7 +1193,14 @@ export function DashboardShell({
                   }
                   loadingReports={floodMapLoadingReports}
                   reportLoadError={floodMapReportLoadError}
+                  selectionNotice={floodMapSelectionNotice}
+                  actionLoading={floodMapActionLoading}
+                  confirmedReportIds={floodMapConfirmedReportIds}
+                  resolvedReportIds={floodMapResolvedReportIds}
+                  onSelectReport={selectFloodMapReport}
                   onOpenReportDetails={openFloodMapReportDetails}
+                  onConfirmReport={handleConfirmFloodMapReport}
+                  onResolveReport={handleResolveFloodMapReport}
                 />
               </div>
             )}
@@ -1152,7 +1329,7 @@ export function DashboardShell({
               : []
           }
           open={floodMapModalOpen}
-          actionLoading={floodMapActionLoadingId === floodMapSelectedReportId}
+          actionLoading={floodMapActionLoading}
           hasConfirmed={
             floodMapSelectedReportId
               ? Boolean(floodMapConfirmedReportIds[floodMapSelectedReportId])
@@ -1165,11 +1342,11 @@ export function DashboardShell({
           }
           onConfirm={handleConfirmFloodMapReport}
           onResolve={handleResolveFloodMapReport}
+          onReportUpdate={handleReportUpdate}
+          onGetDirections={handleGetReportDirections}
+          onFindEvacuationCenters={handleFindReportEvacuationCenters}
           onOpenChange={(open) => {
             setFloodMapModalOpen(open);
-            if (!open) {
-              setFloodMapSelectedReportId(null);
-            }
           }}
         />
       ) : null}

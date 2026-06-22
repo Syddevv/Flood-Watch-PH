@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
@@ -60,6 +61,13 @@ import {
   createReportActionHeaders,
   REPORT_ACTION_UNDO_WINDOW_MS,
 } from "@/lib/report-session";
+import {
+  buildReportDirectionsUrl,
+  buildReportEvacuationCentersHref,
+  buildReportUpdateHref,
+  REPORT_ACTION_MESSAGES,
+  type ReportActionLoadingState,
+} from "@/lib/report-actions";
 import { fetchWeatherLocation } from "@/lib/weather-client";
 
 type FormState = {
@@ -89,6 +97,11 @@ type PendingNearbyDuplicateState = {
   nearbyReports: NearbyReportRecord[];
   requestBody: FormData;
   photoAttached: boolean;
+} | null;
+
+type UpdateContextState = {
+  reportId: string;
+  locationName?: string;
 } | null;
 
 const emptyFormState: FormState = {
@@ -507,6 +520,7 @@ function ReportCard({
 }
 
 export function IncidentReportsContent() {
+  const router = useRouter();
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [updatesByReportId, setUpdatesByReportId] = useState<Record<string, ReportUpdateItem[]>>({});
   const [confirmedReportIds, setConfirmedReportIds] = useState<Record<string, boolean>>({});
@@ -516,7 +530,8 @@ export function IncidentReportsContent() {
   const [loadingReports, setLoadingReports] = useState(true);
   const [reportLoadError, setReportLoadError] = useState<string | null>(null);
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<ReportActionLoadingState>(null);
+  const actionLoadingId = actionLoading?.reportId ?? null;
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
@@ -524,6 +539,7 @@ export function IncidentReportsContent() {
   const [formState, setFormState] = useState<FormState>(emptyFormState);
   const [pendingNearbyDuplicate, setPendingNearbyDuplicate] =
     useState<PendingNearbyDuplicateState>(null);
+  const [updateContext, setUpdateContext] = useState<UpdateContextState>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const today = useSyncExternalStore(emptySubscribe, getTodaySnapshot, () => null);
   const selectedPhoto = formState.photos[0] ?? null;
@@ -537,6 +553,50 @@ export function IncidentReportsContent() {
     formState.locationName.trim().length > 0 &&
     formState.description.trim().length > 0 &&
     hasValidCoordinates;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let frameId = 0;
+    const searchParams = new URLSearchParams(window.location.search);
+
+    if (searchParams.get("mode") !== "update") {
+      frameId = window.requestAnimationFrame(() => {
+        setUpdateContext(null);
+      });
+      return () => window.cancelAnimationFrame(frameId);
+    }
+
+    const reportId = searchParams.get("reportId");
+
+    if (!reportId) {
+      return;
+    }
+
+    const locationName = searchParams.get("location") ?? "";
+    const latitude = searchParams.get("lat") ?? "";
+    const longitude = searchParams.get("lng") ?? "";
+
+    frameId = window.requestAnimationFrame(() => {
+      setUpdateContext({
+        reportId,
+        locationName: locationName || undefined,
+      });
+      setFormState((current) => ({
+        ...current,
+        locationName: locationName || current.locationName,
+        latitude: latitude || current.latitude,
+        longitude: longitude || current.longitude,
+        description:
+          current.description ||
+          `Update for existing flood report${locationName ? ` at ${locationName}` : ""}: `,
+      }));
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -605,7 +665,11 @@ export function IncidentReportsContent() {
   }
 
   useEffect(() => {
-    void loadReports();
+    const frameId = window.requestAnimationFrame(() => {
+      void loadReports();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, []);
 
   useEffect(() => {
@@ -613,7 +677,11 @@ export function IncidentReportsContent() {
       return;
     }
 
-    setPendingNearbyDuplicate(null);
+    const frameId = window.requestAnimationFrame(() => {
+      setPendingNearbyDuplicate(null);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [
     formState.category,
     formState.description,
@@ -621,6 +689,7 @@ export function IncidentReportsContent() {
     formState.locationName,
     formState.longitude,
     formState.severity,
+    pendingNearbyDuplicate,
   ]);
 
   useEffect(() => {
@@ -814,7 +883,7 @@ export function IncidentReportsContent() {
 
     const previousReports = reports;
     const previousConfirmedReportIds = confirmedReportIds;
-    setActionLoadingId(reportId);
+    setActionLoading({ reportId, type: "confirmed" });
     setConfirmedReportIds((current) => ({
       ...current,
       [reportId]: true,
@@ -847,7 +916,7 @@ export function IncidentReportsContent() {
       );
       setToast({
         tone: "success",
-        message: "Report confirmed.",
+        message: REPORT_ACTION_MESSAGES.confirmedSuccess,
         actionType: "confirmed",
         reportId,
         expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
@@ -874,11 +943,13 @@ export function IncidentReportsContent() {
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message
-            : "Unable to confirm this report right now.",
+            ? error.message === "This report has already been updated from this browser."
+              ? REPORT_ACTION_MESSAGES.duplicate
+              : error.message
+            : REPORT_ACTION_MESSAGES.error,
       });
     } finally {
-      setActionLoadingId(null);
+      setActionLoading(null);
     }
   }
 
@@ -889,7 +960,7 @@ export function IncidentReportsContent() {
 
     const previousReports = reports;
     const previousResolvedReportIds = resolvedReportIds;
-    setActionLoadingId(reportId);
+    setActionLoading({ reportId, type: "resolved" });
     setResolvedReportIds((current) => ({
       ...current,
       [reportId]: true,
@@ -922,7 +993,7 @@ export function IncidentReportsContent() {
       );
       setToast({
         tone: "success",
-        message: "Water receded report submitted.",
+        message: REPORT_ACTION_MESSAGES.resolvedSuccess,
         actionType: "resolved",
         reportId,
         expiresAt: Date.now() + REPORT_ACTION_UNDO_WINDOW_MS,
@@ -949,11 +1020,13 @@ export function IncidentReportsContent() {
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message
-            : "Unable to submit a water receded report right now.",
+            ? error.message === "This report has already been updated from this browser."
+              ? REPORT_ACTION_MESSAGES.duplicate
+              : error.message
+            : REPORT_ACTION_MESSAGES.error,
       });
     } finally {
-      setActionLoadingId(null);
+      setActionLoading(null);
     }
   }
 
@@ -1032,10 +1105,7 @@ export function IncidentReportsContent() {
 
       setToast({
         tone: "success",
-        message:
-          actionType === "confirmed"
-            ? "Confirmation removed."
-            : "Water receded report removed.",
+        message: REPORT_ACTION_MESSAGES.undoSuccess,
       });
     } catch (error) {
       setToast({
@@ -1279,6 +1349,26 @@ export function IncidentReportsContent() {
     await handleConfirmReport(nearestReportId);
   }
 
+  function handleModalReportUpdate(report: IncidentReport) {
+    router.push(buildReportUpdateHref(report));
+  }
+
+  function handleModalGetDirections(report: IncidentReport) {
+    const directionsUrl = buildReportDirectionsUrl(report);
+
+    if (directionsUrl && typeof window !== "undefined") {
+      window.open(directionsUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  function handleModalFindEvacuationCenters(report: IncidentReport) {
+    const href = buildReportEvacuationCentersHref(report);
+
+    if (href) {
+      router.push(href);
+    }
+  }
+
   return (
     <>
       <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)]">
@@ -1294,6 +1384,18 @@ export function IncidentReportsContent() {
 
           <section className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
             <div className="space-y-4">
+              {updateContext ? (
+                <section className="rounded-[18px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
+                  <div className="text-[0.88rem] font-semibold text-[var(--color-info-text)]">
+                    Report update
+                  </div>
+                  <p className="mt-1 text-[0.82rem] leading-6 text-[var(--color-foreground)]">
+                    You are submitting an update for an existing flood report.
+                    {updateContext.locationName ? ` Location: ${updateContext.locationName}.` : ""}
+                  </p>
+                </section>
+              ) : null}
+
               <section className="rounded-[18px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-[var(--color-warning)]" />
@@ -1823,11 +1925,14 @@ export function IncidentReportsContent() {
         report={selectedReport}
         updates={selectedReportId ? updatesByReportId[selectedReportId] ?? [] : []}
         open={modalOpen}
-        actionLoading={actionLoadingId === selectedReportId}
+        actionLoading={actionLoading}
         hasConfirmed={selectedReportId ? Boolean(confirmedReportIds[selectedReportId]) : false}
         hasResolved={selectedReportId ? Boolean(resolvedReportIds[selectedReportId]) : false}
         onConfirm={handleConfirmReport}
         onResolve={handleResolveReport}
+        onReportUpdate={handleModalReportUpdate}
+        onGetDirections={handleModalGetDirections}
+        onFindEvacuationCenters={handleModalFindEvacuationCenters}
         onOpenChange={(open) => {
           setModalOpen(open);
           if (!open) {

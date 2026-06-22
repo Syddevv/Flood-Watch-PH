@@ -5,7 +5,16 @@ import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Clock3, Eye, LocateFixed, Map, Satellite, ThumbsUp } from "lucide-react";
+import {
+  Check,
+  Clock3,
+  Eye,
+  LocateFixed,
+  Map,
+  Navigation,
+  Satellite,
+  ThumbsUp,
+} from "lucide-react";
 import L from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {
@@ -23,9 +32,18 @@ import {
   EVACUATION_STATUS_META,
   summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
+import {
+  panToReportWithOffset,
+  type FocusableLeafletMarker,
+} from "@/lib/map-focus";
+import {
+  buildReportDirectionsUrl,
+  getReportActionLabel,
+  isReportActionLoading,
+  type ReportActionLoadingState,
+} from "@/lib/report-actions";
 import { formatCountLabel } from "@/lib/reporting";
 import {
-  getReportCommunitySignal,
   getStatusPresentation,
   severityBadgeClasses,
   severityLabels,
@@ -33,8 +51,6 @@ import {
 import {
   getReportActivityLabel,
   getReportFreshnessBadge,
-  getReportTrustDetail,
-  getReportTrustSummary,
 } from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
@@ -105,30 +121,16 @@ type CenterMarkerInstance = {
   };
 };
 
-type ReportMarkerInstance = {
-  openPopup: () => void;
-  getLatLng: () => { lat: number; lng: number };
-  _map?: {
-    flyTo: (
-      center: { lat: number; lng: number },
-      zoom: number,
-      options?: Record<string, unknown>,
-    ) => void;
-    panBy?: (
-      offset: [number, number],
-      options?: Record<string, unknown>,
-    ) => void;
-  };
-};
+type ReportMarkerInstance = FocusableLeafletMarker;
 
-function iconForReportMarker(marker: ReportMapMarker) {
+function iconForReportMarker(marker: ReportMapMarker, selected: boolean) {
   const markerStyle = reportMarkerStatusStyles[marker.status];
 
   return L.divIcon({
     className: "floodwatch-marker-shell",
-    html: `<div class="floodwatch-marker" style="--marker-color:${markerStyle.color};--marker-ring:${markerStyle.ring};--marker-border:${markerStyle.border};opacity:${markerStyle.opacity}">R</div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    html: `<div class="floodwatch-marker${selected ? " floodwatch-marker--selected" : ""}" style="--marker-color:${markerStyle.color};--marker-ring:${markerStyle.ring};--marker-border:${markerStyle.border};opacity:${markerStyle.opacity}">R</div>`,
+    iconSize: selected ? [38, 38] : [32, 32],
+    iconAnchor: selected ? [19, 19] : [16, 16],
   });
 }
 
@@ -192,8 +194,15 @@ type FloodMapClientProps = {
   polygons: RiskPolygon[];
   legend: LegendItem[];
   onOpenReportDetails: (reportId: string) => void;
+  onSelectReport: (reportId: string) => void;
+  onConfirmReport: (reportId: string) => void;
+  onResolveReport: (reportId: string) => void;
+  actionLoading: ReportActionLoadingState;
+  confirmedReportIds: Record<string, boolean>;
+  resolvedReportIds: Record<string, boolean>;
   focusedCenterId?: string | null;
   focusedReportId?: string | null;
+  selectedReportId?: string | null;
 };
 
 export function FloodMapClient({
@@ -201,8 +210,15 @@ export function FloodMapClient({
   evacuationCenterMarkers,
   polygons,
   onOpenReportDetails,
+  onSelectReport,
+  onConfirmReport,
+  onResolveReport,
+  actionLoading,
+  confirmedReportIds,
+  resolvedReportIds,
   focusedCenterId = null,
   focusedReportId = null,
+  selectedReportId = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
   const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
@@ -256,15 +272,7 @@ export function FloodMapClient({
         return;
       }
 
-      const targetLatLng = targetMarker.getLatLng();
-      targetMarker.openPopup();
-      targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.95 });
-
-      const verticalOffset = window.innerWidth < 768 ? 144 : 92;
-      window.setTimeout(() => {
-        targetMarker.openPopup();
-        targetMarker._map?.panBy?.([0, verticalOffset], { animate: true, duration: 0.35 });
-      }, 220);
+      panToReportWithOffset(targetMarker, { reason: "external" });
     };
 
     frameId = window.requestAnimationFrame(focusTargetMarker);
@@ -313,14 +321,29 @@ export function FloodMapClient({
             const statusPresentation = getStatusPresentation(marker.report.status);
             const freshnessBadge = getReportFreshnessBadge(marker.report);
             const activityLabel = getReportActivityLabel(marker.report);
-            const trustSummary = getReportTrustSummary(marker.report);
-            const trustDetail = getReportTrustDetail(marker.report);
+            const isSelected = selectedReportId === marker.reportId;
+            const thumbnailUrl = marker.report.photos[0]?.imageUrl;
+            const directionsUrl = buildReportDirectionsUrl(marker.report);
+            const confirmLoading = isReportActionLoading(
+              actionLoading,
+              marker.reportId,
+              "confirmed",
+            );
+            const resolveLoading = isReportActionLoading(
+              actionLoading,
+              marker.reportId,
+              "resolved",
+            );
+            const actionBusy = isReportActionLoading(actionLoading, marker.reportId);
+            const hasConfirmed = Boolean(confirmedReportIds[marker.reportId]);
+            const hasResolved = Boolean(resolvedReportIds[marker.reportId]);
+            const isResolved = marker.report.status === "Resolved";
 
             return (
               <Marker
                 key={marker.id}
                 position={marker.coordinates}
-                icon={iconForReportMarker(marker)}
+                icon={iconForReportMarker(marker, isSelected)}
                 title={marker.title}
                 ref={(instance: ReportMarkerInstance | null) => {
                   reportMarkerRefs.current[marker.reportId] = instance;
@@ -332,27 +355,41 @@ export function FloodMapClient({
                       return;
                     }
 
-                    const targetLatLng = targetMarker.getLatLng();
-                    targetMarker.openPopup();
-                    targetMarker._map?.flyTo(targetLatLng, 13, { duration: 0.9 });
+                    onSelectReport(marker.reportId);
+                    panToReportWithOffset(targetMarker, { reason: "marker-click" });
                   },
                 }}
               >
                 <Popup>
-                  <div className="w-[248px] space-y-3">
-                    <div>
-                      <div className="text-[0.98rem] font-semibold text-slate-900">
-                        {marker.report.title}
+                  <div className="w-[276px] space-y-2.5">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                      <div className="min-w-0">
+                        {isSelected ? (
+                          <div className="mb-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[0.62rem] font-semibold text-blue-700">
+                            Selected
+                          </div>
+                        ) : null}
+                        <div className="line-clamp-2 text-[0.94rem] font-semibold leading-5 text-slate-900">
+                          {marker.report.title}
+                        </div>
+                        <div className="mt-0.5 line-clamp-1 text-[0.76rem] text-slate-600">
+                          {marker.report.location}
+                        </div>
                       </div>
-                      <div className="mt-1 text-[0.8rem] text-slate-600">
-                        {marker.report.location}
-                      </div>
+                      {thumbnailUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={thumbnailUrl}
+                          alt={marker.report.title}
+                          className="h-12 w-12 rounded-[10px] object-cover"
+                        />
+                      ) : null}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       <span
                         className={cn(
-                          "rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold",
+                          "rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold",
                           severityBadgeClasses[marker.report.severity],
                         )}
                       >
@@ -360,7 +397,7 @@ export function FloodMapClient({
                       </span>
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
+                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.66rem] font-medium",
                           statusPresentation.textClassName,
                           statusPresentation.wrapperClassName,
                         )}
@@ -376,7 +413,7 @@ export function FloodMapClient({
                       {freshnessBadge ? (
                         <span
                           className={cn(
-                            "rounded-full px-2.5 py-1 text-[0.7rem] font-medium",
+                            "rounded-full px-2 py-0.5 text-[0.66rem] font-medium",
                             freshnessBadge.tone === "success"
                               ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
                               : freshnessBadge.tone === "warning"
@@ -411,20 +448,73 @@ export function FloodMapClient({
                       <span>{activityLabel}</span>
                     </div>
 
-                    <div className="text-[0.75rem] leading-5 text-slate-600">
-                      <div>{trustSummary}</div>
-                      <div className="mt-1">{trustDetail}</div>
-                      <div className="mt-1">{getReportCommunitySignal(marker.report)}</div>
-                    </div>
+                    <p className="line-clamp-2 text-[0.75rem] leading-5 text-slate-600">
+                      {marker.report.description}
+                    </p>
 
-                    <button
-                      type="button"
-                      onClick={() => onOpenReportDetails(marker.reportId)}
-                      className="floodwatch-primary-action inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] px-3 text-[0.75rem] font-semibold"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>View Details</span>
-                    </button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onOpenReportDetails(marker.reportId)}
+                        className="floodwatch-primary-action inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] px-2 text-[0.7rem] font-semibold"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>View Details</span>
+                      </button>
+                      {directionsUrl ? (
+                        <a
+                          href={directionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700 no-underline"
+                        >
+                          <Navigation className="h-3.5 w-3.5" />
+                          <span>Directions</span>
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => onConfirmReport(marker.reportId)}
+                        disabled={actionBusy || hasConfirmed || isResolved}
+                        className={cn(
+                          "inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] px-2 text-[0.7rem] font-semibold",
+                          actionBusy || hasConfirmed || isResolved
+                            ? "bg-slate-100 text-slate-500"
+                            : "bg-blue-600 text-white",
+                        )}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        <span>
+                          {getReportActionLabel({
+                            type: "confirmed",
+                            loading: confirmLoading,
+                            alreadySubmitted: hasConfirmed,
+                            compact: true,
+                          })}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onResolveReport(marker.reportId)}
+                        disabled={actionBusy || hasResolved || isResolved}
+                        className={cn(
+                          "inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border px-2 text-[0.7rem] font-semibold",
+                          actionBusy || hasResolved || isResolved
+                            ? "border-slate-200 bg-slate-100 text-slate-500"
+                            : "border-slate-200 bg-white text-slate-700",
+                        )}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>
+                          {getReportActionLabel({
+                            type: "resolved",
+                            loading: resolveLoading,
+                            alreadySubmitted: hasResolved,
+                            compact: true,
+                          })}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </Popup>
               </Marker>

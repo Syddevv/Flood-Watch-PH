@@ -209,6 +209,37 @@ button {
   font-weight: 700;
 }
 
+.floodwatch-marker--selected {
+  animation: floodwatch-selected-marker 1.8s ease-out 1;
+  box-shadow:
+    0 0 0 4px var(--marker-ring),
+    0 0 0 8px color-mix(in srgb, var(--color-primary) 18%, transparent),
+    0 12px 24px rgba(15, 23, 42, 0.3);
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 72%, white);
+  outline-offset: 3px;
+}
+
+@keyframes floodwatch-selected-marker {
+  0% {
+    box-shadow:
+      0 0 0 4px var(--marker-ring),
+      0 0 0 4px color-mix(in srgb, var(--color-primary) 24%, transparent),
+      0 12px 24px rgba(15, 23, 42, 0.3);
+  }
+  60% {
+    box-shadow:
+      0 0 0 4px var(--marker-ring),
+      0 0 0 12px color-mix(in srgb, var(--color-primary) 0%, transparent),
+      0 12px 24px rgba(15, 23, 42, 0.3);
+  }
+  100% {
+    box-shadow:
+      0 0 0 4px var(--marker-ring),
+      0 0 0 8px color-mix(in srgb, var(--color-primary) 18%, transparent),
+      0 12px 24px rgba(15, 23, 42, 0.3);
+  }
+}
+
 .map-floating-controls {
   position: absolute;
   right: 16px;

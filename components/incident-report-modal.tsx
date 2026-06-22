@@ -7,6 +7,9 @@ import {
   ChevronRight,
   CloudRain,
   Clock3,
+  FilePenLine,
+  Navigation,
+  ShieldPlus,
   MapPin,
   ShieldAlert,
   ThumbsUp,
@@ -19,6 +22,13 @@ import type { IncidentReport, WeatherLocationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import type { ReportUpdateItem } from "@/lib/report-types";
+import {
+  buildReportDirectionsUrl,
+  buildReportEvacuationCentersHref,
+  getReportActionLabel,
+  isReportActionLoading,
+  type ReportActionLoadingState,
+} from "@/lib/report-actions";
 import {
   getReportCommunitySignal,
   getStatusPresentation,
@@ -40,9 +50,12 @@ type IncidentReportModalProps = {
   onOpenChange: (open: boolean) => void;
   onConfirm: (reportId: string) => void;
   onResolve: (reportId: string) => void;
+  onReportUpdate?: (report: IncidentReport) => void;
+  onGetDirections?: (report: IncidentReport) => void;
+  onFindEvacuationCenters?: (report: IncidentReport) => void;
   hasConfirmed: boolean;
   hasResolved: boolean;
-  actionLoading: boolean;
+  actionLoading: ReportActionLoadingState;
 };
 
 function SummaryMetric({
@@ -74,6 +87,9 @@ export function IncidentReportModal({
   onOpenChange,
   onConfirm,
   onResolve,
+  onReportUpdate,
+  onGetDirections,
+  onFindEvacuationCenters,
   hasConfirmed,
   hasResolved,
   actionLoading,
@@ -138,8 +154,13 @@ export function IncidentReportModal({
   const currentPhoto = photos[photoIndex] ?? photos[0] ?? null;
   const statusPresentation = getStatusPresentation(report.status);
   const isResolved = report.status === "Resolved";
-  const confirmDisabled = actionLoading || hasConfirmed || isResolved;
-  const resolveDisabled = actionLoading || hasResolved || isResolved;
+  const confirmLoading = isReportActionLoading(actionLoading, report.id, "confirmed");
+  const resolveLoading = isReportActionLoading(actionLoading, report.id, "resolved");
+  const actionBusy = isReportActionLoading(actionLoading, report.id);
+  const confirmDisabled = actionBusy || hasConfirmed || isResolved;
+  const resolveDisabled = actionBusy || hasResolved || isResolved;
+  const directionsUrl = buildReportDirectionsUrl(report);
+  const evacuationCentersHref = buildReportEvacuationCentersHref(report);
   const communitySignal = getReportCommunitySignal(report);
   const freshnessBadge = getReportFreshnessBadge(report);
   const activityLabel = getReportActivityLabel(report);
@@ -151,6 +172,12 @@ export function IncidentReportModal({
       : report.sourceCategory === "system"
         ? "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
         : "border-[var(--color-muted-border)] bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]";
+  const footerButtonBase =
+    "inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[11px] px-3 text-center text-[0.78rem] font-semibold leading-none whitespace-nowrap transition-colors md:min-h-10 md:px-3.5 md:text-[0.82rem]";
+  const secondaryButtonClassName =
+    "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_84%,transparent)] text-[var(--color-foreground)] hover:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] hover:text-[var(--color-primary)]";
+  const disabledButtonClassName =
+    "cursor-not-allowed border border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]";
 
   return (
     <>
@@ -159,30 +186,25 @@ export function IncidentReportModal({
         className="floodwatch-scrim fixed inset-0 z-[var(--layer-modal-backdrop)] backdrop-blur-[2px]"
         onClick={() => onOpenChange(false)}
       />
-      <div className="fixed inset-0 z-[var(--layer-modal)] flex items-center justify-center p-2.5 sm:p-4">
-        <div className="flex max-h-[92dvh] w-full max-w-[680px] flex-col overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-floating)] md:max-h-[94vh] md:rounded-[18px]">
-          <div className="relative h-[160px] overflow-hidden bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto">
-            {currentPhoto?.imageUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
+      <div className="fixed inset-0 z-[var(--layer-modal)] flex items-end justify-center p-0 sm:p-4 md:items-center">
+        <div className="relative flex max-h-[92dvh] w-full max-w-[680px] flex-col overflow-hidden rounded-t-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-floating)] md:max-h-[94vh] md:rounded-[18px]">
+          <button
+            type="button"
+            aria-label="Close report details"
+            onClick={() => onOpenChange(false)}
+            className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/85 text-white md:right-3 md:top-3 md:h-9 md:w-9"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          {currentPhoto?.imageUrl ? (
+            <div className="relative h-[160px] overflow-hidden bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentPhoto.imageUrl}
                 alt={currentPhoto.label}
                 className="h-full w-full object-cover"
               />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-[0.88rem] font-medium text-[var(--color-muted-foreground)] md:text-[0.95rem]">
-                No photo attached
-              </div>
-            )}
-
-            <button
-              type="button"
-              aria-label="Close report details"
-              onClick={() => onOpenChange(false)}
-              className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/85 text-white md:right-3 md:top-3 md:h-9 md:w-9"
-            >
-              <X className="h-4 w-4" />
-            </button>
 
             {photos.length > 1 ? (
               <>
@@ -210,9 +232,10 @@ export function IncidentReportModal({
                 </button>
               </>
             ) : null}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 md:px-5 md:py-4">
+          <div className="flex-1 overflow-y-auto px-3 pb-5 pt-3 md:px-5 md:pb-6 md:pt-4">
             <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
               <span
                 className={cn(
@@ -454,44 +477,98 @@ export function IncidentReportModal({
             ) : null}
           </div>
 
-          <div className="sticky bottom-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 md:px-5 md:py-3">
-            <div className="grid grid-cols-2 gap-2 md:flex md:flex-row">
-              <button
-                type="button"
-                onClick={() => onConfirm(report.id)}
-                disabled={confirmDisabled}
-                className={cn(
-                  "flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-2.5 text-center text-[0.78rem] font-semibold leading-tight md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
-                  confirmDisabled
-                    ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
-                    : "floodwatch-primary-action",
-                )}
-              >
-                <ThumbsUp className="h-4 w-4" />
-                <span>{hasConfirmed ? "Confirmed" : "Confirm report"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onResolve(report.id)}
-                disabled={resolveDisabled}
-                className={cn(
-                  "flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] border px-2.5 text-center text-[0.78rem] font-medium leading-tight md:h-10 md:gap-2 md:rounded-[11px] md:px-4 md:text-[0.88rem]",
-                  resolveDisabled
-                    ? "border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
-                )}
-              >
-                <Check className="h-4 w-4" />
-                <span className="md:hidden">{hasResolved ? "Receded" : "Mark receded"}</span>
-                <span className="hidden md:inline">{hasResolved ? "Reported receded" : "Report receded"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="hidden h-10 rounded-[11px] border border-[var(--color-border)] px-4 text-[0.88rem] font-medium text-[var(--color-foreground)] md:block"
-              >
-                Close
-              </button>
+          <div className="sticky bottom-0 border-t border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_96%,transparent)] px-3 py-3 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] backdrop-blur-md md:px-5">
+            <div className="grid gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-label="Confirm this flood report"
+                  onClick={() => onConfirm(report.id)}
+                  disabled={confirmDisabled}
+                  className={cn(
+                    footerButtonBase,
+                    confirmDisabled
+                      ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
+                      : "floodwatch-primary-action",
+                  )}
+                >
+                  <ThumbsUp className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {getReportActionLabel({
+                      type: "confirmed",
+                      loading: confirmLoading,
+                      alreadySubmitted: hasConfirmed,
+                      compact: true,
+                    })}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mark water as receded for this report"
+                  onClick={() => onResolve(report.id)}
+                  disabled={resolveDisabled}
+                  className={cn(
+                    footerButtonBase,
+                    resolveDisabled ? disabledButtonClassName : secondaryButtonClassName,
+                  )}
+                >
+                  <Check className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {getReportActionLabel({
+                      type: "resolved",
+                      loading: resolveLoading,
+                      alreadySubmitted: hasResolved,
+                      compact: true,
+                    })}
+                  </span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {onReportUpdate ? (
+                  <button
+                    type="button"
+                    aria-label="Submit an update for this report"
+                    onClick={() => onReportUpdate(report)}
+                    className={cn(footerButtonBase, secondaryButtonClassName)}
+                  >
+                    <FilePenLine className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Update</span>
+                  </button>
+                ) : null}
+                {directionsUrl && onGetDirections ? (
+                  <button
+                    type="button"
+                    aria-label="Get directions to this report"
+                    onClick={() => onGetDirections(report)}
+                    className={cn(footerButtonBase, secondaryButtonClassName)}
+                  >
+                    <Navigation className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Directions</span>
+                  </button>
+                ) : null}
+                {evacuationCentersHref && onFindEvacuationCenters ? (
+                  <button
+                    type="button"
+                    aria-label="Find evacuation centers near this report"
+                    onClick={() => onFindEvacuationCenters(report)}
+                    className={cn(footerButtonBase, secondaryButtonClassName)}
+                  >
+                    <ShieldPlus className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Centers</span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className={cn(
+                    footerButtonBase,
+                    "border border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted-surface)] hover:text-[var(--color-foreground)]",
+                  )}
+                >
+                  <span className="truncate">Close</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
