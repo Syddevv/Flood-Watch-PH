@@ -1214,6 +1214,34 @@ export function IncidentReportsContent() {
     });
   }
 
+  async function fetchNearbyReportsForDuplicateCheck(latitude: number, longitude: number) {
+    try {
+      const nearbyResponse = await fetch(
+        `/api/reports/nearby?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}&radiusMeters=300&limit=3`,
+        {
+          cache: "no-store",
+        },
+      );
+      const nearbyPayload =
+        (await nearbyResponse.json()) as NearbyReportsResponse | { error?: string };
+
+      if (!nearbyResponse.ok || !("data" in nearbyPayload)) {
+        console.warn(
+          "Nearby duplicate check skipped.",
+          "error" in nearbyPayload && nearbyPayload.error
+            ? nearbyPayload.error
+            : "Unable to check nearby reports right now.",
+        );
+        return [];
+      }
+
+      return nearbyPayload.data;
+    } catch (error) {
+      console.warn("Nearby duplicate check skipped.", error);
+      return [];
+    }
+  }
+
   async function handleSubmitReport(skipNearbyDuplicateCheck = false) {
     if (!formState.locationName.trim()) {
       setToast({ tone: "error", message: "Location name is required." });
@@ -1270,26 +1298,11 @@ export function IncidentReportsContent() {
       }
 
       if (!skipNearbyDuplicateCheck) {
-        const nearbyResponse = await fetch(
-          `/api/reports/nearby?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}&radiusMeters=300&limit=3`,
-          {
-            cache: "no-store",
-          },
-        );
-        const nearbyPayload =
-          (await nearbyResponse.json()) as NearbyReportsResponse | { error?: string };
+        const nearbyReports = await fetchNearbyReportsForDuplicateCheck(latitude, longitude);
 
-        if (!nearbyResponse.ok || !("data" in nearbyPayload)) {
-          throw new Error(
-            "error" in nearbyPayload && nearbyPayload.error
-              ? nearbyPayload.error
-              : "Unable to check nearby reports right now.",
-          );
-        }
-
-        if (nearbyPayload.data.length > 0) {
+        if (nearbyReports.length > 0) {
           setPendingNearbyDuplicate({
-            nearbyReports: nearbyPayload.data,
+            nearbyReports,
             requestBody,
             photoAttached: Boolean(selectedPhoto),
           });
@@ -1299,7 +1312,7 @@ export function IncidentReportsContent() {
 
       await submitPreparedReport(requestBody, Boolean(selectedPhoto));
     } catch (error) {
-      console.error("Failed to submit report.", error);
+      console.warn("Failed to submit report.", error);
       setToast({
         tone: "error",
         message:
@@ -1325,7 +1338,7 @@ export function IncidentReportsContent() {
         pendingNearbyDuplicate.photoAttached,
       );
     } catch (error) {
-      console.error("Failed to submit report after duplicate warning.", error);
+      console.warn("Failed to submit report after duplicate warning.", error);
       setToast({
         tone: "error",
         message:

@@ -1,11 +1,13 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createBoundingBox, calculateDistanceMeters } from "@/lib/report-geo";
 import {
+  applyReportLifecycleUpdates,
   getLifecyclePersistencePatch,
   isActiveLifecycleStatus,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
 const DEFAULT_RADIUS_METERS = 300;
 const MAX_RADIUS_METERS = 500;
@@ -86,16 +88,29 @@ function serializeNearbyReport(report: NearbyReportRecord, distanceMeters: numbe
 }
 
 async function reconcileNearbyReport(report: NearbyReportRecord) {
+  const nextLifecycle = applyReportLifecycleUpdates(report);
   const patch = getLifecyclePersistencePatch(report);
   if (Object.keys(patch).length === 0) {
-    return report;
+    return {
+      ...report,
+      status: nextLifecycle.status,
+    };
   }
 
-  return prisma.floodReport.update({
-    where: { id: report.id },
-    data: patch,
-    include: nearbyInclude,
-  });
+  try {
+    return await prisma.floodReport.update({
+      where: { id: report.id },
+      data: patch,
+      include: nearbyInclude,
+    });
+  } catch (error) {
+    console.warn("Failed to persist nearby report lifecycle update.", error);
+
+    return {
+      ...report,
+      ...nextLifecycle,
+    };
+  }
 }
 
 export async function GET(request: Request) {
@@ -106,7 +121,12 @@ export async function GET(request: Request) {
     const radiusMeters = clampRadiusMeters(searchParams.get("radiusMeters"));
     const limit = clampLimit(searchParams.get("limit"));
 
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      !isValidLatitude(latitude) ||
+      !isValidLongitude(longitude)
+    ) {
       return errorResponse("Latitude and longitude are required.", 400);
     }
 

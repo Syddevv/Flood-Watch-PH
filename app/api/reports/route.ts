@@ -31,6 +31,51 @@ function buildInlineImageDataUrl(fileBuffer: Buffer, mimeType: string) {
   return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
 }
 
+function buildReportListResponse(
+  data: ReportListRecord[],
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  },
+) {
+  return Response.json({
+    data: data.map((report) => serializeReportRecord(report)),
+    pagination: {
+      ...pagination,
+      totalPages: Math.max(1, Math.ceil(pagination.total / pagination.limit)),
+    },
+  });
+}
+
+function isReportDatabaseUnavailableError(error: unknown) {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    ["EACCES", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND"].includes(error.code)
+  ) {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
+    error.message,
+  );
+}
+
+function buildEmptyReportListResponseFromRequest(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = parsePositiveInteger(searchParams.get("page"), 1);
+  const limit = clampLimit(
+    parsePositiveInteger(searchParams.get("limit"), DEFAULT_LIMIT),
+    MAX_LIMIT,
+  );
+
+  return buildReportListResponse([], { page, limit, total: 0 });
+}
+
 type ReportListRecord = {
   id: string;
   title: string;
@@ -148,14 +193,48 @@ export async function GET(request: Request) {
       search: parsedFilters.filters.search,
     });
 
-    const reports = await prisma.floodReport.findMany({
+    const reports = (await prisma.floodReport.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: reportListInclude,
+    })) as ReportListRecord[];
+
+    if (reports.length === 0) {
+      return buildReportListResponse([], { page, limit, total: 0 });
+    }
+
+    const confirmations = await prisma.reportConfirmation.findMany({
+      where: {
+        reportId: {
+          in: reports.map((report) => report.id),
+        },
+      },
+      select: {
+        reportId: true,
+        confirmationType: true,
+        createdAt: true,
+      },
     });
+    const confirmationsByReportId = new Map<
+      string,
+      NonNullable<ReportListRecord["confirmations"]>
+    >();
+
+    for (const confirmation of confirmations) {
+      const existing = confirmationsByReportId.get(confirmation.reportId) ?? [];
+      existing.push({
+        confirmationType: confirmation.confirmationType,
+        createdAt: confirmation.createdAt,
+      });
+      confirmationsByReportId.set(confirmation.reportId, existing);
+    }
+
+    const reportsWithConfirmations = reports.map((report) => ({
+      ...report,
+      confirmations: confirmationsByReportId.get(report.id) ?? [],
+    }));
 
     const reconciledReports = await Promise.all(
-      reports.map((report) => reconcileReportLifecycle(report as ReportListRecord)),
+      reportsWithConfirmations.map((report) => reconcileReportLifecycle(report)),
     );
 
     const filteredReports = reconciledReports.filter((report) => {
@@ -205,17 +284,18 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
     const paginatedReports = filteredReports.slice(skip, skip + limit);
 
-    return Response.json({
-      data: paginatedReports.map((report) => serializeReportRecord(report as ReportListRecord)),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+    return buildReportListResponse(paginatedReports as ReportListRecord[], {
+      page,
+      limit,
+      total,
     });
   } catch (error) {
     console.error("Failed to fetch reports.", error);
+
+    if (isReportDatabaseUnavailableError(error)) {
+      return buildEmptyReportListResponseFromRequest(request);
+    }
+
     return errorResponse("Something went wrong while fetching reports.");
   }
 }
@@ -332,10 +412,14 @@ export async function POST(request: Request) {
     return Response.json({ data: serializeReportRecord(report as ReportListRecord) }, { status: 201 });
   } catch (error) {
     console.error("Failed to create report.", error);
-    return errorResponse(
-      error instanceof Error
-        ? error.message
-        : "Something went wrong while creating the report.",
-    );
+
+    if (isReportDatabaseUnavailableError(error)) {
+      return errorResponse(
+        "Unable to save the report because the database connection is unavailable. Check your Supabase database URL and try again.",
+        503,
+      );
+    }
+
+    return errorResponse("Something went wrong while creating the report.");
   }
 }
