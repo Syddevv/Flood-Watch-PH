@@ -22,6 +22,7 @@ model FloodReport {
   latitude          Float
   longitude         Float
   imageUrl          String?
+  ownerSessionHash  String?
   reportedByName    String?
   sourceType        String               @default("Community")
   confirmationCount Int                  @default(0)
@@ -33,6 +34,8 @@ model FloodReport {
   archivedAt        DateTime?
   confirmations     ReportConfirmation[]
   updates           ReportUpdate[]
+
+  @@index([ownerSessionHash])
 }
 
 model ReportConfirmation {
@@ -51,6 +54,9 @@ model ReportUpdate {
   reportId   String
   updateType String
   message    String
+  imageUrl   String?
+  severity   String?
+  status     String?
   createdAt  DateTime    @default(now())
   report     FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 

@@ -7,6 +7,8 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+import { serializeReportRecord } from "@/lib/report-api";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
 const DEFAULT_RADIUS_METERS = 300;
@@ -24,6 +26,7 @@ type NearbyReportRecord = {
   latitude: number;
   longitude: number;
   imageUrl: string | null;
+  ownerSessionHash: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -66,24 +69,14 @@ function clampLimit(value: string | null) {
   return Math.min(parsed, 5);
 }
 
-function serializeNearbyReport(report: NearbyReportRecord, distanceMeters: number) {
-  const lastConfirmedAt =
-    report.confirmations
-      .filter((entry) => entry.confirmationType === "confirmed")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-  const lastResolvedConfirmationAt =
-    report.confirmations
-      .filter((entry) => entry.confirmationType === "resolved")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-
+function serializeNearbyReport(
+  report: NearbyReportRecord,
+  distanceMeters: number,
+  sessionHash: string,
+) {
   return {
-    ...report,
+    ...serializeReportRecord(report, sessionHash),
     distanceMeters,
-    lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
-    lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
-    confirmations: undefined,
   };
 }
 
@@ -116,6 +109,7 @@ async function reconcileNearbyReport(report: NearbyReportRecord) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const sessionHash = getReportSessionHashFromRequest(request);
     const latitude = Number(searchParams.get("lat"));
     const longitude = Number(searchParams.get("lng"));
     const radiusMeters = clampRadiusMeters(searchParams.get("radiusMeters"));
@@ -167,7 +161,7 @@ export async function GET(request: Request) {
       .filter((entry) => entry.distanceMeters <= radiusMeters)
       .sort((left, right) => left.distanceMeters - right.distanceMeters)
       .slice(0, limit)
-      .map((entry) => serializeNearbyReport(entry.report, entry.distanceMeters));
+      .map((entry) => serializeNearbyReport(entry.report, entry.distanceMeters, sessionHash));
 
     return successResponse(nearbyReports);
   } catch (error) {

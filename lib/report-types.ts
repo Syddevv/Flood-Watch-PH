@@ -4,6 +4,9 @@ export type ReportUpdateItem = {
   id: string;
   updateType: string;
   message: string;
+  imageUrl: string | null;
+  severity: string | null;
+  status: string | null;
   createdAt: string;
 };
 
@@ -33,6 +36,7 @@ export type ReportRecord = {
   resolvedCount: number;
   lastConfirmedAt?: string | null;
   lastResolvedConfirmationAt?: string | null;
+  isOwner: boolean;
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;

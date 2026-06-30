@@ -5,9 +5,7 @@ import {
   clampLimit,
   parsePositiveInteger,
   parseReportFilters,
-  trimToUndefined,
 } from "@/lib/api-utils";
-import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import {
   getLifecyclePersistencePatch,
   isVisiblePublicLifecycleStatus,
@@ -16,20 +14,16 @@ import {
 } from "@/lib/report-lifecycle";
 import { compareReportsByPriority } from "@/lib/report-trust";
 import { prisma } from "@/lib/prisma";
-import { validateReportImageFile } from "@/lib/report-image-validation";
-import { isSupportedReportCategory } from "@/lib/reporting";
 import {
-  isValidLatitude,
-  isValidLongitude,
-  isValidReportSeverity,
-} from "@/lib/validations";
+  parseReportDetailsFormData,
+  reportListInclude,
+  serializeReportRecord,
+  uploadReportImageFile,
+} from "@/lib/report-api";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
-
-function buildInlineImageDataUrl(fileBuffer: Buffer, mimeType: string) {
-  return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
-}
 
 function buildReportListResponse(
   data: ReportListRecord[],
@@ -37,12 +31,15 @@ function buildReportListResponse(
     page: number;
     limit: number;
     total: number;
+    sessionHash: string;
   },
 ) {
   return Response.json({
-    data: data.map((report) => serializeReportRecord(report)),
+    data: data.map((report) => serializeReportRecord(report, pagination.sessionHash)),
     pagination: {
-      ...pagination,
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
       totalPages: Math.max(1, Math.ceil(pagination.total / pagination.limit)),
     },
   });
@@ -73,7 +70,12 @@ function buildEmptyReportListResponseFromRequest(request: Request) {
     MAX_LIMIT,
   );
 
-  return buildReportListResponse([], { page, limit, total: 0 });
+  return buildReportListResponse([], {
+    page,
+    limit,
+    total: 0,
+    sessionHash: getReportSessionHashFromRequest(request),
+  });
 }
 
 type ReportListRecord = {
@@ -87,6 +89,7 @@ type ReportListRecord = {
   latitude: number;
   longitude: number;
   imageUrl: string | null;
+  ownerSessionHash: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -101,35 +104,6 @@ type ReportListRecord = {
     createdAt: Date;
   }>;
 };
-
-const reportListInclude = {
-  confirmations: {
-    select: {
-      confirmationType: true,
-      createdAt: true,
-    },
-  },
-} satisfies Prisma.FloodReportInclude;
-
-function serializeReportRecord(report: ReportListRecord) {
-  const lastConfirmedAt =
-    report.confirmations
-      ?.filter((entry) => entry.confirmationType === "confirmed")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-  const lastResolvedConfirmationAt =
-    report.confirmations
-      ?.filter((entry) => entry.confirmationType === "resolved")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-
-  return {
-    ...report,
-    lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
-    lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
-    confirmations: undefined,
-  };
-}
 
 function buildReportWhereClause(filters: {
   severity?: string;
@@ -175,6 +149,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const parsedFilters = parseReportFilters(searchParams);
+    const sessionHash = getReportSessionHashFromRequest(request);
 
     if (parsedFilters.error) {
       return errorResponse(parsedFilters.error, 400);
@@ -199,7 +174,7 @@ export async function GET(request: Request) {
     })) as ReportListRecord[];
 
     if (reports.length === 0) {
-      return buildReportListResponse([], { page, limit, total: 0 });
+      return buildReportListResponse([], { page, limit, total: 0, sessionHash });
     }
 
     const confirmations = await prisma.reportConfirmation.findMany({
@@ -288,6 +263,7 @@ export async function GET(request: Request) {
       page,
       limit,
       total,
+      sessionHash,
     });
   } catch (error) {
     console.error("Failed to fetch reports.", error);
@@ -302,6 +278,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const sessionHash = getReportSessionHashFromRequest(request);
     const formData = await request.formData();
     const imageFile = formData.get("image");
 
@@ -309,85 +286,34 @@ export async function POST(request: Request) {
       return errorResponse("Invalid image upload.", 400);
     }
 
-    const title = trimToUndefined(formData.get("title"));
-    const description = trimToUndefined(formData.get("description"));
-    const category = trimToUndefined(formData.get("category"));
-    const severity = trimToUndefined(formData.get("severity"));
-    const locationName = trimToUndefined(formData.get("locationName"));
-    const reportedByName = trimToUndefined(formData.get("reportedByName"));
-    const latitude = Number(formData.get("latitude"));
-    const longitude = Number(formData.get("longitude"));
+    const parsedReport = parseReportDetailsFormData(formData);
 
-    if (!title) {
-      return errorResponse("Title is required.", 400);
-    }
-
-    if (title.length > 120) {
-      return errorResponse("Title must not exceed 120 characters.", 400);
-    }
-
-    if (!description) {
-      return errorResponse("Description is required.", 400);
-    }
-
-    if (description.length > 1000) {
-      return errorResponse("Description must not exceed 1000 characters.", 400);
-    }
-
-    if (!category) {
-      return errorResponse("Category is required.", 400);
-    }
-
-    if (!isSupportedReportCategory(category)) {
-      return errorResponse("Invalid category value.", 400);
-    }
-
-    if (!severity) {
-      return errorResponse("Severity is required.", 400);
-    }
-
-    if (!isValidReportSeverity(severity)) {
-      return errorResponse("Invalid severity value.", 400);
-    }
-
-    if (!locationName) {
-      return errorResponse("Location name is required.", 400);
-    }
-
-    if (locationName.length > 160) {
-      return errorResponse("Location name must not exceed 160 characters.", 400);
-    }
-
-    if (!Number.isFinite(latitude) || !isValidLatitude(latitude)) {
-      return errorResponse("Invalid latitude value.", 400);
-    }
-
-    if (!Number.isFinite(longitude) || !isValidLongitude(longitude)) {
-      return errorResponse("Invalid longitude value.", 400);
-    }
-
-    if (reportedByName && reportedByName.length > 80) {
-      return errorResponse("Reported by name must not exceed 80 characters.", 400);
+    if (parsedReport.error || !parsedReport.data) {
+      return errorResponse(parsedReport.error ?? "Invalid report details.", 400);
     }
 
     let imageUrl: string | undefined;
 
     if (imageFile instanceof File && imageFile.size > 0) {
-      const imageValidationError = validateReportImageFile(imageFile);
+      const uploadResult = await uploadReportImageFile(imageFile);
 
-      if (imageValidationError) {
-        return errorResponse(imageValidationError, 400);
+      if (uploadResult.error) {
+        return errorResponse(uploadResult.error, 400);
       }
 
-      const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-
-      try {
-        imageUrl = await uploadReportImageToCloudinary(imageBuffer, imageFile.name);
-      } catch (error) {
-        console.error("Failed to upload report image.", error);
-        imageUrl = buildInlineImageDataUrl(imageBuffer, imageFile.type);
-      }
+      imageUrl = uploadResult.imageUrl;
     }
+
+    const {
+      title,
+      description,
+      category,
+      severity,
+      locationName,
+      reportedByName,
+      latitude,
+      longitude,
+    } = parsedReport.data;
 
     const report = await prisma.floodReport.create({
       data: {
@@ -400,6 +326,7 @@ export async function POST(request: Request) {
         latitude,
         longitude,
         imageUrl,
+        ownerSessionHash: sessionHash || undefined,
         reportedByName,
         sourceType: "Community",
         confirmationCount: 0,
@@ -409,7 +336,10 @@ export async function POST(request: Request) {
       include: reportListInclude,
     });
 
-    return Response.json({ data: serializeReportRecord(report as ReportListRecord) }, { status: 201 });
+    return Response.json(
+      { data: serializeReportRecord(report as ReportListRecord, sessionHash) },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Failed to create report.", error);
 

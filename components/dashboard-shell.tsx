@@ -384,6 +384,7 @@ export function DashboardShell({
       try {
         const response = await fetch("/api/reports?limit=50", {
           cache: "no-store",
+          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportsResponse | { error: string };
 
@@ -463,6 +464,7 @@ export function DashboardShell({
         try {
           const response = await fetch(`/api/reports/${queryReportId}`, {
             cache: "no-store",
+            headers: createReportActionHeaders(),
           });
           const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -519,6 +521,7 @@ export function DashboardShell({
       try {
         const response = await fetch(`/api/reports/${reportId}`, {
           cache: "no-store",
+          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -842,6 +845,68 @@ export function DashboardShell({
   const handleReportUpdate = (report: IncidentReport) => {
     router.push(buildReportUpdateHref(report));
   };
+
+  function applyFloodMapReportDetailPayload(payload: ReportDetailResponse) {
+    const nextReport = mapReportToIncident(payload.data);
+
+    setFloodMapReports((current) =>
+      current.some((report) => report.id === nextReport.id)
+        ? current
+            .map((report) => (report.id === nextReport.id ? nextReport : report))
+            .sort(compareReportsByPriority)
+        : [nextReport, ...current].sort(compareReportsByPriority),
+    );
+    setFloodMapUpdatesByReportId((current) => ({
+      ...current,
+      [nextReport.id]: payload.data.updates,
+    }));
+  }
+
+  async function handleEditFloodMapReport(report: IncidentReport, requestBody: FormData) {
+    const response = await fetch(`/api/reports/${report.id}`, {
+      method: "PATCH",
+      headers: createReportActionHeaders(),
+      body: requestBody,
+    });
+    const payload = (await response.json()) as ReportDetailResponse | { error?: string };
+
+    if (!response.ok || !("data" in payload)) {
+      const errorMessage =
+        response.status === 403
+          ? "Only the original uploader can edit this report."
+          : "error" in payload && payload.error
+            ? payload.error
+            : "Unable to update this report.";
+      setFloodMapToast({ tone: "error", message: errorMessage });
+      throw new Error(errorMessage);
+    }
+
+    applyFloodMapReportDetailPayload(payload);
+    setFloodMapToast({ tone: "success", message: "Report updated successfully." });
+  }
+
+  async function handleSubmitFloodMapReportUpdate(report: IncidentReport, requestBody: FormData) {
+    const response = await fetch(`/api/reports/${report.id}/updates`, {
+      method: "POST",
+      headers: createReportActionHeaders(),
+      body: requestBody,
+    });
+    const payload = (await response.json()) as ReportDetailResponse | { error?: string };
+
+    if (!response.ok || !("data" in payload)) {
+      const errorMessage =
+        response.status === 403
+          ? "Only the original uploader can edit this report."
+          : "error" in payload && payload.error
+            ? payload.error
+            : "Unable to submit this update.";
+      setFloodMapToast({ tone: "error", message: errorMessage });
+      throw new Error(errorMessage);
+    }
+
+    applyFloodMapReportDetailPayload(payload);
+    setFloodMapToast({ tone: "success", message: "Report updated successfully." });
+  }
 
   const handleGetReportDirections = (report: IncidentReport) => {
     const directionsUrl = buildReportDirectionsUrl(report);
@@ -1342,6 +1407,8 @@ export function DashboardShell({
           }
           onConfirm={handleConfirmFloodMapReport}
           onResolve={handleResolveFloodMapReport}
+          onEditReport={handleEditFloodMapReport}
+          onSubmitReportUpdate={handleSubmitFloodMapReportUpdate}
           onReportUpdate={handleReportUpdate}
           onGetDirections={handleGetReportDirections}
           onFindEvacuationCenters={handleFindReportEvacuationCenters}

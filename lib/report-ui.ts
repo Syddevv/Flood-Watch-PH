@@ -133,7 +133,9 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     coordinatesLabel: toCoordinatesLabel(report.latitude, report.longitude),
     coordinates: [report.latitude, report.longitude],
     category: getReportCategoryLabel(report.category),
+    categoryValue: report.category,
     severity: severityTone,
+    severityValue: report.severity,
     status: derivedStatus,
     description,
     createdAt,
@@ -148,6 +150,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     lastConfirmedAt: report.lastConfirmedAt ?? null,
     lastResolvedConfirmationAt: report.lastResolvedConfirmationAt ?? null,
     sourceType: report.sourceType,
+    isOwner: Boolean(report.isOwner),
     sourceCategory: getSourceCategoryFromReportType(report.sourceType),
     sourceLabel: getSourceLabelFromReportType(report.sourceType),
     resolvedAgo:

@@ -4,6 +4,16 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+import {
+  REPORT_OWNER_FORBIDDEN_MESSAGE,
+  isReportOwner,
+  parseReportDetailsFormData,
+  reportDetailInclude,
+  serializeReportRecord,
+  uploadReportImageFile,
+  type PublicReportRecord,
+} from "@/lib/report-api";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
 type RouteContext = {
   params: Promise<{
@@ -11,78 +21,11 @@ type RouteContext = {
   }>;
 };
 
-const reportDetailInclude = {
-  updates: {
-    orderBy: {
-      createdAt: "desc" as const,
-    },
-  },
-  confirmations: {
-    select: {
-      confirmationType: true,
-      createdAt: true,
-    },
-  },
-} as const;
-
-type DetailedReportRecord = {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  severity: string;
-  status: string;
-  locationName: string;
-  latitude: number;
-  longitude: number;
-  imageUrl: string | null;
-  reportedByName: string | null;
-  sourceType: string;
-  confirmationCount: number;
-  resolvedCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-  lastActivityAt: Date;
-  resolvedAt: Date | null;
-  archivedAt: Date | null;
-  updates: Array<{
-    id: string;
-    message: string;
-    updateType: string;
-    createdAt: Date;
-  }>;
-  confirmations: Array<{
-    confirmationType: string;
-    createdAt: Date;
-  }>;
-};
-
-function serializeDetailedReport(
-  report: DetailedReportRecord,
-) {
-  const lastConfirmedAt =
-    report.confirmations
-      .filter((entry) => entry.confirmationType === "confirmed")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-  const lastResolvedConfirmationAt =
-    report.confirmations
-      .filter((entry) => entry.confirmationType === "resolved")
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0]
-      ?.createdAt ?? null;
-
-  return {
-    ...report,
-    lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
-    lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
-    confirmations: undefined,
-  };
-}
-
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const includeArchived = new URL(request.url).searchParams.get("includeArchived") === "true";
+    const sessionHash = getReportSessionHashFromRequest(request);
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
@@ -110,10 +53,70 @@ export async function GET(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    return successResponse(serializeDetailedReport(reconciledReport));
+    return successResponse(serializeReportRecord(reconciledReport as PublicReportRecord, sessionHash));
   } catch (error) {
     console.error("Failed to fetch report.", error);
     return errorResponse("Something went wrong while fetching the report.");
+  }
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const sessionHash = getReportSessionHashFromRequest(request);
+
+    const existingReport = await prisma.floodReport.findUnique({
+      where: { id },
+      include: reportDetailInclude,
+    });
+
+    if (!existingReport) {
+      return errorResponse("Flood report not found.", 404);
+    }
+
+    if (!isReportOwner(existingReport as PublicReportRecord, sessionHash)) {
+      return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
+    }
+
+    const formData = await request.formData();
+    const imageFile = formData.get("image");
+
+    if (imageFile && typeof imageFile === "string") {
+      return errorResponse("Invalid image upload.", 400);
+    }
+
+    const parsedReport = parseReportDetailsFormData(formData);
+
+    if (parsedReport.error || !parsedReport.data) {
+      return errorResponse(parsedReport.error ?? "Invalid report details.", 400);
+    }
+
+    let imageUrl: string | undefined;
+
+    if (imageFile instanceof File && imageFile.size > 0) {
+      const uploadResult = await uploadReportImageFile(imageFile);
+
+      if (uploadResult.error) {
+        return errorResponse(uploadResult.error, 400);
+      }
+
+      imageUrl = uploadResult.imageUrl;
+    }
+
+    const updatedReport = await prisma.floodReport.update({
+      where: { id },
+      data: {
+        ...parsedReport.data,
+        ...(imageUrl ? { imageUrl } : {}),
+        lastActivityAt: new Date(),
+      },
+      include: reportDetailInclude,
+    });
+
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, sessionHash));
+  } catch (error) {
+    console.error("Failed to update report.", error);
+    return errorResponse("Something went wrong while updating the report.");
   }
 }
 

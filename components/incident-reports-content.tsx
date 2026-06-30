@@ -632,6 +632,7 @@ export function IncidentReportsContent() {
     try {
       const response = await fetch("/api/reports?limit=50", {
         cache: "no-store",
+        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as ReportsResponse | { error: string };
 
@@ -704,6 +705,7 @@ export function IncidentReportsContent() {
       try {
         const response = await fetch(`/api/reports/${reportId}`, {
           cache: "no-store",
+          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -1193,6 +1195,7 @@ export function IncidentReportsContent() {
   async function submitPreparedReport(requestBody: FormData, photoAttached: boolean) {
     const response = await fetch("/api/reports", {
       method: "POST",
+      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as { data?: ReportRecord; error?: string };
@@ -1220,6 +1223,7 @@ export function IncidentReportsContent() {
         `/api/reports/nearby?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}&radiusMeters=300&limit=3`,
         {
           cache: "no-store",
+          headers: createReportActionHeaders(),
         },
       );
       const nearbyPayload =
@@ -1364,6 +1368,68 @@ export function IncidentReportsContent() {
 
   function handleModalReportUpdate(report: IncidentReport) {
     router.push(buildReportUpdateHref(report));
+  }
+
+  function applyReportDetailPayload(payload: ReportDetailResponse) {
+    const nextReport = mapReportToIncident(payload.data);
+
+    setReports((current) =>
+      current.some((report) => report.id === nextReport.id)
+        ? current
+            .map((report) => (report.id === nextReport.id ? nextReport : report))
+            .sort(compareReportsByPriority)
+        : [nextReport, ...current].sort(compareReportsByPriority),
+    );
+    setUpdatesByReportId((current) => ({
+      ...current,
+      [nextReport.id]: payload.data.updates,
+    }));
+  }
+
+  async function handleEditSelectedReport(report: IncidentReport, requestBody: FormData) {
+    const response = await fetch(`/api/reports/${report.id}`, {
+      method: "PATCH",
+      headers: createReportActionHeaders(),
+      body: requestBody,
+    });
+    const payload = (await response.json()) as ReportDetailResponse | { error?: string };
+
+    if (!response.ok || !("data" in payload)) {
+      const errorMessage =
+        response.status === 403
+          ? "Only the original uploader can edit this report."
+          : "error" in payload && payload.error
+            ? payload.error
+            : "Unable to update this report.";
+      setToast({ tone: "error", message: errorMessage });
+      throw new Error(errorMessage);
+    }
+
+    applyReportDetailPayload(payload);
+    setToast({ tone: "success", message: "Report updated successfully." });
+  }
+
+  async function handleSubmitSelectedReportUpdate(report: IncidentReport, requestBody: FormData) {
+    const response = await fetch(`/api/reports/${report.id}/updates`, {
+      method: "POST",
+      headers: createReportActionHeaders(),
+      body: requestBody,
+    });
+    const payload = (await response.json()) as ReportDetailResponse | { error?: string };
+
+    if (!response.ok || !("data" in payload)) {
+      const errorMessage =
+        response.status === 403
+          ? "Only the original uploader can edit this report."
+          : "error" in payload && payload.error
+            ? payload.error
+            : "Unable to submit this update.";
+      setToast({ tone: "error", message: errorMessage });
+      throw new Error(errorMessage);
+    }
+
+    applyReportDetailPayload(payload);
+    setToast({ tone: "success", message: "Report updated successfully." });
   }
 
   function handleModalGetDirections(report: IncidentReport) {
@@ -1943,6 +2009,8 @@ export function IncidentReportsContent() {
         hasResolved={selectedReportId ? Boolean(resolvedReportIds[selectedReportId]) : false}
         onConfirm={handleConfirmReport}
         onResolve={handleResolveReport}
+        onEditReport={handleEditSelectedReport}
+        onSubmitReportUpdate={handleSubmitSelectedReportUpdate}
         onReportUpdate={handleModalReportUpdate}
         onGetDirections={handleModalGetDirections}
         onFindEvacuationCenters={handleModalFindEvacuationCenters}

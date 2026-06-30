@@ -224,7 +224,9 @@ export type IncidentReport = {
   coordinatesLabel: string;
   coordinates?: [number, number];
   category: string;
+  categoryValue: string;
   severity: AlertSeverity;
+  severityValue: string;
   status: IncidentReportStatus;
   description: string;
   createdAt?: string;
@@ -239,6 +241,7 @@ export type IncidentReport = {
   lastConfirmedAt?: string | null;
   lastResolvedConfirmationAt?: string | null;
   sourceType: "Community" | "Official" | "System";
+  isOwner: boolean;
   sourceCategory: Exclude<SourceCategory, "provider">;
   sourceLabel: SourceLabel;
   resolvedAgo?: string;

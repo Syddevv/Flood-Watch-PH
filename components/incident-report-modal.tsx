@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   Check,
   ChevronLeft,
@@ -8,7 +8,10 @@ import {
   CloudRain,
   Clock3,
   FilePenLine,
+  ImageUp,
+  LoaderCircle,
   Navigation,
+  Send,
   ShieldPlus,
   MapPin,
   ShieldAlert,
@@ -17,6 +20,12 @@ import {
   X,
 } from "lucide-react";
 
+import {
+  INCIDENT_CATEGORY_OPTIONS,
+  REPORT_SEVERITIES,
+  REPORT_STATUSES,
+} from "@/lib/constants";
+import { getReportImageAcceptValue, validateReportImageFile } from "@/lib/report-image-validation";
 import { formatCountLabel, formatRelativeTime } from "@/lib/reporting";
 import type { IncidentReport, WeatherLocationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -50,6 +59,8 @@ type IncidentReportModalProps = {
   onOpenChange: (open: boolean) => void;
   onConfirm: (reportId: string) => void;
   onResolve: (reportId: string) => void;
+  onEditReport?: (report: IncidentReport, requestBody: FormData) => Promise<void>;
+  onSubmitReportUpdate?: (report: IncidentReport, requestBody: FormData) => Promise<void>;
   onReportUpdate?: (report: IncidentReport) => void;
   onGetDirections?: (report: IncidentReport) => void;
   onFindEvacuationCenters?: (report: IncidentReport) => void;
@@ -57,6 +68,27 @@ type IncidentReportModalProps = {
   hasResolved: boolean;
   actionLoading: ReportActionLoadingState;
 };
+
+type EditReportFormState = {
+  title: string;
+  description: string;
+  category: string;
+  severity: string;
+  locationName: string;
+  latitude: string;
+  longitude: string;
+  image: File | null;
+};
+
+type ReportUpdateFormState = {
+  message: string;
+  severity: string;
+  status: string;
+  image: File | null;
+};
+
+const reportImageAcceptValue = getReportImageAcceptValue();
+const editableStatusOptions = REPORT_STATUSES.filter((status) => status !== "Archived");
 
 function SummaryMetric({
   icon,
@@ -80,6 +112,30 @@ function SummaryMetric({
   );
 }
 
+function ModalField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-[0.72rem] font-semibold text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function modalInputClassName(extra = "") {
+  return cn(
+    "min-h-10 rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 text-[0.84rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]",
+    extra,
+  );
+}
+
 export function IncidentReportModal({
   report,
   updates,
@@ -87,6 +143,8 @@ export function IncidentReportModal({
   onOpenChange,
   onConfirm,
   onResolve,
+  onEditReport,
+  onSubmitReportUpdate,
   onReportUpdate,
   onGetDirections,
   onFindEvacuationCenters,
@@ -97,6 +155,28 @@ export function IncidentReportModal({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [nearbyWeather, setNearbyWeather] = useState<WeatherLocationResult | null>(null);
   const [nearbyWeatherLoading, setNearbyWeatherLoading] = useState(false);
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [updatePanelOpen, setUpdatePanelOpen] = useState(false);
+  const [ownerActionError, setOwnerActionError] = useState("");
+  const [savingOwnerAction, setSavingOwnerAction] = useState<"edit" | "update" | null>(null);
+  const [editForm, setEditForm] = useState<EditReportFormState>({
+    title: "",
+    description: "",
+    category: INCIDENT_CATEGORY_OPTIONS[0],
+    severity: REPORT_SEVERITIES[1],
+    locationName: "",
+    latitude: "",
+    longitude: "",
+    image: null,
+  });
+  const [updateForm, setUpdateForm] = useState<ReportUpdateFormState>({
+    message: "",
+    severity: "",
+    status: "",
+    image: null,
+  });
+  const editImageInputRef = useRef<HTMLInputElement | null>(null);
+  const updateImageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open || !report?.coordinates) {
@@ -145,6 +225,169 @@ export function IncidentReportModal({
       abortController.abort();
     };
   }, [open, report]);
+
+  useEffect(() => {
+    if (!open || !report) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const [latitude, longitude] = report.coordinates ?? [0, 0];
+
+      setPhotoIndex(0);
+      setEditPanelOpen(false);
+      setUpdatePanelOpen(false);
+      setOwnerActionError("");
+      setSavingOwnerAction(null);
+      setEditForm({
+        title: report.title,
+        description: report.description,
+        category: report.categoryValue,
+        severity: report.severityValue,
+        locationName: report.location,
+        latitude: String(latitude),
+        longitude: String(longitude),
+        image: null,
+      });
+      setUpdateForm({
+        message: "",
+        severity: "",
+        status: "",
+        image: null,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [open, report]);
+
+  function handleEditImageSelection(fileList: FileList | null) {
+    const file = fileList?.[0] ?? null;
+
+    if (!file) {
+      setEditForm((current) => ({ ...current, image: null }));
+      return;
+    }
+
+    const imageValidationError = validateReportImageFile(file);
+
+    if (imageValidationError) {
+      setOwnerActionError(imageValidationError);
+      setEditForm((current) => ({ ...current, image: null }));
+      return;
+    }
+
+    setOwnerActionError("");
+    setEditForm((current) => ({ ...current, image: file }));
+  }
+
+  function handleUpdateImageSelection(fileList: FileList | null) {
+    const file = fileList?.[0] ?? null;
+
+    if (!file) {
+      setUpdateForm((current) => ({ ...current, image: null }));
+      return;
+    }
+
+    const imageValidationError = validateReportImageFile(file);
+
+    if (imageValidationError) {
+      setOwnerActionError(imageValidationError);
+      setUpdateForm((current) => ({ ...current, image: null }));
+      return;
+    }
+
+    setOwnerActionError("");
+    setUpdateForm((current) => ({ ...current, image: file }));
+  }
+
+  async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!report || !onEditReport) {
+      return;
+    }
+
+    const requestBody = new FormData();
+    requestBody.set("title", editForm.title.trim());
+    requestBody.set("description", editForm.description.trim());
+    requestBody.set("category", editForm.category);
+    requestBody.set("severity", editForm.severity);
+    requestBody.set("locationName", editForm.locationName.trim());
+    requestBody.set("latitude", editForm.latitude.trim());
+    requestBody.set("longitude", editForm.longitude.trim());
+
+    if (editForm.image) {
+      requestBody.set("image", editForm.image);
+    }
+
+    setSavingOwnerAction("edit");
+    setOwnerActionError("");
+
+    try {
+      await onEditReport(report, requestBody);
+      setEditPanelOpen(false);
+      setEditForm((current) => ({ ...current, image: null }));
+      if (editImageInputRef.current) {
+        editImageInputRef.current.value = "";
+      }
+    } catch (error) {
+      setOwnerActionError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to update this report.",
+      );
+    } finally {
+      setSavingOwnerAction(null);
+    }
+  }
+
+  async function handleUpdateSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!report || !onSubmitReportUpdate) {
+      return;
+    }
+
+    const requestBody = new FormData();
+    requestBody.set("message", updateForm.message.trim());
+
+    if (updateForm.severity) {
+      requestBody.set("severity", updateForm.severity);
+    }
+
+    if (updateForm.status) {
+      requestBody.set("status", updateForm.status);
+    }
+
+    if (updateForm.image) {
+      requestBody.set("image", updateForm.image);
+    }
+
+    setSavingOwnerAction("update");
+    setOwnerActionError("");
+
+    try {
+      await onSubmitReportUpdate(report, requestBody);
+      setUpdatePanelOpen(false);
+      setUpdateForm({
+        message: "",
+        severity: "",
+        status: "",
+        image: null,
+      });
+      if (updateImageInputRef.current) {
+        updateImageInputRef.current.value = "";
+      }
+    } catch (error) {
+      setOwnerActionError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to submit this update.",
+      );
+    } finally {
+      setSavingOwnerAction(null);
+    }
+  }
 
   if (!open || !report) {
     return null;
@@ -467,12 +710,297 @@ export function IncidentReportModal({
                       <p className="mt-1 text-[0.78rem] text-[var(--color-foreground)] md:text-[0.86rem]">
                         {update.message}
                       </p>
+                      {update.imageUrl ? (
+                        <div className="mt-2 overflow-hidden rounded-[10px] border border-[var(--color-border)]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={update.imageUrl}
+                            alt="Report update"
+                            className="max-h-48 w-full object-cover"
+                          />
+                        </div>
+                      ) : null}
+                      {update.severity || update.status ? (
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[0.7rem] font-medium text-[var(--color-muted-foreground)]">
+                          {update.severity ? (
+                            <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5">
+                              Severity: {update.severity}
+                            </span>
+                          ) : null}
+                          {update.status ? (
+                            <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5">
+                              Status: {update.status}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)] md:text-[0.76rem]">
                         {formatRelativeTime(update.createdAt)}
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : null}
+
+            {report.isOwner && (onEditReport || onSubmitReportUpdate) ? (
+              <div className="mt-3 border-t border-[var(--color-border)] pt-3 md:mt-4 md:pt-4">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)] md:text-[0.74rem]">
+                  Owner actions
+                </div>
+
+                {ownerActionError ? (
+                  <div className="mt-2 rounded-[10px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] text-[var(--color-danger-text)]">
+                    {ownerActionError}
+                  </div>
+                ) : null}
+
+                {editPanelOpen && onEditReport ? (
+                  <form
+                    onSubmit={handleEditSubmit}
+                    className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
+                  >
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <ModalField label="Title">
+                        <input
+                          value={editForm.title}
+                          onChange={(event) =>
+                            setEditForm((current) => ({ ...current, title: event.target.value }))
+                          }
+                          className={modalInputClassName()}
+                        />
+                      </ModalField>
+                      <ModalField label="Location">
+                        <input
+                          value={editForm.locationName}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              locationName: event.target.value,
+                            }))
+                          }
+                          className={modalInputClassName()}
+                        />
+                      </ModalField>
+                      <ModalField label="Category">
+                        <select
+                          value={editForm.category}
+                          onChange={(event) =>
+                            setEditForm((current) => ({ ...current, category: event.target.value }))
+                          }
+                          className={modalInputClassName()}
+                        >
+                          {INCIDENT_CATEGORY_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </ModalField>
+                      <ModalField label="Severity">
+                        <select
+                          value={editForm.severity}
+                          onChange={(event) =>
+                            setEditForm((current) => ({ ...current, severity: event.target.value }))
+                          }
+                          className={modalInputClassName()}
+                        >
+                          {REPORT_SEVERITIES.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </ModalField>
+                      <ModalField label="Latitude">
+                        <input
+                          value={editForm.latitude}
+                          onChange={(event) =>
+                            setEditForm((current) => ({ ...current, latitude: event.target.value }))
+                          }
+                          className={modalInputClassName("tabular-nums")}
+                        />
+                      </ModalField>
+                      <ModalField label="Longitude">
+                        <input
+                          value={editForm.longitude}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              longitude: event.target.value,
+                            }))
+                          }
+                          className={modalInputClassName("tabular-nums")}
+                        />
+                      </ModalField>
+                    </div>
+                    <ModalField label="Description">
+                      <textarea
+                        rows={4}
+                        value={editForm.description}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            description: event.target.value,
+                          }))
+                        }
+                        className={modalInputClassName("py-2.5 leading-5")}
+                      />
+                    </ModalField>
+                    <div className="grid gap-2">
+                      <input
+                        ref={editImageInputRef}
+                        type="file"
+                        accept={reportImageAcceptValue}
+                        className="sr-only"
+                        onChange={(event) => handleEditImageSelection(event.target.files)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => editImageInputRef.current?.click()}
+                        className={cn(footerButtonBase, secondaryButtonClassName)}
+                      >
+                        <ImageUp className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {editForm.image ? editForm.image.name : "Replace image"}
+                        </span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="submit"
+                        disabled={savingOwnerAction !== null}
+                        className={cn(
+                          footerButtonBase,
+                          savingOwnerAction ? disabledButtonClassName : "floodwatch-primary-action",
+                        )}
+                      >
+                        {savingOwnerAction === "edit" ? (
+                          <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />
+                        ) : (
+                          <FilePenLine className="h-4 w-4 shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {savingOwnerAction === "edit" ? "Saving..." : "Save edit"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditPanelOpen(false)}
+                        disabled={savingOwnerAction !== null}
+                        className={cn(footerButtonBase, secondaryButtonClassName)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
+
+                {updatePanelOpen && onSubmitReportUpdate ? (
+                  <form
+                    onSubmit={handleUpdateSubmit}
+                    className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
+                  >
+                    <ModalField label="Update note">
+                      <textarea
+                        rows={4}
+                        value={updateForm.message}
+                        onChange={(event) =>
+                          setUpdateForm((current) => ({
+                            ...current,
+                            message: event.target.value,
+                          }))
+                        }
+                        placeholder="Add a factual update about current conditions."
+                        className={modalInputClassName("py-2.5 leading-5")}
+                      />
+                    </ModalField>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <ModalField label="Severity">
+                        <select
+                          value={updateForm.severity}
+                          onChange={(event) =>
+                            setUpdateForm((current) => ({
+                              ...current,
+                              severity: event.target.value,
+                            }))
+                          }
+                          className={modalInputClassName()}
+                        >
+                          <option value="">No severity change</option>
+                          {REPORT_SEVERITIES.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </ModalField>
+                      <ModalField label="Status">
+                        <select
+                          value={updateForm.status}
+                          onChange={(event) =>
+                            setUpdateForm((current) => ({
+                              ...current,
+                              status: event.target.value,
+                            }))
+                          }
+                          className={modalInputClassName()}
+                        >
+                          <option value="">No status change</option>
+                          {editableStatusOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </ModalField>
+                    </div>
+                    <input
+                      ref={updateImageInputRef}
+                      type="file"
+                      accept={reportImageAcceptValue}
+                      className="sr-only"
+                      onChange={(event) => handleUpdateImageSelection(event.target.files)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => updateImageInputRef.current?.click()}
+                      className={cn(footerButtonBase, secondaryButtonClassName)}
+                    >
+                      <ImageUp className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {updateForm.image ? updateForm.image.name : "Attach image"}
+                      </span>
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="submit"
+                        disabled={savingOwnerAction !== null}
+                        className={cn(
+                          footerButtonBase,
+                          savingOwnerAction ? disabledButtonClassName : "floodwatch-primary-action",
+                        )}
+                      >
+                        {savingOwnerAction === "update" ? (
+                          <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {savingOwnerAction === "update" ? "Submitting..." : "Submit update"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUpdatePanelOpen(false)}
+                        disabled={savingOwnerAction !== null}
+                        className={cn(footerButtonBase, secondaryButtonClassName)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -525,7 +1053,44 @@ export function IncidentReportModal({
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {onReportUpdate ? (
+                {report.isOwner && onEditReport ? (
+                  <button
+                    type="button"
+                    aria-label="Edit this report"
+                    onClick={() => {
+                      setEditPanelOpen((current) => !current);
+                      setUpdatePanelOpen(false);
+                      setOwnerActionError("");
+                    }}
+                    disabled={savingOwnerAction !== null}
+                    className={cn(
+                      footerButtonBase,
+                      savingOwnerAction ? disabledButtonClassName : secondaryButtonClassName,
+                    )}
+                  >
+                    <FilePenLine className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Edit</span>
+                  </button>
+                ) : null}
+                {report.isOwner && onSubmitReportUpdate ? (
+                  <button
+                    type="button"
+                    aria-label="Submit an update for this report"
+                    onClick={() => {
+                      setUpdatePanelOpen((current) => !current);
+                      setEditPanelOpen(false);
+                      setOwnerActionError("");
+                    }}
+                    disabled={savingOwnerAction !== null}
+                    className={cn(
+                      footerButtonBase,
+                      savingOwnerAction ? disabledButtonClassName : secondaryButtonClassName,
+                    )}
+                  >
+                    <Send className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Update</span>
+                  </button>
+                ) : onReportUpdate && report.isOwner ? (
                   <button
                     type="button"
                     aria-label="Submit an update for this report"
