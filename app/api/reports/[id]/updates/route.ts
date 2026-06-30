@@ -70,7 +70,6 @@ export async function POST(request: Request, context: RouteContext) {
           message: parsedUpdate.data.message,
           imageUrl,
           severity: parsedUpdate.data.severity,
-          status: parsedUpdate.data.status,
         },
       });
 
@@ -78,7 +77,6 @@ export async function POST(request: Request, context: RouteContext) {
         where: { id },
         data: {
           ...(parsedUpdate.data.severity ? { severity: parsedUpdate.data.severity } : {}),
-          ...(parsedUpdate.data.status ? { status: parsedUpdate.data.status } : {}),
           lastActivityAt: now,
         },
         include: reportDetailInclude,

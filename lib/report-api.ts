@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
-import { REPORT_STATUSES } from "@/lib/constants";
 import { validateReportImageFile } from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
 import {
@@ -229,7 +228,6 @@ export function parseReportUpdateFormData(formData: FormData) {
   const message =
     getOptionalText(formData.get("message")) ?? getOptionalText(formData.get("description"));
   const severity = getOptionalText(formData.get("severity"));
-  const status = getOptionalText(formData.get("status"));
 
   if (!message) {
     return { error: "Update message is required." };
@@ -243,18 +241,10 @@ export function parseReportUpdateFormData(formData: FormData) {
     return { error: "Invalid severity value." };
   }
 
-  if (
-    status &&
-    (status === "Archived" || !REPORT_STATUSES.includes(status as (typeof REPORT_STATUSES)[number]))
-  ) {
-    return { error: "Invalid status value." };
-  }
-
   return {
     data: {
       message,
       severity,
-      status,
     },
   };
 }

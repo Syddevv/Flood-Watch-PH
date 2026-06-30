@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   Check,
   ChevronLeft,
@@ -23,7 +30,6 @@ import {
 import {
   INCIDENT_CATEGORY_OPTIONS,
   REPORT_SEVERITIES,
-  REPORT_STATUSES,
 } from "@/lib/constants";
 import { getReportImageAcceptValue, validateReportImageFile } from "@/lib/report-image-validation";
 import { formatCountLabel, formatRelativeTime } from "@/lib/reporting";
@@ -83,12 +89,10 @@ type EditReportFormState = {
 type ReportUpdateFormState = {
   message: string;
   severity: string;
-  status: string;
   image: File | null;
 };
 
 const reportImageAcceptValue = getReportImageAcceptValue();
-const editableStatusOptions = REPORT_STATUSES.filter((status) => status !== "Archived");
 
 function SummaryMetric({
   icon,
@@ -155,6 +159,7 @@ export function IncidentReportModal({
   const [photoIndex, setPhotoIndex] = useState(0);
   const [nearbyWeather, setNearbyWeather] = useState<WeatherLocationResult | null>(null);
   const [nearbyWeatherLoading, setNearbyWeatherLoading] = useState(false);
+  const [ownerSectionOpen, setOwnerSectionOpen] = useState(false);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [updatePanelOpen, setUpdatePanelOpen] = useState(false);
   const [ownerActionError, setOwnerActionError] = useState("");
@@ -172,9 +177,14 @@ export function IncidentReportModal({
   const [updateForm, setUpdateForm] = useState<ReportUpdateFormState>({
     message: "",
     severity: "",
-    status: "",
     image: null,
   });
+  const modalBodyRef = useRef<HTMLDivElement | null>(null);
+  const ownerSectionRef = useRef<HTMLDivElement | null>(null);
+  const editFormRef = useRef<HTMLFormElement | null>(null);
+  const updateFormRef = useRef<HTMLFormElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const updateMessageRef = useRef<HTMLTextAreaElement | null>(null);
   const editImageInputRef = useRef<HTMLInputElement | null>(null);
   const updateImageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -235,6 +245,7 @@ export function IncidentReportModal({
       const [latitude, longitude] = report.coordinates ?? [0, 0];
 
       setPhotoIndex(0);
+      setOwnerSectionOpen(false);
       setEditPanelOpen(false);
       setUpdatePanelOpen(false);
       setOwnerActionError("");
@@ -252,7 +263,6 @@ export function IncidentReportModal({
       setUpdateForm({
         message: "",
         severity: "",
-        status: "",
         image: null,
       });
     });
@@ -300,6 +310,39 @@ export function IncidentReportModal({
     setUpdateForm((current) => ({ ...current, image: file }));
   }
 
+  function scrollOwnerFormIntoView(
+    formRef: RefObject<HTMLFormElement | null>,
+    focusRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
+  ) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const target = formRef.current ?? ownerSectionRef.current;
+
+        target?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+        focusRef.current?.focus({ preventScroll: true });
+      });
+    });
+  }
+
+  function openEditReportPanel() {
+    setOwnerSectionOpen(true);
+    setEditPanelOpen(true);
+    setUpdatePanelOpen(false);
+    setOwnerActionError("");
+    scrollOwnerFormIntoView(editFormRef, titleInputRef);
+  }
+
+  function openSubmitUpdatePanel() {
+    setOwnerSectionOpen(true);
+    setUpdatePanelOpen(true);
+    setEditPanelOpen(false);
+    setOwnerActionError("");
+    scrollOwnerFormIntoView(updateFormRef, updateMessageRef);
+  }
+
   async function handleEditSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -325,8 +368,8 @@ export function IncidentReportModal({
 
     try {
       await onEditReport(report, requestBody);
-      setEditPanelOpen(false);
       setEditForm((current) => ({ ...current, image: null }));
+      setOwnerActionError("");
       if (editImageInputRef.current) {
         editImageInputRef.current.value = "";
       }
@@ -355,10 +398,6 @@ export function IncidentReportModal({
       requestBody.set("severity", updateForm.severity);
     }
 
-    if (updateForm.status) {
-      requestBody.set("status", updateForm.status);
-    }
-
     if (updateForm.image) {
       requestBody.set("image", updateForm.image);
     }
@@ -368,13 +407,8 @@ export function IncidentReportModal({
 
     try {
       await onSubmitReportUpdate(report, requestBody);
-      setUpdatePanelOpen(false);
-      setUpdateForm({
-        message: "",
-        severity: "",
-        status: "",
-        image: null,
-      });
+      setUpdateForm((current) => ({ ...current, image: null }));
+      setOwnerActionError("");
       if (updateImageInputRef.current) {
         updateImageInputRef.current.value = "";
       }
@@ -478,7 +512,10 @@ export function IncidentReportModal({
             </div>
           ) : null}
 
-          <div className="flex-1 overflow-y-auto px-3 pb-5 pt-3 md:px-5 md:pb-6 md:pt-4">
+          <div
+            ref={modalBodyRef}
+            className="flex-1 overflow-y-auto px-3 pb-28 pt-3 md:px-5 md:pb-24 md:pt-4"
+          >
             <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
               <span
                 className={cn(
@@ -720,18 +757,11 @@ export function IncidentReportModal({
                           />
                         </div>
                       ) : null}
-                      {update.severity || update.status ? (
+                      {update.severity ? (
                         <div className="mt-2 flex flex-wrap gap-1.5 text-[0.7rem] font-medium text-[var(--color-muted-foreground)]">
-                          {update.severity ? (
-                            <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5">
-                              Severity: {update.severity}
-                            </span>
-                          ) : null}
-                          {update.status ? (
-                            <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5">
-                              Status: {update.status}
-                            </span>
-                          ) : null}
+                          <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5">
+                            Severity: {update.severity}
+                          </span>
                         </div>
                       ) : null}
                       <div className="mt-1 text-[0.72rem] text-[var(--color-muted-foreground)] md:text-[0.76rem]">
@@ -744,25 +774,86 @@ export function IncidentReportModal({
             ) : null}
 
             {report.isOwner && (onEditReport || onSubmitReportUpdate) ? (
-              <div className="mt-3 border-t border-[var(--color-border)] pt-3 md:mt-4 md:pt-4">
-                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)] md:text-[0.74rem]">
-                  Owner actions
-                </div>
-
-                {ownerActionError ? (
-                  <div className="mt-2 rounded-[10px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] text-[var(--color-danger-text)]">
-                    {ownerActionError}
+              <div
+                ref={ownerSectionRef}
+                className={cn(
+                  "mt-3 overflow-hidden border-t border-[var(--color-border)] transition-all duration-300 ease-out md:mt-4",
+                  ownerSectionOpen
+                    ? "max-h-[2400px] pt-3 opacity-100 md:pt-4"
+                    : "max-h-0 pt-0 opacity-0",
+                )}
+              >
+                <div
+                  className={cn(
+                    "transition-transform duration-300 ease-out",
+                    ownerSectionOpen ? "translate-y-0" : "translate-y-2",
+                  )}
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)] md:text-[0.74rem]">
+                        Owner actions
+                      </div>
+                      <div className="mt-0.5 text-[0.76rem] text-[var(--color-muted-foreground)] md:text-[0.82rem]">
+                        Manage the details you originally submitted.
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:min-w-[260px]">
+                      {onEditReport ? (
+                        <button
+                          type="button"
+                          onClick={openEditReportPanel}
+                          disabled={savingOwnerAction !== null}
+                          className={cn(
+                            footerButtonBase,
+                            editPanelOpen
+                              ? "floodwatch-primary-action"
+                              : savingOwnerAction
+                                ? disabledButtonClassName
+                                : secondaryButtonClassName,
+                          )}
+                        >
+                          <FilePenLine className="h-4 w-4 shrink-0" />
+                          <span className="truncate">Edit Report</span>
+                        </button>
+                      ) : null}
+                      {onSubmitReportUpdate ? (
+                        <button
+                          type="button"
+                          onClick={openSubmitUpdatePanel}
+                          disabled={savingOwnerAction !== null}
+                          className={cn(
+                            footerButtonBase,
+                            updatePanelOpen
+                              ? "floodwatch-primary-action"
+                              : savingOwnerAction
+                                ? disabledButtonClassName
+                                : secondaryButtonClassName,
+                          )}
+                        >
+                          <Send className="h-4 w-4 shrink-0" />
+                          <span className="truncate">Submit Update</span>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                ) : null}
 
-                {editPanelOpen && onEditReport ? (
-                  <form
-                    onSubmit={handleEditSubmit}
-                    className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
-                  >
+                  {ownerActionError ? (
+                    <div className="mt-2 rounded-[10px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] text-[var(--color-danger-text)]">
+                      {ownerActionError}
+                    </div>
+                  ) : null}
+
+                  {editPanelOpen && onEditReport ? (
+                    <form
+                      ref={editFormRef}
+                      onSubmit={handleEditSubmit}
+                      className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
+                    >
                     <div className="grid gap-3 md:grid-cols-2">
                       <ModalField label="Title">
                         <input
+                          ref={titleInputRef}
                           value={editForm.title}
                           onChange={(event) =>
                             setEditForm((current) => ({ ...current, title: event.target.value }))
@@ -893,16 +984,18 @@ export function IncidentReportModal({
                         Cancel
                       </button>
                     </div>
-                  </form>
-                ) : null}
+                    </form>
+                  ) : null}
 
-                {updatePanelOpen && onSubmitReportUpdate ? (
-                  <form
-                    onSubmit={handleUpdateSubmit}
-                    className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
-                  >
+                  {updatePanelOpen && onSubmitReportUpdate ? (
+                    <form
+                      ref={updateFormRef}
+                      onSubmit={handleUpdateSubmit}
+                      className="mt-2 grid gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 md:mt-3 md:px-3.5"
+                    >
                     <ModalField label="Update note">
                       <textarea
+                        ref={updateMessageRef}
                         rows={4}
                         value={updateForm.message}
                         onChange={(event) =>
@@ -915,7 +1008,7 @@ export function IncidentReportModal({
                         className={modalInputClassName("py-2.5 leading-5")}
                       />
                     </ModalField>
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3">
                       <ModalField label="Severity">
                         <select
                           value={updateForm.severity}
@@ -929,25 +1022,6 @@ export function IncidentReportModal({
                         >
                           <option value="">No severity change</option>
                           {REPORT_SEVERITIES.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </ModalField>
-                      <ModalField label="Status">
-                        <select
-                          value={updateForm.status}
-                          onChange={(event) =>
-                            setUpdateForm((current) => ({
-                              ...current,
-                              status: event.target.value,
-                            }))
-                          }
-                          className={modalInputClassName()}
-                        >
-                          <option value="">No status change</option>
-                          {editableStatusOptions.map((option) => (
                             <option key={option} value={option}>
                               {option}
                             </option>
@@ -999,8 +1073,9 @@ export function IncidentReportModal({
                         Cancel
                       </button>
                     </div>
-                  </form>
-                ) : null}
+                    </form>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
@@ -1052,55 +1127,7 @@ export function IncidentReportModal({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {report.isOwner && onEditReport ? (
-                  <button
-                    type="button"
-                    aria-label="Edit this report"
-                    onClick={() => {
-                      setEditPanelOpen((current) => !current);
-                      setUpdatePanelOpen(false);
-                      setOwnerActionError("");
-                    }}
-                    disabled={savingOwnerAction !== null}
-                    className={cn(
-                      footerButtonBase,
-                      savingOwnerAction ? disabledButtonClassName : secondaryButtonClassName,
-                    )}
-                  >
-                    <FilePenLine className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Edit</span>
-                  </button>
-                ) : null}
-                {report.isOwner && onSubmitReportUpdate ? (
-                  <button
-                    type="button"
-                    aria-label="Submit an update for this report"
-                    onClick={() => {
-                      setUpdatePanelOpen((current) => !current);
-                      setEditPanelOpen(false);
-                      setOwnerActionError("");
-                    }}
-                    disabled={savingOwnerAction !== null}
-                    className={cn(
-                      footerButtonBase,
-                      savingOwnerAction ? disabledButtonClassName : secondaryButtonClassName,
-                    )}
-                  >
-                    <Send className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Update</span>
-                  </button>
-                ) : onReportUpdate && report.isOwner ? (
-                  <button
-                    type="button"
-                    aria-label="Submit an update for this report"
-                    onClick={() => onReportUpdate(report)}
-                    className={cn(footerButtonBase, secondaryButtonClassName)}
-                  >
-                    <FilePenLine className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Update</span>
-                  </button>
-                ) : null}
+              <div className="grid grid-cols-2 gap-2">
                 {directionsUrl && onGetDirections ? (
                   <button
                     type="button"
@@ -1123,17 +1150,41 @@ export function IncidentReportModal({
                     <span className="truncate">Centers</span>
                   </button>
                 ) : null}
+              </div>
+
+              {report.isOwner && (onEditReport || onSubmitReportUpdate || onReportUpdate) ? (
                 <button
                   type="button"
-                  onClick={() => onOpenChange(false)}
+                  aria-expanded={ownerSectionOpen}
+                  aria-label="Manage this report"
+                  onClick={() => {
+                    setOwnerSectionOpen((current) => !current);
+                    setOwnerActionError("");
+                    if (!ownerSectionOpen) {
+                      window.requestAnimationFrame(() => {
+                        ownerSectionRef.current?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "nearest",
+                        });
+                      });
+                    }
+                  }}
+                  disabled={savingOwnerAction !== null}
                   className={cn(
                     footerButtonBase,
-                    "border border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted-surface)] hover:text-[var(--color-foreground)]",
+                    savingOwnerAction
+                      ? disabledButtonClassName
+                      : ownerSectionOpen
+                        ? "floodwatch-primary-action"
+                        : secondaryButtonClassName,
                   )}
                 >
-                  <span className="truncate">Close</span>
+                  <FilePenLine className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {ownerSectionOpen ? "Hide Manage Report" : "Manage Report"}
+                  </span>
                 </button>
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
