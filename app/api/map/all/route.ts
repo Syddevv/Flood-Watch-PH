@@ -101,23 +101,25 @@ export async function GET(request: Request) {
       select: mapReportSelect,
     });
 
-    const reconciledReports = await Promise.all(
+    const reconciledReports: MapReportRecord[] = await Promise.all(
       reports.map(async (report: MapReportRecord) => {
         const patch = getLifecyclePersistencePatch(report);
         if (Object.keys(patch).length === 0) {
           return report;
         }
 
-        return prisma.floodReport.update({
+        const updatedReport: MapReportRecord = await prisma.floodReport.update({
           where: { id: report.id },
           data: patch,
           select: mapReportSelect,
         });
+
+        return updatedReport;
       }),
     );
 
     const filteredReports = reconciledReports
-      .filter((report) => {
+      .filter((report: MapReportRecord) => {
         const lifecycleStatus = report.status as ReportLifecycleStatus;
 
         if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
@@ -126,7 +128,7 @@ export async function GET(request: Request) {
 
         return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
       })
-      .map((report) => ({
+      .map((report: MapReportRecord) => ({
         ...report,
         type: "flood_report" as const,
       }))
