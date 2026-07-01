@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client";
-
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import { validateReportImageFile } from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
@@ -64,7 +62,7 @@ export const reportDetailInclude = {
       createdAt: true,
     },
   },
-} satisfies Prisma.FloodReportInclude;
+} as const;
 
 export const reportListInclude = {
   confirmations: {
@@ -73,7 +71,7 @@ export const reportListInclude = {
       createdAt: true,
     },
   },
-} satisfies Prisma.FloodReportInclude;
+} as const;
 
 export function isReportOwner(
   report: Pick<PublicReportRecord, "ownerSessionHash">,

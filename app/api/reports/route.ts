@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client";
-
 import { errorResponse } from "@/lib/api-response";
 import {
   clampLimit,
@@ -46,20 +44,41 @@ function buildReportListResponse(
 }
 
 function isReportDatabaseUnavailableError(error: unknown) {
-  if (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    ["EACCES", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND"].includes(error.code)
-  ) {
-    return true;
+  if (typeof error === "object" && error && "code" in error) {
+    const code = (error as { code?: unknown }).code;
+    if (
+      typeof code === "string" &&
+      ["EACCES", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND"].includes(code)
+    ) {
+      return true;
+    }
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (
+      typeof message === "string" &&
+      /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
+        message,
+      )
+    ) {
+      return true;
+    }
   }
 
   if (!(error instanceof Error)) {
     return false;
   }
 
-  return /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
-    error.message,
-  );
+  if (
+    /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
+      error.message,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function buildEmptyReportListResponseFromRequest(request: Request) {
@@ -107,12 +126,23 @@ type ReportListRecord = {
 
 type ReportConfirmationSummary = NonNullable<ReportListRecord["confirmations"]>[number];
 
+type ReportWhereClause = {
+  severity?: string;
+  category?: string;
+  sourceType?: string;
+  OR?: Array<{
+    title?: { contains: string; mode: "insensitive" };
+    description?: { contains: string; mode: "insensitive" };
+    locationName?: { contains: string; mode: "insensitive" };
+  }>;
+};
+
 function buildReportWhereClause(filters: {
   severity?: string;
   category?: string;
   sourceType?: string;
   search?: string;
-}): Prisma.FloodReportWhereInput {
+}): ReportWhereClause {
   return {
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.category ? { category: filters.category } : {}),
