@@ -154,7 +154,7 @@ export async function GET(request: Request) {
     }));
 
     const lastUpdatedCandidates = [
-      ...filteredReports.map((report) => report.updatedAt.getTime()),
+      ...filteredReports.map((report: MapReportRecord) => report.updatedAt.getTime()),
       ...mappedEvacuationCenters
         .map((center) => center.updatedAt)
         .filter((updatedAt): updatedAt is string => Boolean(updatedAt))

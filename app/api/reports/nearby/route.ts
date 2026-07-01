@@ -80,7 +80,14 @@ function serializeNearbyReport(
   };
 }
 
-async function reconcileNearbyReport(report: NearbyReportRecord) {
+type NearbyReportDistanceEntry = {
+  report: NearbyReportRecord;
+  distanceMeters: number;
+};
+
+async function reconcileNearbyReport(
+  report: NearbyReportRecord,
+): Promise<NearbyReportRecord> {
   const nextLifecycle = applyReportLifecycleUpdates(report);
   const patch = getLifecyclePersistencePatch(report);
   if (Object.keys(patch).length === 0) {
@@ -91,11 +98,13 @@ async function reconcileNearbyReport(report: NearbyReportRecord) {
   }
 
   try {
-    return await prisma.floodReport.update({
+    const updatedReport: NearbyReportRecord = await prisma.floodReport.update({
       where: { id: report.id },
       data: patch,
       include: nearbyInclude,
     });
+
+    return updatedReport;
   } catch (error) {
     console.warn("Failed to persist nearby report lifecycle update.", error);
 
@@ -125,7 +134,7 @@ export async function GET(request: Request) {
     }
 
     const bounds = createBoundingBox(latitude, longitude, radiusMeters);
-    const reports = await prisma.floodReport.findMany({
+    const reports: NearbyReportRecord[] = await prisma.floodReport.findMany({
       where: {
         latitude: {
           gte: bounds.minLatitude,
@@ -139,29 +148,34 @@ export async function GET(request: Request) {
       include: nearbyInclude,
     });
 
-    const reconciledReports = await Promise.all(
-      reports.map((report) => reconcileNearbyReport(report as NearbyReportRecord)),
+    const reconciledReports: NearbyReportRecord[] = await Promise.all(
+      reports.map((report: NearbyReportRecord) => reconcileNearbyReport(report)),
     );
 
     const nearbyReports = reconciledReports
-      .filter((report) =>
+      .filter((report: NearbyReportRecord) =>
         isActiveLifecycleStatus(report.status as ReportLifecycleStatus),
       )
-      .map((report) => {
+      .map((report: NearbyReportRecord): NearbyReportDistanceEntry => {
         const distanceMeters = calculateDistanceMeters(
           { latitude, longitude },
           { latitude: report.latitude, longitude: report.longitude },
         );
 
         return {
-          report: report as NearbyReportRecord,
+          report,
           distanceMeters,
         };
       })
-      .filter((entry) => entry.distanceMeters <= radiusMeters)
-      .sort((left, right) => left.distanceMeters - right.distanceMeters)
+      .filter((entry: NearbyReportDistanceEntry) => entry.distanceMeters <= radiusMeters)
+      .sort(
+        (left: NearbyReportDistanceEntry, right: NearbyReportDistanceEntry) =>
+          left.distanceMeters - right.distanceMeters,
+      )
       .slice(0, limit)
-      .map((entry) => serializeNearbyReport(entry.report, entry.distanceMeters, sessionHash));
+      .map((entry: NearbyReportDistanceEntry) =>
+        serializeNearbyReport(entry.report, entry.distanceMeters, sessionHash),
+      );
 
     return successResponse(nearbyReports);
   } catch (error) {

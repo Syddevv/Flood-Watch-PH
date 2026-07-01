@@ -105,6 +105,8 @@ type ReportListRecord = {
   }>;
 };
 
+type ReportConfirmationSummary = NonNullable<ReportListRecord["confirmations"]>[number];
+
 function buildReportWhereClause(filters: {
   severity?: string;
   category?: string;
@@ -180,7 +182,7 @@ export async function GET(request: Request) {
     const confirmations = await prisma.reportConfirmation.findMany({
       where: {
         reportId: {
-          in: reports.map((report) => report.id),
+          in: reports.map((report: ReportListRecord) => report.id),
         },
       },
       select: {
@@ -203,16 +205,20 @@ export async function GET(request: Request) {
       confirmationsByReportId.set(confirmation.reportId, existing);
     }
 
-    const reportsWithConfirmations = reports.map((report) => ({
+    const reportsWithConfirmations: ReportListRecord[] = reports.map(
+      (report: ReportListRecord) => ({
       ...report,
       confirmations: confirmationsByReportId.get(report.id) ?? [],
-    }));
-
-    const reconciledReports = await Promise.all(
-      reportsWithConfirmations.map((report) => reconcileReportLifecycle(report)),
+      }),
     );
 
-    const filteredReports = reconciledReports.filter((report) => {
+    const reconciledReports: ReportListRecord[] = await Promise.all(
+      reportsWithConfirmations.map((report: ReportListRecord) =>
+        reconcileReportLifecycle(report),
+      ),
+    );
+
+    const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
       if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
@@ -222,7 +228,7 @@ export async function GET(request: Request) {
       return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
     });
 
-    filteredReports.sort((left, right) =>
+    filteredReports.sort((left: ReportListRecord, right: ReportListRecord) =>
       compareReportsByPriority(
         {
           createdAt: left.createdAt,
@@ -230,8 +236,14 @@ export async function GET(request: Request) {
           lastActivityAt: left.lastActivityAt,
           lastConfirmedAt:
             left.confirmations
-              ?.filter((entry) => entry.confirmationType === "confirmed")
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+              ?.filter(
+                (entry: ReportConfirmationSummary) =>
+                  entry.confirmationType === "confirmed",
+              )
+              .sort(
+                (a: ReportConfirmationSummary, b: ReportConfirmationSummary) =>
+                  b.createdAt.getTime() - a.createdAt.getTime(),
+              )[0]
               ?.createdAt ?? null,
           confirmationCount: left.confirmationCount,
           resolvedCount: left.resolvedCount,
@@ -244,8 +256,14 @@ export async function GET(request: Request) {
           lastActivityAt: right.lastActivityAt,
           lastConfirmedAt:
             right.confirmations
-              ?.filter((entry) => entry.confirmationType === "confirmed")
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+              ?.filter(
+                (entry: ReportConfirmationSummary) =>
+                  entry.confirmationType === "confirmed",
+              )
+              .sort(
+                (a: ReportConfirmationSummary, b: ReportConfirmationSummary) =>
+                  b.createdAt.getTime() - a.createdAt.getTime(),
+              )[0]
               ?.createdAt ?? null,
           confirmationCount: right.confirmationCount,
           resolvedCount: right.resolvedCount,
