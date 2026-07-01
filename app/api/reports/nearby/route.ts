@@ -98,13 +98,13 @@ async function reconcileNearbyReport(
   }
 
   try {
-    const updatedReport: NearbyReportRecord = await prisma.floodReport.update({
+    const updatedReport = await prisma.floodReport.update({
       where: { id: report.id },
       data: patch,
       include: nearbyInclude,
     });
 
-    return updatedReport;
+    return updatedReport as NearbyReportRecord;
   } catch (error) {
     console.warn("Failed to persist nearby report lifecycle update.", error);
 
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
     }
 
     const bounds = createBoundingBox(latitude, longitude, radiusMeters);
-    const reports: NearbyReportRecord[] = await prisma.floodReport.findMany({
+    const reports = (await prisma.floodReport.findMany({
       where: {
         latitude: {
           gte: bounds.minLatitude,
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
         },
       },
       include: nearbyInclude,
-    });
+    })) as NearbyReportRecord[];
 
     const reconciledReports: NearbyReportRecord[] = await Promise.all(
       reports.map((report: NearbyReportRecord) => reconcileNearbyReport(report)),

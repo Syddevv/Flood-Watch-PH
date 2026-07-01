@@ -129,7 +129,9 @@ function buildReportWhereClause(filters: {
   };
 }
 
-async function reconcileReportLifecycle(report: ReportListRecord) {
+async function reconcileReportLifecycle(
+  report: ReportListRecord,
+): Promise<ReportListRecord> {
   const now = new Date();
   const patch = getLifecyclePersistencePatch(report, now);
 
@@ -140,11 +142,13 @@ async function reconcileReportLifecycle(report: ReportListRecord) {
     };
   }
 
-  return prisma.floodReport.update({
+  const updatedReport = await prisma.floodReport.update({
     where: { id: report.id },
     data: patch,
     include: reportListInclude,
   });
+
+  return updatedReport as ReportListRecord;
 }
 
 export async function GET(request: Request) {
