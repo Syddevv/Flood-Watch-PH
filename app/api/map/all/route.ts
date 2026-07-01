@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client";
-
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
 import { EVACUATION_CENTERS } from "@/lib/constants";
@@ -28,11 +26,26 @@ const mapReportSelect = {
   lastActivityAt: true,
   resolvedAt: true,
   archivedAt: true,
-} as const satisfies Prisma.FloodReportSelect;
+} as const;
 
-type MapReportRecord = Prisma.FloodReportGetPayload<{
-  select: typeof mapReportSelect;
-}>;
+type MapReportRecord = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  severity: string;
+  status: string;
+  locationName: string;
+  latitude: number;
+  longitude: number;
+  confirmationCount: number;
+  resolvedCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  lastActivityAt: Date;
+  resolvedAt: Date | null;
+  archivedAt: Date | null;
+};
 
 function getSeverityRank(severity: string) {
   switch (severity) {
