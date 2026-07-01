@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
 import { EVACUATION_CENTERS } from "@/lib/constants";
@@ -8,6 +10,29 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+
+const mapReportSelect = {
+  id: true,
+  title: true,
+  description: true,
+  category: true,
+  severity: true,
+  status: true,
+  locationName: true,
+  latitude: true,
+  longitude: true,
+  confirmationCount: true,
+  resolvedCount: true,
+  createdAt: true,
+  updatedAt: true,
+  lastActivityAt: true,
+  resolvedAt: true,
+  archivedAt: true,
+} as const satisfies Prisma.FloodReportSelect;
+
+type MapReportRecord = Prisma.FloodReportGetPayload<{
+  select: typeof mapReportSelect;
+}>;
 
 function getSeverityRank(severity: string) {
   switch (severity) {
@@ -51,7 +76,7 @@ export async function GET(request: Request) {
     }
 
     const includeArchived = searchParams.get("includeArchived") === "true";
-    const reports = await prisma.floodReport.findMany({
+    const reports: MapReportRecord[] = await prisma.floodReport.findMany({
       where: {
         ...(parsedFilters.filters.severity
           ? { severity: parsedFilters.filters.severity }
@@ -60,28 +85,11 @@ export async function GET(request: Request) {
           ? { category: parsedFilters.filters.category }
           : {}),
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        category: true,
-        severity: true,
-        status: true,
-        locationName: true,
-        latitude: true,
-        longitude: true,
-        confirmationCount: true,
-        resolvedCount: true,
-        createdAt: true,
-        updatedAt: true,
-        lastActivityAt: true,
-        resolvedAt: true,
-        archivedAt: true,
-      },
+      select: mapReportSelect,
     });
 
     const reconciledReports = await Promise.all(
-      reports.map(async (report) => {
+      reports.map(async (report: MapReportRecord) => {
         const patch = getLifecyclePersistencePatch(report);
         if (Object.keys(patch).length === 0) {
           return report;
@@ -90,24 +98,7 @@ export async function GET(request: Request) {
         return prisma.floodReport.update({
           where: { id: report.id },
           data: patch,
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            category: true,
-            severity: true,
-            status: true,
-            locationName: true,
-            latitude: true,
-            longitude: true,
-            confirmationCount: true,
-            resolvedCount: true,
-            createdAt: true,
-            updatedAt: true,
-            lastActivityAt: true,
-            resolvedAt: true,
-            archivedAt: true,
-          },
+          select: mapReportSelect,
         });
       }),
     );
