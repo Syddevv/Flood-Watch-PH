@@ -1,5 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { prisma } from "@/lib/prisma";
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import {
   REPORT_OWNER_FORBIDDEN_MESSAGE,
   isReportOwner,
@@ -62,7 +62,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const now = new Date();
 
-    const updatedReport = await prisma.$transaction(async (tx) => {
+    const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       await tx.reportUpdate.create({
         data: {
           reportId: id,

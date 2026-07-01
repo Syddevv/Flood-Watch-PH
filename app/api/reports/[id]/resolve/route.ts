@@ -3,7 +3,7 @@ import {
   deriveReportLifecycleStatus,
   getLifecyclePersistencePatch,
 } from "@/lib/report-lifecycle";
-import { prisma } from "@/lib/prisma";
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
 import {
   getReportSessionHashFromRequest,
   REPORT_ACTION_UNDO_WINDOW_MS,
@@ -49,7 +49,7 @@ export async function POST(request: Request, context: RouteContext) {
       return errorResponse("This report is no longer active.", 400);
     }
 
-    const updatedReport = await prisma.$transaction(async (tx) => {
+    const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const lifecyclePatch = getLifecyclePersistencePatch(report);
       if (Object.keys(lifecyclePatch).length > 0) {
         await tx.floodReport.update({
@@ -170,7 +170,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("Undo window has expired.", 400);
     }
 
-    const updatedReport = await prisma.$transaction(async (tx) => {
+    const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       await tx.reportConfirmation.delete({
         where: {
           id: matchingResolution.id,
