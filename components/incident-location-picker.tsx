@@ -14,7 +14,7 @@ const DynamicIncidentLocationPickerMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] text-[0.88rem] text-[var(--color-muted-foreground)]">
+      <div className="flex h-full min-h-[300px] items-center justify-center rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-panel)] text-[0.86rem] text-[var(--color-muted-foreground)] md:min-h-[320px] md:rounded-none md:border-0">
         Loading map...
       </div>
     ),
@@ -257,11 +257,11 @@ export function IncidentLocationPicker({
         role="dialog"
         aria-modal="true"
         aria-labelledby="incident-location-picker-title"
-        className="fixed inset-0 z-[var(--layer-sheet)] flex items-end md:items-start md:justify-center md:px-6 md:pb-6 md:pt-[calc(var(--header-height)+1.25rem)]"
+        className="fixed inset-0 z-[var(--layer-sheet)] flex items-end pt-[var(--header-height)] md:items-start md:justify-center md:px-6 md:pb-6 md:pt-[calc(var(--header-height)+1.25rem)]"
       >
-        <div className="flex h-[calc(100dvh-var(--header-height))] w-full flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-sidebar)] shadow-[var(--shadow-floating)] md:h-[min(88vh,820px)] md:max-w-[1080px] md:rounded-[20px]">
-          <div className="border-b border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] px-4 pb-3 pt-3 md:px-5 md:py-4">
-            <div className="flex items-start justify-between gap-3">
+        <div className="flex h-[calc(100dvh-var(--header-height))] max-h-[calc(100dvh-var(--header-height))] w-full flex-col overflow-hidden border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-sidebar)] shadow-[var(--shadow-floating)] md:h-[min(88vh,820px)] md:max-h-none md:max-w-[1080px] md:rounded-[20px]">
+          <div className="shrink-0 border-b border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] px-4 py-3.5 md:px-5 md:py-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
               <div className="min-w-0">
                 <div className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
                   Location picker
@@ -272,7 +272,7 @@ export function IncidentLocationPicker({
                 >
                   Pick flood location on the map
                 </h2>
-                <p className="mt-1 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
+                <p className="mt-1 max-w-[34rem] text-[0.8rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem] md:leading-6">
                   Search for a place or tap the map to pin the exact flooded area.
                 </p>
               </div>
@@ -280,19 +280,19 @@ export function IncidentLocationPicker({
                 type="button"
                 aria-label="Close location picker"
                 onClick={onClose}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)] md:h-10 md:w-10"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-0 md:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="order-2 flex min-h-[320px] flex-col border-t border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] md:order-1 md:border-r md:border-t-0 md:min-h-0">
-              <div className="border-b border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] px-4 py-3 md:px-5">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 focus-within:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]">
-                    <Search className="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 md:grid md:grid-cols-[minmax(0,1fr)_320px] md:gap-0 md:overflow-hidden md:px-0 md:py-0">
+            <div className="flex min-h-0 flex-col gap-3 md:gap-0 md:border-r md:border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)]">
+              <div className="md:border-b md:border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] md:px-5 md:py-3">
+                <div className="flex flex-col gap-3 md:flex-row md:gap-2">
+                  <label className="box-border flex h-[48px] min-h-[48px] w-full min-w-0 flex-1 items-center gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_78%,var(--color-primary)_22%)] bg-[color:color-mix(in_srgb,var(--color-panel)_76%,black)] px-4 shadow-[inset_0_1px_0_color-mix(in_srgb,white_6%,transparent)] focus-within:border-[color:color-mix(in_srgb,var(--color-primary)_56%,transparent)] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--color-primary)_18%,transparent)] md:h-11 md:min-h-11 md:gap-2.5 md:bg-[var(--color-surface)] md:px-3.5 md:shadow-none">
+                    <Search className="h-5 w-5 shrink-0 text-[var(--color-muted-foreground)] opacity-75 md:h-4 md:w-4" />
                     <input
                       type="text"
                       value={searchQuery}
@@ -304,14 +304,14 @@ export function IncidentLocationPicker({
                         }
                       }}
                       placeholder="Search barangay, street, city, or landmark"
-                      className="w-full bg-transparent text-[0.9rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                      className="h-full min-w-0 flex-1 truncate bg-transparent text-base leading-none text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] md:text-[0.9rem]"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={() => void handleSearch()}
                     disabled={searching}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex h-[48px] min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-base font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 md:h-11 md:min-h-11 md:w-auto md:rounded-[11px] md:text-[0.88rem]"
                   >
                     {searching ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -323,7 +323,7 @@ export function IncidentLocationPicker({
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1">
+              <div className="h-[320px] min-h-[300px] w-full shrink-0 overflow-hidden rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[var(--color-map-shell)] md:min-h-0 md:flex-1 md:rounded-none md:border-0">
                 <DynamicIncidentLocationPickerMap
                   selectedCoordinates={selectedCoordinates}
                   focusCoordinates={focusCoordinates}
@@ -332,43 +332,43 @@ export function IncidentLocationPicker({
               </div>
             </div>
 
-            <aside className="order-1 flex min-h-0 flex-col px-4 py-4 md:order-2 md:px-5">
-              <div className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4">
-                <div className="flex items-center gap-2 text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+            <aside className="flex min-h-0 flex-col md:overflow-y-auto md:px-5 md:py-4">
+              <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_82%,transparent)] px-3.5 py-3 md:rounded-[16px] md:px-4 md:py-4">
+                <div className="flex items-center gap-2 text-[0.86rem] font-semibold text-[var(--color-foreground)] md:text-[0.9rem]">
                   <MapPin className="h-4 w-4 text-[var(--color-primary)]" />
                   <span>Selected location</span>
                 </div>
 
                 {selection ? (
-                  <div className="mt-3 space-y-3">
+                  <div className="mt-2.5 space-y-2.5 md:mt-3 md:space-y-3">
                     <div>
-                      <div className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                      <div className="text-[0.72rem] font-medium text-[var(--color-muted-foreground)] md:text-[0.78rem]">
                         Place
                       </div>
-                      <div className="mt-1 text-[0.9rem] leading-6 text-[var(--color-foreground)]">
+                      <div className="mt-0.5 line-clamp-2 text-[0.84rem] leading-5 text-[var(--color-foreground)] md:mt-1 md:line-clamp-none md:text-[0.9rem] md:leading-6">
                         {selection.locationName}
                       </div>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-1">
                       <div>
-                        <div className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                        <div className="text-[0.7rem] font-medium text-[var(--color-muted-foreground)] md:text-[0.78rem]">
                           Latitude
                         </div>
-                        <div className="mt-1 font-mono text-[0.92rem] tabular-nums text-[var(--color-foreground)]">
+                        <div className="mt-0.5 font-mono text-[0.8rem] tabular-nums text-[var(--color-foreground)] md:mt-1 md:text-[0.92rem]">
                           {selection.latitude.toFixed(6)}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
+                        <div className="text-[0.7rem] font-medium text-[var(--color-muted-foreground)] md:text-[0.78rem]">
                           Longitude
                         </div>
-                        <div className="mt-1 font-mono text-[0.92rem] tabular-nums text-[var(--color-foreground)]">
+                        <div className="mt-0.5 font-mono text-[0.8rem] tabular-nums text-[var(--color-foreground)] md:mt-1 md:text-[0.92rem]">
                           {selection.longitude.toFixed(6)}
                         </div>
                       </div>
                     </div>
                     {resolvingSelection ? (
-                      <div className="text-[0.8rem] text-[var(--color-muted-foreground)]">
+                      <div className="text-[0.76rem] text-[var(--color-muted-foreground)] md:text-[0.8rem]">
                         Resolving nearby place name...
                       </div>
                     ) : null}
@@ -379,13 +379,13 @@ export function IncidentLocationPicker({
                     ) : null}
                   </div>
                 ) : (
-                  <p className="mt-3 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+                  <p className="mt-2 text-[0.8rem] leading-5 text-[var(--color-muted-foreground)] md:mt-3 md:text-[0.84rem] md:leading-6">
                     Search for a place or click the map to place a temporary marker.
                   </p>
                 )}
               </div>
 
-              <div className="mt-4 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+              <div className="mt-4 hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 md:block">
                 <div className="text-[0.88rem] font-semibold text-[var(--color-foreground)]">
                   How to use
                 </div>
@@ -403,7 +403,7 @@ export function IncidentLocationPicker({
                 </div>
               ) : null}
 
-              <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row md:flex-col lg:flex-row">
+              <div className="mt-auto hidden flex-col gap-2 pt-4 md:flex lg:flex-row">
                 <button
                   type="button"
                   onClick={onClose}
@@ -425,6 +425,28 @@ export function IncidentLocationPicker({
                 </button>
               </div>
             </aside>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3 border-t border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-4 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] pt-3 shadow-[0_-12px_28px_color-mix(in_srgb,var(--color-background)_28%,transparent)] backdrop-blur-md md:hidden">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[var(--color-surface)] px-4 text-[0.88rem] font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-panel)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={!selection || resolvingSelection || searching}
+              className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {resolvingSelection
+                ? "Resolving location..."
+                : searching
+                  ? "Please wait..."
+                  : "Use this location"}
+            </button>
           </div>
         </div>
       </section>

@@ -43,9 +43,27 @@ function PickerMapEvents({
       zoom: number,
       options?: Record<string, unknown>,
     ) => void;
+    invalidateSize: (options?: Record<string, unknown>) => void;
     on: (event: string, handler: (event: { latlng: { lat: number; lng: number } }) => void) => void;
     off: (event: string, handler: (event: { latlng: { lat: number; lng: number } }) => void) => void;
   };
+
+  useEffect(() => {
+    const invalidateMapSize = () => {
+      window.requestAnimationFrame(() => {
+        interactiveMap.invalidateSize({ pan: false });
+      });
+    };
+    const timeoutId = window.setTimeout(invalidateMapSize, 120);
+
+    invalidateMapSize();
+    window.addEventListener("resize", invalidateMapSize);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("resize", invalidateMapSize);
+    };
+  }, [interactiveMap]);
 
   useEffect(() => {
     const target = focusCoordinates ?? selectedCoordinates;
