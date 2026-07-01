@@ -33,7 +33,9 @@ function buildReportListResponse(
   },
 ) {
   return Response.json({
-    data: data.map((report) => serializeReportRecord(report, pagination.sessionHash)),
+    data: data.map((report: ReportListRecord) =>
+      serializeReportRecord(report, pagination.sessionHash),
+    ),
     pagination: {
       page: pagination.page,
       limit: pagination.limit,
