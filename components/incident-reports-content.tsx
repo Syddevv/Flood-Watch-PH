@@ -85,6 +85,17 @@ type FormState = {
   photos: File[];
 };
 
+type ReportReverseGeocodeResponse =
+  | {
+      data: {
+        locationName: string | null;
+        formattedAddress: string | null;
+      };
+    }
+  | {
+      error: string;
+    };
+
 type ToastState = {
   message: string;
   tone: "success" | "error";
@@ -1137,7 +1148,7 @@ export function IncidentReportsContent() {
     if (!navigator.geolocation) {
       setToast({
         tone: "error",
-        message: "Current location is not supported on this browser.",
+        message: "Browser does not support geolocation.",
       });
       return;
     }
@@ -1146,43 +1157,81 @@ export function IncidentReportsContent() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const latitude = position.coords.latitude.toFixed(6);
-        const longitude = position.coords.longitude.toFixed(6);
+        const latitude = String(position.coords.latitude);
+        const longitude = String(position.coords.longitude);
 
         updateFormState("latitude", latitude);
         updateFormState("longitude", longitude);
 
         try {
-          const result = await fetchWeatherLocation({
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            name: "Your Location",
+          const searchParams = new URLSearchParams({
+            lat: latitude,
+            lng: longitude,
           });
-          const resolvedLocationName = result.resolvedAddress?.trim() || result.location.name.trim();
+          const response = await fetch(`/api/reports/reverse-geocode?${searchParams.toString()}`, {
+            cache: "no-store",
+          });
+          const payload = (await response.json()) as ReportReverseGeocodeResponse;
 
-          if (resolvedLocationName) {
-            updateFormState("locationName", resolvedLocationName);
+          if (!response.ok || !("data" in payload)) {
+            throw new Error("error" in payload ? payload.error : "Reverse-geocoding failed.");
           }
+
+          const resolvedLocationName =
+            payload.data.formattedAddress?.trim() || payload.data.locationName?.trim();
+
+          if (!resolvedLocationName) {
+            throw new Error("Reverse-geocoding failed.");
+          }
+
+          updateFormState("locationName", resolvedLocationName);
         } catch {
-          setToast({
-            tone: "error",
-            message: "Current coordinates added. Enter the location name manually if needed.",
-          });
+          try {
+            const result = await fetchWeatherLocation({
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+              name: "Your Location",
+            });
+            const resolvedLocationName =
+              result.resolvedAddress?.trim() || result.location.name.trim();
+
+            if (!resolvedLocationName) {
+              throw new Error("Reverse-geocoding failed.");
+            }
+
+            updateFormState("locationName", resolvedLocationName);
+            setToast({
+              tone: "error",
+              message: "Detailed address lookup failed. Coordinates were added with a broader location.",
+            });
+          } catch {
+            setToast({
+              tone: "error",
+              message: "Reverse-geocoding failed. Coordinates were added; enter the location name manually.",
+            });
+          }
         } finally {
           setLoadingCurrentLocation(false);
         }
       },
-      () => {
+      (error) => {
         setLoadingCurrentLocation(false);
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? "Permission denied. Allow location access to use your current location."
+            : error.code === error.POSITION_UNAVAILABLE
+              ? "Location unavailable. Check GPS or network location services and try again."
+              : "Location request timed out. Move to an open area or try again.";
+
         setToast({
           tone: "error",
-          message: "Unable to read your current location.",
+          message,
         });
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        timeout: 12000,
+        maximumAge: 30000,
       },
     );
   }
@@ -1530,7 +1579,7 @@ export function IncidentReportsContent() {
                       ) : (
                         <Phone className="h-4 w-4" />
                       )}
-                      <span>{loadingCurrentLocation ? "Detecting location..." : "Use current location"}</span>
+                      <span>{loadingCurrentLocation ? "Detecting your location..." : "Use current location"}</span>
                     </button>
                   </div>
 
