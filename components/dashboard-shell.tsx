@@ -1362,9 +1362,7 @@ export function DashboardShell({
           <Sidebar
             items={NAV_ITEMS}
             activeItem={activeItem}
-            alerts={weatherOverview.alerts}
             onSelect={handleSelect}
-            onViewAlert={openWeatherAlertViewer}
             open={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
           />

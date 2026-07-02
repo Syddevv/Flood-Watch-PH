@@ -1,121 +1,22 @@
 "use client";
 
-import { Clock3, PanelLeftClose, ShieldCheck, X } from "lucide-react";
+import { PanelLeftClose, X } from "lucide-react";
 
-import { WeatherAlertIcon } from "@/components/weather-alert-icon";
-import {
-  alertSeverityBadgeClasses,
-  alertSeverityIconClasses,
-  getAlertRelativeUpdateLabel,
-  getAlertSummary,
-  sortAlertsByPriority,
-} from "@/lib/alert-ui";
-import type { FloodAlert, NavItem } from "@/lib/types";
+import type { NavItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type SidebarProps = {
   items: NavItem[];
   activeItem: string;
-  alerts?: FloodAlert[];
   onSelect: (id: string) => void;
-  onViewAlert?: (alertId: string) => void;
   open: boolean;
   onClose: () => void;
 };
 
-function SidebarSignalCard({
-  alerts = [],
-  onViewAlert,
-}: {
-  alerts?: FloodAlert[];
-  onViewAlert?: (alertId: string) => void;
-}) {
-  const orderedAlerts = sortAlertsByPriority(alerts);
-  const alert = orderedAlerts[0] ?? null;
-
-  if (!alert) {
-    return (
-      <div className="rounded-[14px] border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-3">
-        <div className="flex items-start gap-2.5">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[color:color-mix(in_srgb,var(--color-success)_14%,var(--color-surface))] text-[var(--color-success-text)]">
-            <ShieldCheck className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <div className="text-[0.82rem] font-semibold text-[var(--color-foreground)]">
-              No active weather alerts
-            </div>
-            <p className="mt-1 text-[0.72rem] leading-5 text-[var(--color-muted-foreground)]">
-              Weather alerts will appear here when available.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const additionalAlertCount = Math.max(0, orderedAlerts.length - 1);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onViewAlert?.(alert.id)}
-      className={cn(
-        "group w-full cursor-pointer rounded-[14px] border bg-[color:color-mix(in_srgb,var(--color-surface)_90%,transparent)] p-3 text-left transition duration-150 hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] active:translate-y-0",
-        alertSeverityBadgeClasses[alert.severity],
-      )}
-    >
-      <div className="flex items-start gap-2.5">
-        <span
-          className={cn(
-            "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]",
-            alertSeverityIconClasses[alert.severity],
-          )}
-        >
-          <WeatherAlertIcon alert={alert} className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span
-              className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-[0.64rem] font-semibold",
-                alertSeverityBadgeClasses[alert.severity],
-              )}
-            >
-              {alert.riskLevel}
-            </span>
-            {additionalAlertCount > 0 ? (
-              <span className="rounded-full bg-[var(--color-muted-surface)] px-2 py-0.5 text-[0.64rem] font-medium text-[var(--color-muted-text)]">
-                +{additionalAlertCount} more alert{additionalAlertCount === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-1 line-clamp-1 text-[0.82rem] font-semibold text-[var(--color-foreground)]">
-            {alert.title}
-          </div>
-          <p className="mt-1 line-clamp-2 text-[0.72rem] leading-5 text-[var(--color-muted-foreground)]">
-            {getAlertSummary(alert)}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.68rem] text-[var(--color-muted-foreground)]">
-            <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3.25 w-3.25 shrink-0" />
-              <span>{getAlertRelativeUpdateLabel(alert)}</span>
-            </span>
-            <span className="font-medium text-[var(--color-foreground)]">
-              Tap to view full advisory
-            </span>
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export function Sidebar({
   items,
   activeItem,
-  alerts = [],
   onSelect,
-  onViewAlert,
   open,
   onClose,
 }: SidebarProps) {
@@ -218,19 +119,11 @@ export function Sidebar({
           </nav>
 
           <div className="shrink-0 border-t border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] px-3.5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
-            <SidebarSignalCard
-              alerts={alerts}
-              onViewAlert={(alertId) => {
-                onClose();
-                onViewAlert?.(alertId);
-              }}
-            />
-
             <button
               type="button"
               aria-label="Collapse navigation"
               onClick={onClose}
-              className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_68%,transparent)] px-3 py-2 text-[0.78rem] font-medium text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)] md:hidden"
+              className="flex w-full items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_68%,transparent)] px-3 py-2 text-[0.78rem] font-medium text-[var(--color-muted-foreground)] transition hover:text-[var(--color-foreground)] md:hidden"
             >
               <PanelLeftClose className="h-3.5 w-3.5" />
               <span>Close menu</span>
