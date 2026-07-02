@@ -1,4 +1,4 @@
-<img width="942" height="696" alt="Screenshot 2026-07-02 213006" src="https://github.com/user-attachments/assets/0892cd2f-627a-4691-acfa-8410f861dbc2" /># 🌊 FloodWatch PH
+# 🌊 FloodWatch PH
 
 A community-powered flood monitoring and reporting platform for the Philippines.
 
