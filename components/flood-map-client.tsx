@@ -62,6 +62,8 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_CENTER: [number, number] = [14.6176, 121.0325];
 const DEFAULT_ZOOM = 10;
+const MOBILE_SELECTED_REPORT_ZOOM = 15;
+const MOBILE_SELECTED_REPORT_DOWN_OFFSET = 56;
 const STREET_TILES = {
   url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
   attribution: "&copy; OpenStreetMap",
@@ -123,6 +125,30 @@ type CenterMarkerInstance = {
 };
 
 type ReportMarkerInstance = FocusableLeafletMarker;
+
+function openReportMarkerCentered(
+  marker: FocusableLeafletMarker,
+  options: { zoom?: number; flyDuration?: number; reopenDelayMs?: number } = {},
+) {
+  const targetLatLng = marker.getLatLng();
+
+  marker.openPopup();
+  marker._map?.flyTo(targetLatLng, options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM, {
+    duration: options.flyDuration ?? 0.45,
+  });
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.setTimeout(() => {
+    marker.openPopup();
+    marker._map?.panBy?.([0, MOBILE_SELECTED_REPORT_DOWN_OFFSET], {
+      animate: true,
+      duration: 0.25,
+    });
+  }, options.reopenDelayMs ?? 180);
+}
 
 function isMobileViewport() {
   return typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_PX;
@@ -694,6 +720,11 @@ export function FloodMapClient({
         return;
       }
 
+      if (mobilePerformanceMode) {
+        openReportMarkerCentered(targetMarker);
+        return;
+      }
+
       panToReportWithOffset(targetMarker, { reason: "external" });
     };
 
@@ -703,7 +734,7 @@ export function FloodMapClient({
       window.cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
-  }, [focusedReportId, reportMarkers]);
+  }, [focusedReportId, mobilePerformanceMode, reportMarkers]);
 
   useEffect(() => {
     if (!selectedReportId) {
@@ -722,11 +753,13 @@ export function FloodMapClient({
         return;
       }
 
-      panToReportWithOffset(targetMarker, {
-        reason: selectedReportOpenReasonRef.current,
-        flyDuration: mobilePerformanceMode ? 0.45 : undefined,
-        panDelayMs: mobilePerformanceMode ? 120 : undefined,
-      });
+      if (mobilePerformanceMode) {
+        openReportMarkerCentered(targetMarker);
+      } else {
+        panToReportWithOffset(targetMarker, {
+          reason: selectedReportOpenReasonRef.current,
+        });
+      }
       selectedReportOpenReasonRef.current = "external";
     };
 
@@ -874,9 +907,13 @@ export function FloodMapClient({
 
                     onSelectReport(marker.reportId);
                     selectedReportOpenReasonRef.current = "marker-click";
-                    targetMarker._map?.flyTo(targetMarker.getLatLng(), 13, {
+                    targetMarker._map?.flyTo(
+                      targetMarker.getLatLng(),
+                      mobilePerformanceMode ? MOBILE_SELECTED_REPORT_ZOOM : 13,
+                      {
                       duration: mobilePerformanceMode ? 0.45 : 0.9,
-                    });
+                      },
+                    );
                   },
                 }}
               >
