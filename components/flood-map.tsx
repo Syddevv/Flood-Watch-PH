@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Building2, ChevronDown, ChevronUp } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
@@ -134,6 +134,7 @@ export function FloodMap({
   onResolveReport,
 }: FloodMapProps) {
   const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
+  const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -148,6 +149,20 @@ export function FloodMap({
 
     return () => window.cancelAnimationFrame(frameId);
   }, []);
+
+  useEffect(() => {
+    if (!selectedReportId || typeof window === "undefined") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (window.innerWidth < 768) {
+        setIsLayerPanelCollapsed(true);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedReportId]);
 
   const layerSummary = useMemo(() => {
     if (loadingReports) {
@@ -239,7 +254,7 @@ export function FloodMap({
         selectedReportId={selectedReportId}
       />
 
-      <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:max-w-[344px]">
+      <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] hidden max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:block md:max-w-[344px]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[0.96rem] font-semibold text-[var(--color-foreground)]">
@@ -274,6 +289,9 @@ export function FloodMap({
             <div className="text-[0.74rem] font-medium text-[var(--color-muted-foreground)]">
               Active layers
             </div>
+            <p className="text-[0.72rem] leading-4 text-[var(--color-muted-foreground)]">
+              Tap a layer to show or hide pins.
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -418,6 +436,215 @@ export function FloodMap({
             </div>
           </section>
         </div>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-3 bottom-24 z-[var(--layer-map-overlay)] md:hidden">
+        {isLayerPanelCollapsed ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              aria-label="Open map controls"
+              aria-expanded="false"
+              onClick={() => setIsLayerPanelCollapsed(false)}
+              className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3.5 text-[0.82rem] font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-floating)] backdrop-blur-md"
+            >
+              <Layers className="h-4 w-4 text-[var(--color-primary)]" />
+              <span>Layers</span>
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[0.68rem] text-[var(--color-primary)]">
+                {(showFloodReports ? 1 : 0) +
+                  (showEvacuationCenters ? 1 : 0) +
+                  (showRiskOverlays ? 1 : 0)}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <div className="pointer-events-auto max-h-[46dvh] overflow-y-auto rounded-t-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_96%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
+                  Map controls
+                </div>
+                <div className="mt-0.5 truncate text-[0.72rem] text-[var(--color-muted-foreground)]">
+                  {layerSummary}
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Collapse map controls"
+                aria-expanded="true"
+                onClick={() => setIsLayerPanelCollapsed(true)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+
+            <section className="mt-3 space-y-2">
+              <p className="text-[0.72rem] leading-4 text-[var(--color-muted-foreground)]">
+                Tap a layer to show or hide pins.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={onToggleFloodReports}
+                  aria-pressed={showFloodReports}
+                  className={cn(
+                    "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[11px] border px-2.5 text-[0.76rem] font-semibold transition-colors",
+                    showFloodReports
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-[var(--shadow-primary)]"
+                      : "border-[var(--color-border)] bg-transparent text-[var(--color-muted-foreground)]",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      showFloodReports ? "bg-white" : "bg-[var(--color-muted-foreground)]/50",
+                    )}
+                  />
+                  <span>Reports</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onToggleEvacuationCenters}
+                  aria-pressed={showEvacuationCenters}
+                  className={cn(
+                    "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[11px] border px-2.5 text-[0.76rem] font-semibold transition-colors",
+                    showEvacuationCenters
+                      ? "border-[var(--color-success-border)] bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
+                      : "border-[var(--color-border)] bg-transparent text-[var(--color-muted-foreground)]",
+                  )}
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span className="truncate">Evacuation</span>
+                </button>
+                {allowPolygonToggle ? (
+                  <button
+                    type="button"
+                    onClick={onToggleRiskOverlays}
+                    aria-pressed={showRiskOverlays}
+                    className={cn(
+                      "col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[11px] border px-2.5 text-[0.76rem] font-semibold transition-colors",
+                      showRiskOverlays
+                        ? "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
+                        : "border-[var(--color-border)] bg-transparent text-[var(--color-muted-foreground)]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        showRiskOverlays
+                          ? "bg-[var(--color-warning)]"
+                          : "bg-[var(--color-muted-foreground)]/50",
+                      )}
+                    />
+                    <span>Risk overlay</span>
+                  </button>
+                ) : null}
+              </div>
+            </section>
+
+            <section
+              className={cn(
+                "mt-3 grid gap-2 border-t border-[color:color-mix(in_srgb,var(--color-border)_66%,transparent)] pt-3",
+                !showFloodReports && "opacity-50",
+              )}
+            >
+              <label className="grid gap-1.5">
+                <span className="text-[0.72rem] font-medium text-[var(--color-muted-foreground)]">
+                  Status filter
+                </span>
+                <select
+                  value={selectedReportStatus}
+                  onChange={(event) =>
+                    onSelectReportStatus(event.target.value as ReportStatusFilterId)
+                  }
+                  disabled={!showFloodReports}
+                  className="h-10 w-full rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[0.82rem] text-[var(--color-foreground)] outline-none"
+                >
+                  {reportStatusFilterOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={onToggleHighSeverityOnly}
+                disabled={!showFloodReports}
+                aria-pressed={highSeverityOnly}
+                className={cn(
+                  "min-h-10 rounded-[11px] border px-3 text-[0.78rem] font-semibold transition-colors",
+                  highSeverityOnly
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-foreground)]",
+                  !showFloodReports && "cursor-not-allowed opacity-60",
+                )}
+              >
+                High severity only
+              </button>
+            </section>
+
+            <section className="mt-3 border-t border-[color:color-mix(in_srgb,var(--color-border)_66%,transparent)] pt-2">
+              <button
+                type="button"
+                aria-expanded={isMapKeyOpen}
+                onClick={() => setIsMapKeyOpen((current) => !current)}
+                className="flex w-full items-center justify-between gap-3 rounded-[10px] px-1 py-1.5 text-left text-[0.78rem] font-semibold text-[var(--color-foreground)]"
+              >
+                <span>Map key</span>
+                {isMapKeyOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+              {isMapKeyOpen ? (
+                <div className="mt-2 grid gap-2">
+                  {markerLegendItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-2 text-[0.76rem] text-[var(--color-foreground)]"
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.68rem] font-semibold leading-none",
+                          item.markerClassName,
+                        )}
+                      >
+                        {item.glyph}
+                      </span>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {legend.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 text-[0.72rem] text-[var(--color-muted-foreground)]"
+                      >
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{
+                            backgroundColor:
+                              item.severity === "severe"
+                                ? "var(--color-danger)"
+                                : item.severity === "high"
+                                  ? "var(--color-high)"
+                                  : item.severity === "moderate"
+                                    ? "var(--color-warning)"
+                                    : "var(--color-success)",
+                          }}
+                        />
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          </div>
+        )}
       </div>
 
       {selectionNotice ? (
