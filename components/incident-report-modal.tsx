@@ -475,7 +475,7 @@ export function IncidentReportModal({
           </button>
 
           {currentPhoto?.imageUrl ? (
-            <div className="relative h-[160px] overflow-hidden bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto">
+            <div className="relative h-[clamp(180px,52vw,240px)] shrink-0 overflow-hidden rounded-t-[18px] rounded-b-none bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto md:rounded-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentPhoto.imageUrl}
@@ -514,7 +514,10 @@ export function IncidentReportModal({
 
           <div
             ref={modalBodyRef}
-            className="flex-1 overflow-y-auto px-3 pb-28 pt-3 md:px-5 md:pb-24 md:pt-4"
+            className={cn(
+              "flex-1 overflow-y-auto px-3 pb-28 md:px-5 md:pb-24 md:pt-4",
+              currentPhoto?.imageUrl ? "pt-2.5" : "pt-3",
+            )}
           >
             <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
               <span
