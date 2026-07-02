@@ -30,6 +30,7 @@ type MobileLiveInfoSheetProps = {
   communityReportsLoading?: boolean;
   communityReportsError?: string | null;
   onViewCommunityReport?: (reportId: string) => void;
+  onViewAlert?: (alertId: string) => void;
   communityReportsDisclaimer?: string;
 };
 
@@ -52,6 +53,7 @@ export function MobileLiveInfoSheet({
   communityReportsLoading,
   communityReportsError,
   onViewCommunityReport,
+  onViewAlert,
   communityReportsDisclaimer,
 }: MobileLiveInfoSheetProps) {
   if (!open) {
@@ -105,6 +107,10 @@ export function MobileLiveInfoSheet({
             communityReportsLoading={communityReportsLoading}
             communityReportsError={communityReportsError}
             onViewCommunityReport={onViewCommunityReport}
+            onViewAlert={(alertId) => {
+              onOpenChange(false);
+              onViewAlert?.(alertId);
+            }}
             communityReportsDisclaimer={communityReportsDisclaimer}
             className="border-l-0"
           />

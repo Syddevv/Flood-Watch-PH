@@ -16,6 +16,7 @@ import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
+import { WeatherAlertViewer } from "@/components/weather-alert-viewer";
 import {
   EMERGENCY_HOTLINES,
   EVACUATION_CENTERS,
@@ -48,6 +49,7 @@ import {
 } from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
+  FloodAlert,
   IncidentReport,
   ReportMapMarker,
   Theme,
@@ -240,6 +242,13 @@ export function DashboardShell({
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [focusedCenterId, setFocusedCenterId] = useState<string | null>(null);
   const [focusedReportId, setFocusedReportId] = useState<string | null>(null);
+  const [focusedAlertLocation, setFocusedAlertLocation] = useState<{
+    id: string;
+    coordinates: [number, number];
+    zoom?: number;
+  } | null>(null);
+  const [weatherAlertViewerOpen, setWeatherAlertViewerOpen] = useState(false);
+  const [selectedWeatherAlertId, setSelectedWeatherAlertId] = useState<string | null>(null);
 
   useEffect(() => {
     let frameId = 0;
@@ -776,6 +785,7 @@ export function DashboardShell({
     setSheetOpen(false);
     setSidebarOpen(false);
     setLiveAlertsOpen(false);
+    setWeatherAlertViewerOpen(false);
 
     if (id === "flood-map") {
       router.push("/");
@@ -809,14 +819,66 @@ export function DashboardShell({
     setSheetOpen(false);
   };
 
+  const findWeatherLocationForAlert = (alert: FloodAlert) =>
+    weatherOverview.locations.find(
+      (location) => location.name.toLowerCase() === alert.location.toLowerCase(),
+    ) ?? null;
+
+  const openWeatherAlertViewer = (alertId: string) => {
+    setSheetOpen(false);
+    setSidebarOpen(false);
+    setLiveAlertsOpen(false);
+    setSelectedWeatherAlertId(alertId);
+    setWeatherAlertViewerOpen(true);
+  };
+
+  const closeWeatherAlertViewer = () => {
+    setWeatherAlertViewerOpen(false);
+  };
+
+  const viewWeatherAlertOnMap = (alert: FloodAlert) => {
+    const location = findWeatherLocationForAlert(alert);
+
+    if (!location) {
+      return;
+    }
+
+    setSheetOpen(false);
+    setSidebarOpen(false);
+    setWeatherAlertViewerOpen(false);
+    setLiveAlertsOpen(false);
+    setFloodMapModalOpen(false);
+    setFocusedCenterId(null);
+    setFocusedReportId(null);
+    setFocusedAlertLocation(null);
+
+    window.requestAnimationFrame(() => {
+      setFocusedAlertLocation({
+        id: alert.id,
+        coordinates: [location.latitude, location.longitude],
+        zoom: 12,
+      });
+    });
+  };
+
+  const viewAllWeatherAlerts = () => {
+    setWeatherAlertViewerOpen(false);
+    setSheetOpen(false);
+    setSidebarOpen(false);
+    setLiveAlertsOpen(false);
+    router.push("/weather-monitoring");
+  };
+
   const focusFloodMapReport = (reportId: string) => {
     setSheetOpen(false);
     setLiveAlertsOpen(false);
+    setWeatherAlertViewerOpen(false);
     setFloodMapModalOpen(false);
     setFloodMapSelectedReportId(reportId);
     setFloodMapShowReports(true);
     setFloodMapHighSeverityOnly(false);
     setFocusedCenterId(null);
+    setFocusedAlertLocation(null);
     setFocusedReportId(null);
 
     window.requestAnimationFrame(() => {
@@ -827,9 +889,11 @@ export function DashboardShell({
   const openFloodMapReportDetails = (reportId: string) => {
     setSheetOpen(false);
     setLiveAlertsOpen(false);
+    setWeatherAlertViewerOpen(false);
     setFloodMapShowReports(true);
     setFloodMapHighSeverityOnly(false);
     setFocusedCenterId(null);
+    setFocusedAlertLocation(null);
     setFocusedReportId(reportId);
     setFloodMapSelectedReportId(reportId);
     setFloodMapModalOpen(true);
@@ -839,6 +903,7 @@ export function DashboardShell({
     setFloodMapSelectionNotice(null);
     setFloodMapSelectedReportId(reportId);
     setFocusedCenterId(null);
+    setFocusedAlertLocation(null);
     setFocusedReportId(reportId);
   };
 
@@ -1249,6 +1314,7 @@ export function DashboardShell({
                   }
                   focusedCenterId={focusedCenterId}
                   focusedReportId={focusedReportId}
+                  focusedAlertLocation={focusedAlertLocation}
                   selectedReportId={floodMapSelectedReportId}
                   selectedReportStatus={floodMapSelectedReportStatus}
                   onSelectReportStatus={setFloodMapSelectedReportStatus}
@@ -1319,6 +1385,7 @@ export function DashboardShell({
               communityReportsLoading={floodMapLoadingReports}
               communityReportsError={floodMapReportLoadError}
               onViewCommunityReport={openFloodMapReportDetails}
+              onViewAlert={openWeatherAlertViewer}
               communityReportsDisclaimer="Community reports may be unverified."
               className="hidden md:flex"
             />
@@ -1350,7 +1417,20 @@ export function DashboardShell({
           communityReportsLoading={floodMapLoadingReports}
           communityReportsError={floodMapReportLoadError}
           onViewCommunityReport={openFloodMapReportDetails}
+          onViewAlert={openWeatherAlertViewer}
           communityReportsDisclaimer="Community reports may be unverified."
+        />
+      ) : null}
+
+      {isFloodMapView ? (
+        <WeatherAlertViewer
+          open={weatherAlertViewerOpen}
+          alerts={weatherOverview.alerts}
+          initialAlertId={selectedWeatherAlertId}
+          canViewAlertOnMap={(alert) => Boolean(findWeatherLocationForAlert(alert))}
+          onClose={closeWeatherAlertViewer}
+          onViewOnMap={viewWeatherAlertOnMap}
+          onViewAllAlerts={viewAllWeatherAlerts}
         />
       ) : null}
 

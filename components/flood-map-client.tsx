@@ -150,6 +150,26 @@ type MapZoomControlsProps = {
   onToggleSatellite: () => void;
 };
 
+type FocusedMapLocation = {
+  id: string;
+  coordinates: [number, number];
+  zoom?: number;
+} | null;
+
+function FocusMapLocation({ location }: { location: FocusedMapLocation }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!location) {
+      return;
+    }
+
+    map.flyTo(location.coordinates, location.zoom ?? 12, { duration: 1.05 });
+  }, [location, map]);
+
+  return null;
+}
+
 function MapZoomControls({
   satelliteMode,
   onToggleSatellite,
@@ -203,6 +223,7 @@ type FloodMapClientProps = {
   focusedCenterId?: string | null;
   focusedReportId?: string | null;
   selectedReportId?: string | null;
+  focusedAlertLocation?: FocusedMapLocation;
 };
 
 export function FloodMapClient({
@@ -219,6 +240,7 @@ export function FloodMapClient({
   focusedCenterId = null,
   focusedReportId = null,
   selectedReportId = null,
+  focusedAlertLocation = null,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
   const centerMarkerRefs = useRef<Record<string, CenterMarkerInstance | null>>({});
@@ -296,6 +318,7 @@ export function FloodMapClient({
         )}
       >
         <TileLayer attribution={tileConfig.attribution} url={tileConfig.url} />
+        <FocusMapLocation location={focusedAlertLocation} />
 
         {polygons.map((polygon) => (
           <Polygon

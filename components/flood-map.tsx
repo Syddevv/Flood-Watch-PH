@@ -86,6 +86,11 @@ type FloodMapProps = {
   onToggleEvacuationCenters: () => void;
   focusedCenterId?: string | null;
   focusedReportId?: string | null;
+  focusedAlertLocation?: {
+    id: string;
+    coordinates: [number, number];
+    zoom?: number;
+  } | null;
   selectedReportId?: string | null;
   selectedReportStatus: ReportStatusFilterId;
   onSelectReportStatus: (filter: ReportStatusFilterId) => void;
@@ -117,6 +122,7 @@ export function FloodMap({
   onToggleEvacuationCenters,
   focusedCenterId = null,
   focusedReportId = null,
+  focusedAlertLocation = null,
   selectedReportId = null,
   selectedReportStatus,
   onSelectReportStatus,
@@ -251,6 +257,7 @@ export function FloodMap({
         resolvedReportIds={resolvedReportIds}
         focusedCenterId={focusedCenterId}
         focusedReportId={focusedReportId}
+        focusedAlertLocation={focusedAlertLocation}
         selectedReportId={selectedReportId}
       />
 

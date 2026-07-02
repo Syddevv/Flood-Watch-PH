@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
-import { Check, Clock3, Info, ThumbsUp } from "lucide-react";
+import { Check, Clock3, Info, ShieldCheck, ThumbsUp } from "lucide-react";
 
-import { AlertCard } from "@/components/alert-card";
 import { EmergencyHotlineCard } from "@/components/emergency-hotline-card";
 import { EvacuationCenterCard } from "@/components/evacuation-center-card";
 import { WeatherOverview } from "@/components/weather-overview";
+import { WeatherAlertIcon } from "@/components/weather-alert-icon";
+import {
+  alertSeverityBadgeClasses,
+  alertSeverityIconClasses,
+  getAlertRelativeUpdateLabel,
+  getAlertSummary,
+  sortAlertsByPriority,
+} from "@/lib/alert-ui";
 import { formatCountLabel } from "@/lib/reporting";
 import {
   getReportCommunitySignal,
@@ -43,6 +50,7 @@ type RightInfoPanelProps = {
   communityReportsLoading?: boolean;
   communityReportsError?: string | null;
   onViewCommunityReport?: (reportId: string) => void;
+  onViewAlert?: (alertId: string) => void;
   communityReportsDisclaimer?: string;
   className?: string;
 };
@@ -174,6 +182,92 @@ function SidebarEmptyState({ children }: { children: ReactNode }) {
   );
 }
 
+function SidebarNoAlertsState() {
+  return (
+    <div className="rounded-[10px] border border-[var(--color-success-border)] bg-[var(--color-success-surface)] px-3.5 py-3">
+      <div className="flex items-start gap-2.5">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-success)_14%,var(--color-surface))] text-[var(--color-success-text)]">
+          <ShieldCheck className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[0.86rem] font-semibold text-[var(--color-foreground)]">
+            No active weather alerts
+          </div>
+          <p className="mt-1 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
+            We&apos;ll notify you here when new PAGASA alerts become available.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SidebarAlertPreview({
+  alerts,
+  onViewAlert,
+}: {
+  alerts: FloodAlert[];
+  onViewAlert?: (alertId: string) => void;
+}) {
+  const orderedAlerts = sortAlertsByPriority(alerts);
+  const alert = orderedAlerts[0];
+
+  if (!alert) {
+    return <SidebarNoAlertsState />;
+  }
+
+  const additionalAlertCount = Math.max(0, orderedAlerts.length - 1);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onViewAlert?.(alert.id)}
+      className={cn(
+        "group w-full rounded-[12px] border bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3.5 py-3 text-left shadow-[var(--shadow-soft)] transition duration-150 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--color-primary)_38%,var(--color-border))] hover:shadow-[var(--shadow-floating)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] active:translate-y-0",
+        alertSeverityBadgeClasses[alert.severity],
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className={cn(
+            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px]",
+            alertSeverityIconClasses[alert.severity],
+          )}
+        >
+          <WeatherAlertIcon alert={alert} className="h-4.5 w-4.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold",
+                alertSeverityBadgeClasses[alert.severity],
+              )}
+            >
+              {alert.riskLevel}
+            </span>
+            {additionalAlertCount > 0 ? (
+              <span className="rounded-full bg-[var(--color-muted-surface)] px-2 py-0.5 text-[0.66rem] font-medium text-[var(--color-muted-text)]">
+                +{additionalAlertCount} more alert{additionalAlertCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-1 line-clamp-2 text-[0.9rem] font-semibold leading-5 text-[var(--color-foreground)]">
+            {alert.title}
+          </div>
+          <p className="mt-1 line-clamp-1 text-[0.76rem] leading-5 text-[var(--color-muted-foreground)]">
+            {getAlertSummary(alert)}
+          </p>
+          <div className="mt-2 flex items-center gap-1.5 text-[0.7rem] text-[var(--color-muted-foreground)]">
+            <Clock3 className="h-3.25 w-3.25 shrink-0" />
+            <span>{getAlertRelativeUpdateLabel(alert)}</span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function PanelSection({
   title,
   description,
@@ -226,6 +320,7 @@ export function RightInfoPanel({
   communityReportsLoading = false,
   communityReportsError = null,
   onViewCommunityReport,
+  onViewAlert,
   communityReportsDisclaimer = "Community reports may be unverified.",
   className,
 }: RightInfoPanelProps) {
@@ -284,13 +379,9 @@ export function RightInfoPanel({
           ) : alertsError ? (
             <SidebarEmptyState>{alertsError}</SidebarEmptyState>
           ) : alerts.length === 0 ? (
-            <SidebarEmptyState>No major weather-based flood alerts right now.</SidebarEmptyState>
+            <SidebarNoAlertsState />
           ) : (
-            <div className="space-y-2">
-              {alerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} />
-              ))}
-            </div>
+            <SidebarAlertPreview alerts={alerts} onViewAlert={onViewAlert} />
           )}
         </PanelSection>
 
