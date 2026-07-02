@@ -43,12 +43,18 @@ type LiveAlertSummary = {
   nearbyActiveCount?: number;
 };
 
+type NearbyLocationStatus = "idle" | "loading" | "available" | "denied" | "unavailable" | "error";
+
 type LiveAlertsPanelProps = {
   open: boolean;
   loading?: boolean;
   error?: string | null;
   groups: LiveAlertGroup[];
   summary: LiveAlertSummary;
+  nearbyLocationStatus?: NearbyLocationStatus;
+  nearbyLocationError?: string | null;
+  nearbyRadiusLabel?: string;
+  onRequestNearbyLocation?: () => void;
   onClose: () => void;
   onViewOnMap: (reportId: string) => void;
   onViewDetails: (reportId: string) => void;
@@ -81,6 +87,10 @@ export function LiveAlertsPanel({
   error = null,
   groups,
   summary,
+  nearbyLocationStatus = "idle",
+  nearbyLocationError = null,
+  nearbyRadiusLabel = "15 km",
+  onRequestNearbyLocation,
   onClose,
   onViewOnMap,
   onViewDetails,
@@ -151,14 +161,42 @@ export function LiveAlertsPanel({
     return groups.filter((group) => group.id === activeTab && group.reports.length > 0);
   }, [activeTab, groups]);
 
-  const activeReportCount = groups
-    .filter((group) => group.id !== "receded")
-    .reduce((count, group) => count + group.reports.length, 0);
+  const activeReportCount = useMemo(() => {
+    const activeReportIds = new Set<string>();
+
+    for (const group of groups) {
+      if (group.id === "receded") {
+        continue;
+      }
+
+      for (const report of group.reports) {
+        activeReportIds.add(report.id);
+      }
+    }
+
+    return activeReportIds.size;
+  }, [groups]);
   const hasAnyVisibleReports = visibleGroups.length > 0;
   const hasCriticalAlerts = summary.criticalCount > 0;
   const showNoActiveReportsEmpty = activeReportCount === 0 && activeTab !== "receded";
   const showNearbyLocationHint =
     activeTab === "nearby" && (summary.nearbyActiveCount ?? 0) === 0 && activeReportCount > 0;
+  const nearbyLocationMessage =
+    nearbyLocationStatus === "loading"
+      ? "Finding nearby flood reports..."
+      : nearbyLocationStatus === "available"
+        ? `No active flood reports found within ${nearbyRadiusLabel} of your current location.`
+        : nearbyLocationStatus === "denied"
+          ? (nearbyLocationError ?? "Location permission is blocked for FloodWatch PH.")
+          : nearbyLocationStatus === "unavailable"
+            ? (nearbyLocationError ?? "Location is not available in this browser.")
+            : nearbyLocationStatus === "error"
+              ? (nearbyLocationError ?? "We could not read your current location. Please try again.")
+              : "Enable location to see nearby flood reports.";
+  const canRequestNearbyLocation =
+    Boolean(onRequestNearbyLocation) &&
+    nearbyLocationStatus !== "loading" &&
+    nearbyLocationStatus !== "available";
 
   const quickActions = [
     { label: "Check map reports", icon: MapPinned, onClick: onViewAllReports },
@@ -305,8 +343,22 @@ export function LiveAlertsPanel({
                 </div>
               </div>
             ) : showNearbyLocationHint ? (
-              <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                Enable location to see nearby flood reports.
+              <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4">
+                <div className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
+                  Nearby reports
+                </div>
+                <p className="mt-1 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
+                  {nearbyLocationMessage}
+                </p>
+                {canRequestNearbyLocation ? (
+                  <button
+                    type="button"
+                    onClick={onRequestNearbyLocation}
+                    className="mt-3 h-8 rounded-[10px] bg-[var(--color-primary)] px-3 text-[0.74rem] font-semibold text-[var(--color-primary-foreground)]"
+                  >
+                    Enable location
+                  </button>
+                ) : null}
               </div>
             ) : !hasAnyVisibleReports ? (
               <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-5">

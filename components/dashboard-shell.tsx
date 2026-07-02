@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, SquareStack } from "lucide-react";
 
@@ -93,6 +93,8 @@ type LiveAlertSummary = {
   nearbyActiveCount: number;
 };
 
+type UserLocationStatus = "idle" | "loading" | "available" | "denied" | "unavailable" | "error";
+
 type DashboardShellProps = {
   pageMode?:
     | "flood-map"
@@ -109,6 +111,27 @@ const EMPTY_WEATHER_OVERVIEW: WeatherOverviewData = {
   fetchedAt: "",
   advisoryMessage: "",
 };
+
+const NEARBY_REPORT_RADIUS_METERS = 15_000;
+
+function getDistanceMeters(
+  [latitudeA, longitudeA]: [number, number],
+  [latitudeB, longitudeB]: [number, number],
+) {
+  const earthRadiusMeters = 6_371_000;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = toRadians(latitudeB - latitudeA);
+  const longitudeDelta = toRadians(longitudeB - longitudeA);
+  const originLatitude = toRadians(latitudeA);
+  const targetLatitude = toRadians(latitudeB);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(originLatitude) *
+      Math.cos(targetLatitude) *
+      Math.sin(longitudeDelta / 2) ** 2;
+
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
 
 function FloodMapUndoToast({
   toast,
@@ -249,6 +272,54 @@ export function DashboardShell({
   } | null>(null);
   const [weatherAlertViewerOpen, setWeatherAlertViewerOpen] = useState(false);
   const [selectedWeatherAlertId, setSelectedWeatherAlertId] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [userLocationStatus, setUserLocationStatus] = useState<UserLocationStatus>("idle");
+  const [userLocationError, setUserLocationError] = useState<string | null>(null);
+
+  const requestUserLocation = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setUserLocationStatus("unavailable");
+      setUserLocationError("Location is not available in this browser.");
+      return;
+    }
+
+    setUserLocationStatus("loading");
+    setUserLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude]);
+        setUserLocationStatus("available");
+        setUserLocationError(null);
+      },
+      (error) => {
+        setUserLocation(null);
+        setUserLocationStatus(error.code === error.PERMISSION_DENIED ? "denied" : "error");
+        setUserLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission is blocked for FloodWatch PH."
+            : "We could not read your current location. Please try again.",
+        );
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 5 * 60 * 1000,
+        timeout: 10_000,
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!liveAlertsOpen || userLocationStatus !== "idle") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      requestUserLocation();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [liveAlertsOpen, requestUserLocation, userLocationStatus]);
 
   useEffect(() => {
     let frameId = 0;
@@ -636,6 +707,30 @@ export function DashboardShell({
     [floodMapFilteredReports],
   );
 
+  const floodMapNearbyReports = useMemo(() => {
+    if (!userLocation) {
+      return [];
+    }
+
+    return floodMapMappedReports
+      .filter((report) => matchesReportStatusFilter(report, "active"))
+      .map((report) => ({
+        report,
+        distanceMeters: getDistanceMeters(userLocation, report.coordinates as [number, number]),
+      }))
+      .filter(({ distanceMeters }) => distanceMeters <= NEARBY_REPORT_RADIUS_METERS)
+      .sort((first, second) => {
+        const distanceDifference = first.distanceMeters - second.distanceMeters;
+
+        if (distanceDifference !== 0) {
+          return distanceDifference;
+        }
+
+        return compareReportsByPriority(first.report, second.report);
+      })
+      .map(({ report }) => report);
+  }, [floodMapMappedReports, userLocation]);
+
   const floodMapLiveAlertGroups = useMemo<LiveAlertGroup[]>(() => {
     const activeReports = floodMapMappedReports
       .filter((report) => matchesReportStatusFilter(report, "active"))
@@ -695,8 +790,8 @@ export function DashboardShell({
       {
         id: "nearby",
         title: "Nearby active",
-        description: "Active reports near your location when location context is available.",
-        reports: take((report) => "distanceMeters" in report),
+        description: "Active reports within 15 km of your current location.",
+        reports: floodMapNearbyReports,
       },
       {
         id: "community-confirmed",
@@ -719,7 +814,7 @@ export function DashboardShell({
         reports: recededReports,
       },
     ];
-  }, [floodMapMappedReports]);
+  }, [floodMapMappedReports, floodMapNearbyReports]);
 
   const liveAlertsCount = useMemo(() => {
     return floodMapMappedReports.filter(
@@ -746,9 +841,9 @@ export function DashboardShell({
           freshness?.label === "Recently confirmed"
         );
       }).length,
-      nearbyActiveCount: activeReports.filter((report) => "distanceMeters" in report).length,
+      nearbyActiveCount: floodMapNearbyReports.length,
     };
-  }, [floodMapMappedReports]);
+  }, [floodMapMappedReports, floodMapNearbyReports]);
 
   const floodMapSelectedReport = useMemo(
     () => floodMapReports.find((report) => report.id === floodMapSelectedReportId) ?? null,
@@ -1443,6 +1538,10 @@ export function DashboardShell({
           error={floodMapReportLoadError}
           groups={floodMapLiveAlertGroups}
           summary={liveAlertSummary}
+          nearbyLocationStatus={userLocationStatus}
+          nearbyLocationError={userLocationError}
+          nearbyRadiusLabel="15 km"
+          onRequestNearbyLocation={requestUserLocation}
           onClose={() => setLiveAlertsOpen(false)}
           onViewOnMap={focusFloodMapReport}
           onViewDetails={openFloodMapReportDetails}
