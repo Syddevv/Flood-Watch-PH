@@ -16,6 +16,7 @@ import {
   Send,
   ThumbsUp,
   Waves,
+  X,
 } from "lucide-react";
 
 import {
@@ -128,9 +129,11 @@ function getTodaySnapshot() {
 function UndoToast({
   toast,
   onUndo,
+  onDismiss,
 }: {
   toast: Exclude<ToastState, null>;
   onUndo: () => void;
+  onDismiss: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -164,29 +167,39 @@ function UndoToast({
             : "floodwatch-toast--error",
         )}
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>{toast.message}</div>
-          {undoAvailable ? (
-            <div className="flex items-center gap-3">
-              <div className="text-[0.78rem] font-medium opacity-75">
-                {countdownSeconds}s
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>{toast.message}</div>
+            {undoAvailable ? (
+              <div className="flex items-center gap-3">
+                <div className="text-[0.78rem] font-medium opacity-75">
+                  {countdownSeconds}s
+                </div>
+                <button
+                  type="button"
+                  onClick={onUndo}
+                  disabled={toast.pending}
+                  className={cn(
+                    "floodwatch-toast-action",
+                    toast.tone === "success"
+                      ? "floodwatch-toast-action--success"
+                      : "floodwatch-toast-action--error",
+                    toast.pending && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {toast.pending ? "Undoing..." : "Undo"}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onUndo}
-                disabled={toast.pending}
-                className={cn(
-                  "floodwatch-toast-action",
-                  toast.tone === "success"
-                    ? "floodwatch-toast-action--success"
-                    : "floodwatch-toast-action--error",
-                  toast.pending && "cursor-not-allowed opacity-60",
-                )}
-              >
-                {toast.pending ? "Undoing..." : "Undo"}
-              </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss notification"
+            onClick={onDismiss}
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-current opacity-75 transition hover:bg-black/10 hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
@@ -2033,7 +2046,13 @@ export function IncidentReportsContent() {
         />
       ) : null}
 
-      {toast ? <UndoToast toast={toast} onUndo={handleUndoAction} /> : null}
+      {toast ? (
+        <UndoToast
+          toast={toast}
+          onUndo={handleUndoAction}
+          onDismiss={() => setToast(null)}
+        />
+      ) : null}
     </>
   );
 }
