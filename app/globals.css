@@ -382,9 +382,63 @@ button {
 }
 
 @media (max-width: 767px) {
+  .floodwatch-leaflet .leaflet-control-attribution {
+    background: color-mix(in srgb, var(--color-sidebar) 76%, transparent);
+    backdrop-filter: none;
+  }
+
+  .floodwatch-marker-mobile {
+    display: flex;
+    height: 24px;
+    width: 24px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 2px solid var(--marker-border, rgba(255, 255, 255, 0.92));
+    background: var(--marker-color);
+    box-shadow: none;
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .floodwatch-marker-mobile--center {
+    background: var(--marker-color, var(--color-success));
+  }
+
+  .floodwatch-marker-mobile--selected {
+    height: 30px;
+    width: 30px;
+    border-width: 3px;
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 72%, white);
+    outline-offset: 2px;
+  }
+
+  .floodwatch-map-performance .floodwatch-marker--selected {
+    animation: none;
+  }
+
+  .floodwatch-map-performance .map-floating-controls,
+  .floodwatch-mobile-map-control {
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: none;
+  }
+
+  .floodwatch-map-interacting .map-floating-controls {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .floodwatch-map-performance .marker-cluster,
+  .floodwatch-map-performance .marker-cluster div {
+    box-shadow: none;
+  }
+
   .map-floating-controls {
     right: 12px;
     top: 18px;
+    backdrop-filter: none;
   }
 
   .map-floating-controls button {

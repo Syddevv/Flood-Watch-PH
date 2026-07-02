@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Building2, ChevronDown, ChevronUp, Layers } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { isActiveLifecycleStatus } from "@/lib/report-lifecycle";
 import type { ReportActionLoadingState } from "@/lib/report-actions";
@@ -142,6 +142,14 @@ export function FloodMap({
   const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
 
+  const collapseMobileMapControls = useCallback(() => {
+    if (typeof window === "undefined" || window.innerWidth >= 768) {
+      return;
+    }
+
+    setIsLayerPanelCollapsed(true);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -259,6 +267,7 @@ export function FloodMap({
         focusedReportId={focusedReportId}
         focusedAlertLocation={focusedAlertLocation}
         selectedReportId={selectedReportId}
+        onMapInteractionStart={collapseMobileMapControls}
       />
 
       <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] hidden max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:block md:max-w-[344px]">
@@ -453,7 +462,7 @@ export function FloodMap({
               aria-label="Open map controls"
               aria-expanded="false"
               onClick={() => setIsLayerPanelCollapsed(false)}
-              className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3.5 text-[0.82rem] font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-floating)] backdrop-blur-md"
+              className="floodwatch-mobile-map-control pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3.5 text-[0.82rem] font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-floating)] backdrop-blur-md"
             >
               <Layers className="h-4 w-4 text-[var(--color-primary)]" />
               <span>Layers</span>
@@ -465,7 +474,7 @@ export function FloodMap({
             </button>
           </div>
         ) : (
-          <div className="pointer-events-auto max-h-[46dvh] overflow-y-auto rounded-t-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_96%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md">
+          <div className="floodwatch-mobile-map-control pointer-events-auto max-h-[46dvh] overflow-y-auto rounded-t-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_96%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-[0.9rem] font-semibold text-[var(--color-foreground)]">
