@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
-  Clock3,
   LoaderCircle,
-  MapPin,
-  Share2,
   X,
 } from "lucide-react";
 
@@ -25,14 +21,8 @@ import { createReportActionHeaders } from "@/lib/report-session";
 import {
   buildStoredActionKey,
   mapReportToIncident,
-  severityBadgeClasses,
-  severityLabels,
 } from "@/lib/report-ui";
-import {
-  getReportActivityLabel,
-  getReportFreshnessBadge,
-} from "@/lib/report-trust";
-import { buildPublicReportUrl, copyPublicReportUrl } from "@/lib/report-share";
+import { copyPublicReportUrl } from "@/lib/report-share";
 import type {
   ReportDetailResponse,
   ReportRecord,
@@ -95,14 +85,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   const [hasConfirmed, setHasConfirmed] = useState(false);
   const [hasResolved, setHasResolved] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
-
-  const publicReportUrl = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "";
-    }
-
-    return buildPublicReportUrl({ id: reportId });
-  }, [reportId]);
 
   useEffect(() => {
     if (!toast) {
@@ -393,33 +375,23 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
     }
   }
 
-  const freshnessBadge = report ? getReportFreshnessBadge(report) : null;
+  function leaveSharedReportPage() {
+    if (
+      typeof window !== "undefined" &&
+      document.referrer.startsWith(window.location.origin) &&
+      window.history.length > 1
+    ) {
+      router.back();
+      return;
+    }
+
+    router.push("/flood-map");
+  }
 
   return (
     <main className="min-h-dvh bg-[var(--color-background)] text-[var(--color-foreground)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-4 py-5 md:px-6 md:py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/incident-reports")}
-            className="inline-flex h-10 items-center gap-2 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-[0.86rem] font-medium text-[var(--color-foreground)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Reports</span>
-          </button>
-          {report && publicReportUrl ? (
-            <button
-              type="button"
-              onClick={() => void handleShareReport(report)}
-              className="inline-flex h-10 items-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-3 text-[0.86rem] font-semibold text-[var(--color-primary-foreground)]"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Share</span>
-            </button>
-          ) : null}
-        </div>
-
-        <section className="mt-5 flex flex-1 items-center justify-center">
+      {loading || notFound || !report ? (
+        <div className="mx-auto flex min-h-dvh w-full max-w-4xl flex-col items-center justify-center px-4 py-5 md:px-6 md:py-8">
           {loading ? (
             <div className="flex w-full max-w-md flex-col items-center rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-8 text-center shadow-[var(--shadow-soft)]">
               <LoaderCircle className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
@@ -430,7 +402,7 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
                 Checking the latest public report details.
               </p>
             </div>
-          ) : notFound || !report ? (
+          ) : (
             <div className="w-full max-w-lg rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-7 text-center shadow-[var(--shadow-soft)]">
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]">
                 <AlertTriangle className="h-5 w-5" />
@@ -443,60 +415,15 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
               </p>
               <button
                 type="button"
-                onClick={() => router.push("/incident-reports")}
+                onClick={() => router.push("/flood-map")}
                 className="mt-5 inline-flex h-10 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-[var(--color-primary-foreground)]"
               >
-                Back to reports
+                Open flood map
               </button>
             </div>
-          ) : (
-            <article className="w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)] md:p-5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold",
-                    severityBadgeClasses[report.severity],
-                  )}
-                >
-                  {severityLabels[report.severity]}
-                </span>
-                {freshnessBadge ? (
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[0.72rem] font-medium",
-                      freshnessBadge.tone === "success"
-                        ? "bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
-                        : freshnessBadge.tone === "warning"
-                          ? "bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
-                          : freshnessBadge.tone === "muted"
-                            ? "bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]"
-                            : "bg-[var(--color-info-surface)] text-[var(--color-info-text)]",
-                    )}
-                  >
-                    {freshnessBadge.label}
-                  </span>
-                ) : null}
-              </div>
-              <h1 className="mt-3 text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)] md:text-[1.75rem]">
-                {report.title}
-              </h1>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <MapPin className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0">{report.location}</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 font-mono tabular-nums">
-                  <Clock3 className="h-4 w-4 shrink-0" />
-                  {getReportActivityLabel(report)}
-                </span>
-              </div>
-              <p className="mt-4 max-w-3xl text-[0.94rem] leading-7 text-[var(--color-muted-foreground)]">
-                {report.description}
-              </p>
-            </article>
           )}
-        </section>
-      </div>
+        </div>
+      ) : null}
 
       {report ? (
         <IncidentReportModal
@@ -516,10 +443,12 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
           onGetDirections={handleGetDirections}
           onFindEvacuationCenters={handleFindEvacuationCenters}
           onOpenChange={(open) => {
-            setModalOpen(open);
-            if (!open) {
-              router.push("/incident-reports");
+            if (open) {
+              setModalOpen(true);
+              return;
             }
+
+            leaveSharedReportPage();
           }}
         />
       ) : null}
