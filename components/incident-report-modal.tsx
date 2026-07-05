@@ -453,11 +453,17 @@ export function IncidentReportModal({
         ? "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
         : "border-[var(--color-muted-border)] bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]";
   const footerButtonBase =
-    "inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[11px] px-3 text-center text-[0.78rem] font-semibold leading-none whitespace-nowrap transition-colors md:min-h-10 md:px-3.5 md:text-[0.82rem]";
+    "inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-[11px] px-3 text-center text-[0.78rem] font-semibold leading-none whitespace-nowrap transition-colors md:min-h-10 md:px-3.5 md:text-[0.82rem]";
   const secondaryButtonClassName =
     "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_84%,transparent)] text-[var(--color-foreground)] hover:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] hover:text-[var(--color-primary)]";
   const disabledButtonClassName =
     "cursor-not-allowed border border-[var(--color-disabled-border)] bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]";
+  const hasShareAction = Boolean(onShareReport);
+  const hasDirectionsAction = Boolean(directionsUrl && onGetDirections);
+  const hasCentersAction = Boolean(evacuationCentersHref && onFindEvacuationCenters);
+  const hasManageAction = Boolean(
+    report.isOwner && (onEditReport || onSubmitReportUpdate || onReportUpdate),
+  );
 
   return (
     <>
@@ -1087,89 +1093,97 @@ export function IncidentReportModal({
           </div>
 
           <div className="sticky bottom-0 border-t border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_96%,transparent)] px-3 py-3 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] backdrop-blur-md md:px-5">
-            <div className="grid gap-2">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+              <button
+                type="button"
+                aria-label="Confirm this flood report"
+                onClick={() => onConfirm(report.id)}
+                disabled={confirmDisabled}
+                className={cn(
+                  footerButtonBase,
+                  confirmDisabled
+                    ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
+                    : "floodwatch-primary-action",
+                )}
+              >
+                <ThumbsUp className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {getReportActionLabel({
+                    type: "confirmed",
+                    loading: confirmLoading,
+                    alreadySubmitted: hasConfirmed,
+                    compact: true,
+                  })}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label="Mark water as receded for this report"
+                onClick={() => onResolve(report.id)}
+                disabled={resolveDisabled}
+                className={cn(
+                  footerButtonBase,
+                  resolveDisabled ? disabledButtonClassName : secondaryButtonClassName,
+                )}
+              >
+                <Check className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {getReportActionLabel({
+                    type: "resolved",
+                    loading: resolveLoading,
+                    alreadySubmitted: hasResolved,
+                    compact: true,
+                  })}
+                </span>
+              </button>
+
+              {onShareReport ? (
                 <button
                   type="button"
-                  aria-label="Confirm this flood report"
-                  onClick={() => onConfirm(report.id)}
-                  disabled={confirmDisabled}
+                  aria-label="Copy link to this report"
+                  onClick={() => onShareReport(report)}
                   className={cn(
                     footerButtonBase,
-                    confirmDisabled
-                      ? "bg-[var(--color-disabled-surface)] text-[var(--color-disabled-text)]"
-                      : "floodwatch-primary-action",
+                    secondaryButtonClassName,
+                    !hasDirectionsAction && "min-[360px]:col-span-2",
                   )}
                 >
-                  <ThumbsUp className="h-4 w-4 shrink-0" />
-                  <span className="truncate">
-                    {getReportActionLabel({
-                      type: "confirmed",
-                      loading: confirmLoading,
-                      alreadySubmitted: hasConfirmed,
-                      compact: true,
-                    })}
-                  </span>
+                  <Share2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Share</span>
                 </button>
+              ) : null}
+              {directionsUrl && onGetDirections ? (
                 <button
                   type="button"
-                  aria-label="Mark water as receded for this report"
-                  onClick={() => onResolve(report.id)}
-                  disabled={resolveDisabled}
+                  aria-label="Get directions to this report"
+                  onClick={() => onGetDirections(report)}
                   className={cn(
                     footerButtonBase,
-                    resolveDisabled ? disabledButtonClassName : secondaryButtonClassName,
+                    secondaryButtonClassName,
+                    !hasShareAction && "min-[360px]:col-span-2",
                   )}
                 >
-                  <Check className="h-4 w-4 shrink-0" />
-                  <span className="truncate">
-                    {getReportActionLabel({
-                      type: "resolved",
-                      loading: resolveLoading,
-                      alreadySubmitted: hasResolved,
-                      compact: true,
-                    })}
-                  </span>
+                  <Navigation className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Directions</span>
                 </button>
-              </div>
+              ) : null}
+              {evacuationCentersHref && onFindEvacuationCenters ? (
+                <button
+                  type="button"
+                  aria-label="Find evacuation centers near this report"
+                  onClick={() => onFindEvacuationCenters(report)}
+                  className={cn(
+                    footerButtonBase,
+                    secondaryButtonClassName,
+                    !hasManageAction && "min-[360px]:col-span-2",
+                  )}
+                >
+                  <ShieldPlus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Centers</span>
+                </button>
+              ) : null}
 
-              <div className="grid grid-cols-2 gap-2">
-                {onShareReport ? (
-                  <button
-                    type="button"
-                    aria-label="Copy link to this report"
-                    onClick={() => onShareReport(report)}
-                    className={cn(footerButtonBase, secondaryButtonClassName)}
-                  >
-                    <Share2 className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Share</span>
-                  </button>
-                ) : null}
-                {directionsUrl && onGetDirections ? (
-                  <button
-                    type="button"
-                    aria-label="Get directions to this report"
-                    onClick={() => onGetDirections(report)}
-                    className={cn(footerButtonBase, secondaryButtonClassName)}
-                  >
-                    <Navigation className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Directions</span>
-                  </button>
-                ) : null}
-                {evacuationCentersHref && onFindEvacuationCenters ? (
-                  <button
-                    type="button"
-                    aria-label="Find evacuation centers near this report"
-                    onClick={() => onFindEvacuationCenters(report)}
-                    className={cn(footerButtonBase, secondaryButtonClassName)}
-                  >
-                    <ShieldPlus className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Centers</span>
-                  </button>
-                ) : null}
-              </div>
-
-              {report.isOwner && (onEditReport || onSubmitReportUpdate || onReportUpdate) ? (
+              {hasManageAction ? (
                 <button
                   type="button"
                   aria-expanded={ownerSectionOpen}
@@ -1189,6 +1203,7 @@ export function IncidentReportModal({
                   disabled={savingOwnerAction !== null}
                   className={cn(
                     footerButtonBase,
+                    !hasCentersAction && "min-[360px]:col-span-2",
                     savingOwnerAction
                       ? disabledButtonClassName
                       : ownerSectionOpen

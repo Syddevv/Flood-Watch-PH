@@ -484,7 +484,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
         <button
           type="button"
           onClick={() => onOpenReportDetails(marker.reportId)}
-          className="floodwatch-primary-action inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] px-2 text-[0.7rem] font-semibold"
+          className="floodwatch-primary-action inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] px-2 text-[0.7rem] font-semibold"
         >
           <Eye className="h-3.5 w-3.5" />
           <span>View Details</span>
@@ -494,7 +494,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
             href={directionsUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700 no-underline"
+            className="inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700 no-underline"
           >
             <Navigation className="h-3.5 w-3.5" />
             <span>Directions</span>
@@ -503,7 +503,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
         <button
           type="button"
           onClick={() => onShareReport(marker.report)}
-          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700"
+          className="inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700"
         >
           <Share2 className="h-3.5 w-3.5" />
           <span>Share</span>
@@ -513,7 +513,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
           onClick={() => onConfirmReport(marker.reportId)}
           disabled={actionBusy || hasConfirmed || isResolved}
           className={cn(
-            "inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] px-2 text-[0.7rem] font-semibold",
+            "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] px-2 text-[0.7rem] font-semibold",
             actionBusy || hasConfirmed || isResolved
               ? "bg-slate-100 text-slate-500"
               : "bg-blue-600 text-white",
@@ -534,7 +534,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
           onClick={() => onResolveReport(marker.reportId)}
           disabled={actionBusy || hasResolved || isResolved}
           className={cn(
-            "inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border px-2 text-[0.7rem] font-semibold",
+            "col-span-2 inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] border px-2 text-[0.7rem] font-semibold",
             actionBusy || hasResolved || isResolved
               ? "border-slate-200 bg-slate-100 text-slate-500"
               : "border-slate-200 bg-white text-slate-700",
