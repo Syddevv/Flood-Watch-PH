@@ -19,6 +19,7 @@ import {
   LoaderCircle,
   Navigation,
   Send,
+  Share2,
   ShieldPlus,
   MapPin,
   ShieldAlert,
@@ -68,6 +69,7 @@ type IncidentReportModalProps = {
   onEditReport?: (report: IncidentReport, requestBody: FormData) => Promise<void>;
   onSubmitReportUpdate?: (report: IncidentReport, requestBody: FormData) => Promise<void>;
   onReportUpdate?: (report: IncidentReport) => void;
+  onShareReport?: (report: IncidentReport) => void;
   onGetDirections?: (report: IncidentReport) => void;
   onFindEvacuationCenters?: (report: IncidentReport) => void;
   hasConfirmed: boolean;
@@ -150,6 +152,7 @@ export function IncidentReportModal({
   onEditReport,
   onSubmitReportUpdate,
   onReportUpdate,
+  onShareReport,
   onGetDirections,
   onFindEvacuationCenters,
   hasConfirmed,
@@ -1131,6 +1134,17 @@ export function IncidentReportModal({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
+                {onShareReport ? (
+                  <button
+                    type="button"
+                    aria-label="Copy link to this report"
+                    onClick={() => onShareReport(report)}
+                    className={cn(footerButtonBase, secondaryButtonClassName)}
+                  >
+                    <Share2 className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Share</span>
+                  </button>
+                ) : null}
                 {directionsUrl && onGetDirections ? (
                   <button
                     type="button"

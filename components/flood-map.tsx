@@ -104,6 +104,7 @@ type FloodMapProps = {
   resolvedReportIds: Record<string, boolean>;
   onSelectReport: (reportId: string) => void;
   onOpenReportDetails: (reportId: string) => void;
+  onShareReport: (report: IncidentReport) => void;
   onConfirmReport: (reportId: string) => void;
   onResolveReport: (reportId: string) => void;
 };
@@ -136,6 +137,7 @@ export function FloodMap({
   resolvedReportIds,
   onSelectReport,
   onOpenReportDetails,
+  onShareReport,
   onConfirmReport,
   onResolveReport,
 }: FloodMapProps) {
@@ -257,6 +259,7 @@ export function FloodMap({
         polygons={showRiskOverlays ? polygons : []}
         legend={legend}
         onOpenReportDetails={onOpenReportDetails}
+        onShareReport={onShareReport}
         onSelectReport={onSelectReport}
         onConfirmReport={onConfirmReport}
         onResolveReport={onResolveReport}

@@ -13,6 +13,7 @@ import {
   Map,
   Navigation,
   Satellite,
+  Share2,
   ThumbsUp,
 } from "lucide-react";
 import L from "leaflet";
@@ -354,6 +355,7 @@ function MapInteractionTracker({
 type ReportPopupContentProps = {
   marker: ReportMapMarker;
   onOpenReportDetails: (reportId: string) => void;
+  onShareReport: (report: ReportMapMarker["report"]) => void;
   onConfirmReport: (reportId: string) => void;
   onResolveReport: (reportId: string) => void;
   actionLoading: ReportActionLoadingState;
@@ -364,6 +366,7 @@ type ReportPopupContentProps = {
 const ReportPopupContent = memo(function ReportPopupContent({
   marker,
   onOpenReportDetails,
+  onShareReport,
   onConfirmReport,
   onResolveReport,
   actionLoading,
@@ -499,6 +502,14 @@ const ReportPopupContent = memo(function ReportPopupContent({
         ) : null}
         <button
           type="button"
+          onClick={() => onShareReport(marker.report)}
+          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] border border-slate-200 bg-white px-2 text-[0.7rem] font-semibold text-slate-700"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          <span>Share</span>
+        </button>
+        <button
+          type="button"
           onClick={() => onConfirmReport(marker.reportId)}
           disabled={actionBusy || hasConfirmed || isResolved}
           className={cn(
@@ -603,6 +614,7 @@ type FloodMapClientProps = {
   polygons: RiskPolygon[];
   legend: LegendItem[];
   onOpenReportDetails: (reportId: string) => void;
+  onShareReport: (report: ReportMapMarker["report"]) => void;
   onSelectReport: (reportId: string) => void;
   onConfirmReport: (reportId: string) => void;
   onResolveReport: (reportId: string) => void;
@@ -621,6 +633,7 @@ export function FloodMapClient({
   evacuationCenterMarkers,
   polygons,
   onOpenReportDetails,
+  onShareReport,
   onSelectReport,
   onConfirmReport,
   onResolveReport,
@@ -922,6 +935,7 @@ export function FloodMapClient({
                     <ReportPopupContent
                       marker={marker}
                       onOpenReportDetails={onOpenReportDetails}
+                      onShareReport={onShareReport}
                       onConfirmReport={onConfirmReport}
                       onResolveReport={onResolveReport}
                       actionLoading={actionLoading}

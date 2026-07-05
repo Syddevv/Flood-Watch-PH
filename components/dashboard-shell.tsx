@@ -42,6 +42,7 @@ import {
   buildStoredActionKey,
   mapReportToIncident,
 } from "@/lib/report-ui";
+import { copyPublicReportUrl } from "@/lib/report-share";
 import {
   compareReportsByPriority,
   getReportFreshnessBadge,
@@ -1090,6 +1091,15 @@ export function DashboardShell({
     }
   };
 
+  async function handleShareFloodMapReport(report: IncidentReport) {
+    const copied = await copyPublicReportUrl(report);
+
+    setFloodMapToast({
+      tone: copied ? "success" : "error",
+      message: copied ? "Report link copied." : "Unable to copy link.",
+    });
+  }
+
   async function applyUpdatedFloodMapReport(
     reportId: string,
     payload: { data?: ReportRecord; error?: string },
@@ -1429,6 +1439,7 @@ export function DashboardShell({
                   resolvedReportIds={floodMapResolvedReportIds}
                   onSelectReport={selectFloodMapReport}
                   onOpenReportDetails={openFloodMapReportDetails}
+                  onShareReport={handleShareFloodMapReport}
                   onConfirmReport={handleConfirmFloodMapReport}
                   onResolveReport={handleResolveFloodMapReport}
                 />
@@ -1593,6 +1604,7 @@ export function DashboardShell({
           onEditReport={handleEditFloodMapReport}
           onSubmitReportUpdate={handleSubmitFloodMapReportUpdate}
           onReportUpdate={handleReportUpdate}
+          onShareReport={handleShareFloodMapReport}
           onGetDirections={handleGetReportDirections}
           onFindEvacuationCenters={handleFindReportEvacuationCenters}
           onOpenChange={(open) => {

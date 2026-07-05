@@ -53,6 +53,7 @@ import {
   severityBadgeClasses,
   severityLabels,
 } from "@/lib/report-ui";
+import { copyPublicReportUrl } from "@/lib/report-share";
 import {
   compareReportsByPriority,
   getReportActivityLabel,
@@ -1510,6 +1511,15 @@ export function IncidentReportsContent() {
     }
   }
 
+  async function handleShareReport(report: IncidentReport) {
+    const copied = await copyPublicReportUrl(report);
+
+    setToast({
+      tone: copied ? "success" : "error",
+      message: copied ? "Report link copied." : "Unable to copy link.",
+    });
+  }
+
   return (
     <>
       <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)]">
@@ -2074,6 +2084,7 @@ export function IncidentReportsContent() {
         onEditReport={handleEditSelectedReport}
         onSubmitReportUpdate={handleSubmitSelectedReportUpdate}
         onReportUpdate={handleModalReportUpdate}
+        onShareReport={handleShareReport}
         onGetDirections={handleModalGetDirections}
         onFindEvacuationCenters={handleModalFindEvacuationCenters}
         onOpenChange={(open) => {
