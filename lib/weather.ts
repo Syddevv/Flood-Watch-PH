@@ -21,7 +21,7 @@ const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
 const WEATHER_TIME_ZONE = "Asia/Manila";
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 15000;
 const PHILIPPINES_COUNTRY_CODE = "PH";
 const SIDEBAR_LOCATION_LIMIT = 5;
 
@@ -100,6 +100,8 @@ type ReverseGeocodedPhilippineAddress = {
   formattedAddress: string | null;
 };
 
+type WeatherDebugLevel = "info" | "warn";
+
 const LOCATION_NOT_FOUND_MESSAGE =
   "Location not found. Try another city, municipality, or province.";
 const GENERIC_LOCATION_ERROR_MESSAGE =
@@ -167,6 +169,58 @@ function createAbortSignal(timeoutMs: number) {
   return {
     signal: controller.signal,
     clear: () => clearTimeout(timeoutId),
+  };
+}
+
+function logWeatherDebug(
+  level: WeatherDebugLevel,
+  event: string,
+  details: Record<string, unknown> = {},
+) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  const payload = {
+    scope: "weather",
+    event,
+    ...details,
+  };
+  const message = JSON.stringify(payload);
+
+  if (level === "warn") {
+    console.warn("[weather-debug]", message);
+    return;
+  }
+
+  console.info("[weather-debug]", message);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isUsableOpenMeteoPayload(payload: unknown): payload is OpenMeteoResponse {
+  return isRecord(payload) && isRecord(payload.current) && isRecord(payload.hourly);
+}
+
+function getErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return {
+      reason: "Unknown failure.",
+    };
+  }
+
+  const cause = "cause" in error ? error.cause : undefined;
+
+  return {
+    reason: error.message,
+    cause:
+      cause instanceof Error
+        ? cause.message
+        : typeof cause === "string"
+          ? cause
+          : undefined,
   };
 }
 
@@ -442,6 +496,7 @@ async function fetchPhilippineGeocodingResults(query: string) {
 
   try {
     const response = await fetch(`${OPEN_METEO_GEOCODING_URL}?${searchParams.toString()}`, {
+      cache: "no-store",
       headers: {
         Accept: "application/json",
       },
@@ -511,6 +566,7 @@ async function reverseGeocodePhilippineAddress(
 
   try {
     const response = await fetch(`${NOMINATIM_REVERSE_URL}?${searchParams.toString()}`, {
+      cache: "no-store",
       headers: {
         Accept: "application/json",
         "User-Agent": "FloodWatchPH/1.0",
@@ -646,10 +702,10 @@ function buildAlertDescription(location: string, riskLevel: FloodRiskLevel) {
   return `Weather signals suggest elevated flood risk in ${location}. Monitor local conditions and watch for official advisories.`;
 }
 
-async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
+function buildOpenMeteoWeatherUrl(locations: WeatherLookupLocation[]) {
   const searchParams = new URLSearchParams({
-    latitude: String(location.latitude),
-    longitude: String(location.longitude),
+    latitude: locations.map((location) => String(location.latitude)).join(","),
+    longitude: locations.map((location) => String(location.longitude)).join(","),
     current: [
       "temperature_2m",
       "relative_humidity_2m",
@@ -662,24 +718,139 @@ async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
     timezone: WEATHER_TIME_ZONE,
   });
 
+  return `${OPEN_METEO_URL}?${searchParams.toString()}`;
+}
+
+async function fetchOpenMeteoJson(url: string, context: Record<string, unknown>) {
   const { signal, clear } = createAbortSignal(REQUEST_TIMEOUT_MS);
 
+  logWeatherDebug("info", "provider-request", {
+    provider: "Open-Meteo forecast",
+    url,
+    ...context,
+  });
+
   try {
-    const response = await fetch(`${OPEN_METEO_URL}?${searchParams.toString()}`, {
+    const response = await fetch(url, {
+      cache: "no-store",
       headers: {
         Accept: "application/json",
       },
       signal,
     });
 
+    logWeatherDebug("info", "provider-response", {
+      provider: "Open-Meteo forecast",
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      ...context,
+    });
+
     if (!response.ok) {
       throw new Error(`Open-Meteo request failed with status ${response.status}.`);
     }
 
-    return (await response.json()) as OpenMeteoResponse;
+    try {
+      const payload = (await response.json()) as unknown;
+
+      logWeatherDebug("info", "provider-json-parse", {
+        provider: "Open-Meteo forecast",
+        ok: true,
+        ...context,
+      });
+
+      return payload;
+    } catch (error) {
+      const errorDetails = getErrorDetails(error);
+
+      logWeatherDebug("warn", "provider-json-parse", {
+        provider: "Open-Meteo forecast",
+        ok: false,
+        ...errorDetails,
+        ...context,
+      });
+
+      throw new Error("Open-Meteo response could not be parsed as JSON.");
+    }
+  } catch (error) {
+    logWeatherDebug("warn", "provider-request-failed", {
+      provider: "Open-Meteo forecast",
+      ...getErrorDetails(error),
+      ...context,
+    });
+
+    throw error;
   } finally {
     clear();
   }
+}
+
+async function fetchOpenMeteoWeather(location: WeatherLookupLocation) {
+  const payload = await fetchOpenMeteoJson(buildOpenMeteoWeatherUrl([location]), {
+    operation: "single-location",
+    location: location.name,
+  });
+
+  if (!isUsableOpenMeteoPayload(payload)) {
+    logWeatherDebug("warn", "monitored-location-failed", {
+      provider: "Open-Meteo forecast",
+      location: location.name,
+      reason: "Missing current or hourly weather fields.",
+    });
+
+    throw new Error("Open-Meteo response is missing current or hourly weather fields.");
+  }
+
+  return payload;
+}
+
+async function fetchOpenMeteoWeatherForOverview(locations: readonly WeatherLookupLocation[]) {
+  const payload = await fetchOpenMeteoJson(buildOpenMeteoWeatherUrl([...locations]), {
+    operation: "overview-batch",
+    locationCount: locations.length,
+  });
+
+  const payloads =
+    locations.length === 1 && isRecord(payload) && !Array.isArray(payload)
+      ? [payload]
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  if (payloads.length !== locations.length) {
+    logWeatherDebug("warn", "provider-response-shape", {
+      provider: "Open-Meteo forecast",
+      expectedLocations: locations.length,
+      receivedLocations: payloads.length,
+      reason: "Batched forecast response length did not match monitored locations.",
+    });
+  }
+
+  return locations.flatMap((location, index) => {
+    const locationPayload = payloads[index];
+
+    if (!isUsableOpenMeteoPayload(locationPayload)) {
+      logWeatherDebug("warn", "monitored-location-failed", {
+        provider: "Open-Meteo forecast",
+        location: location.name,
+        reason: "Missing current or hourly weather fields.",
+      });
+
+      return [];
+    }
+
+    try {
+      return [buildWeatherLocation(location, locationPayload)];
+    } catch (error) {
+    logWeatherDebug("warn", "monitored-location-failed", {
+      provider: "Open-Meteo forecast",
+      location: location.name,
+      ...getErrorDetails(error),
+    });
+
+    return [];
+  }
+  });
 }
 
 function buildWeatherLocation(
@@ -718,6 +889,28 @@ function buildWeatherLocation(
 async function fetchWeatherForLocation(location: WeatherLookupLocation): Promise<WeatherLocation> {
   const payload = await fetchOpenMeteoWeather(location);
   return buildWeatherLocation(location, payload);
+}
+
+async function fetchWeatherForOverviewLocationsIndividually(
+  locations: readonly WeatherLookupLocation[],
+) {
+  const results = await Promise.all(
+    locations.map(async (location) => {
+      try {
+        return await fetchWeatherForLocation(location);
+      } catch (error) {
+        logWeatherDebug("warn", "monitored-location-failed", {
+          provider: "Open-Meteo forecast",
+          location: location.name,
+          ...getErrorDetails(error),
+        });
+
+        return null;
+      }
+    }),
+  );
+
+  return results.filter((result): result is WeatherLocation => result !== null);
 }
 
 async function geocodePhilippineLocation(query: string) {
@@ -802,15 +995,48 @@ export function getWeatherUnavailableMessage() {
   return WEATHER_UNAVAILABLE_MESSAGE;
 }
 
+export function createUnavailableWeatherOverview(
+  message = WEATHER_UNAVAILABLE_MESSAGE,
+): WeatherOverviewData {
+  return {
+    locations: [],
+    alerts: [],
+    fetchedAt: "",
+    advisoryMessage: message,
+  };
+}
+
 export async function getWeatherOverview(): Promise<WeatherOverviewData> {
-  const results = await Promise.allSettled(
-    MONITORED_LOCATIONS.map((location) => fetchWeatherForLocation(location)),
-  );
-  const locations = sortLocationsByRisk(
-    results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])),
-  );
+  let locations: WeatherLocation[] = [];
+
+  try {
+    locations = sortLocationsByRisk(await fetchOpenMeteoWeatherForOverview(MONITORED_LOCATIONS));
+  } catch (error) {
+    logWeatherDebug("warn", "overview-provider-failed", {
+      provider: "Open-Meteo forecast",
+      operation: "overview-batch",
+      ...getErrorDetails(error),
+    });
+  }
 
   if (locations.length === 0) {
+    logWeatherDebug("warn", "overview-provider-retry", {
+      provider: "Open-Meteo forecast",
+      operation: "individual-locations",
+      reason: "Batched overview returned no usable monitored locations.",
+    });
+
+    locations = sortLocationsByRisk(
+      await fetchWeatherForOverviewLocationsIndividually(MONITORED_LOCATIONS),
+    );
+  }
+
+  if (locations.length === 0) {
+    logWeatherDebug("warn", "overview-fallback", {
+      reason: "No monitored locations returned usable weather data.",
+      monitoredLocations: MONITORED_LOCATIONS.map((location) => location.name),
+    });
+
     throw new Error(WEATHER_UNAVAILABLE_MESSAGE);
   }
 

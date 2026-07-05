@@ -1,7 +1,8 @@
 import { unstable_cache } from "next/cache";
 
-import { errorResponse, successResponse } from "@/lib/api-response";
+import { successResponse } from "@/lib/api-response";
 import {
+  createUnavailableWeatherOverview,
   getWeatherCacheHeaders,
   getWeatherOverview,
   getWeatherUnavailableMessage,
@@ -18,11 +19,14 @@ export async function GET() {
     return successResponse(overview, {
       headers: getWeatherCacheHeaders(),
     });
-  } catch (error) {
-    console.error("Failed to fetch weather overview.", error);
-    return errorResponse(
-      error instanceof Error ? error.message : getWeatherUnavailableMessage(),
-      503,
+  } catch {
+    return successResponse(
+      createUnavailableWeatherOverview(getWeatherUnavailableMessage()),
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
     );
   }
 }

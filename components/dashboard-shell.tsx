@@ -432,25 +432,17 @@ export function DashboardShell({
       setWeatherLoading(true);
       setWeatherError(null);
 
-      try {
-        const nextWeatherOverview = await fetchWeatherOverview(abortController.signal);
+      const nextWeatherOverview = await fetchWeatherOverview(abortController.signal);
 
-        if (!isMounted) {
-          return;
-        }
+      if (!isMounted || abortController.signal.aborted) {
+        return;
+      }
 
-        setWeatherOverview(nextWeatherOverview);
-      } catch (error) {
-        if (!isMounted || abortController.signal.aborted) {
-          return;
-        }
+      setWeatherOverview(nextWeatherOverview.data);
+      setWeatherError(nextWeatherOverview.error);
 
-        console.error("Failed to load weather overview.", error);
-        setWeatherError("Weather data is temporarily unavailable. Please check PAGASA or try again later.");
-      } finally {
-        if (isMounted) {
-          setWeatherLoading(false);
-        }
+      if (isMounted) {
+        setWeatherLoading(false);
       }
     }
 
