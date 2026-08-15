@@ -120,24 +120,32 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
+    const sessionHash = getReportSessionHashFromRequest(request);
 
     const existingReport = await prisma.floodReport.findUnique({
       where: { id },
-      select: { id: true },
+      select: {
+        id: true,
+        ownerSessionHash: true,
+      },
     });
 
     if (!existingReport) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    const deletedReport = await prisma.floodReport.delete({
+    if (!isReportOwner(existingReport, sessionHash)) {
+      return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
+    }
+
+    await prisma.floodReport.delete({
       where: { id },
     });
 
-    return successResponse(deletedReport);
+    return successResponse({ id });
   } catch (error) {
     console.error("Failed to delete report.", error);
     return errorResponse("Something went wrong while deleting the report.");
