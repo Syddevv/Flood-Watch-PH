@@ -8,6 +8,7 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+import { protectApiRequest } from "@/lib/request-security";
 
 const mapReportSelect = {
   id: true,
@@ -81,6 +82,16 @@ function getStatusRank(status: string) {
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "map-all",
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const parsedFilters = parseReportFilters(searchParams);
 

@@ -108,6 +108,9 @@ Create a `.env.local` file.
 
 ```env
 DATABASE_URL=
+REPORT_SESSION_SECRET=
+ABUSE_PROTECTION_SECRET=
+NEXT_PUBLIC_APP_URL=
 
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -116,6 +119,35 @@ SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 Fill in the values from your Supabase project.
+
+`REPORT_SESSION_SECRET` must be a cryptographically random value containing at
+least 32 characters. It signs the anonymous `HttpOnly` session cookie used for
+report ownership and community actions. Keep the same value across deployments;
+changing it invalidates existing anonymous sessions.
+
+`ABUSE_PROTECTION_SECRET` hashes client network identifiers used by the
+database-backed API rate limiter. It may be omitted to reuse
+`REPORT_SESSION_SECRET`. Set `NEXT_PUBLIC_APP_URL` to the deployed application
+origin, such as `https://flood-watch-ph.vercel.app`, so mutation requests can be
+validated against the expected origin.
+
+### Apply database migrations
+
+For a new database, apply the complete migration history:
+
+```bash
+npx prisma migrate deploy
+```
+
+This repository now includes the baseline migration
+`20260601_initial_schema`. Existing deployments that already contain the
+baseline schema must mark it as applied before their next deploy, then run the
+normal migration command:
+
+```bash
+npx prisma migrate resolve --applied 20260601_initial_schema
+npx prisma migrate deploy
+```
 
 ---
 

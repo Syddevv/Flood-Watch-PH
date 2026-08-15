@@ -46,6 +46,7 @@ model ReportConfirmation {
   createdAt        DateTime    @default(now())
   report           FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  @@unique([reportId, confirmationType, ipHash])
   @@index([reportId])
 }
 
@@ -108,4 +109,13 @@ model AboutContent {
   title      String
   content    String
   updatedAt  DateTime @updatedAt
+}
+
+model RequestRateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
 }

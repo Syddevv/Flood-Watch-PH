@@ -7,6 +7,7 @@ import {
   getWeatherUnavailableMessage,
 } from "@/lib/weather";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { protectApiRequest } from "@/lib/request-security";
 
 const getCachedWeatherByCoordinates = unstable_cache(
   async (latitude: number, longitude: number, name?: string) =>
@@ -19,6 +20,16 @@ const getCachedWeatherByCoordinates = unstable_cache(
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "weather-coordinates",
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const latitude = searchParams.get("lat");
     const longitude = searchParams.get("lng") ?? searchParams.get("lon");

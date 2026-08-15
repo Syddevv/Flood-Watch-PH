@@ -7,6 +7,7 @@ import {
   getWeatherUnavailableMessage,
 } from "@/lib/weather";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { protectApiRequest } from "@/lib/request-security";
 
 const getCachedWeatherByQuery = unstable_cache(
   async (query: string) => getWeatherByQuery(query),
@@ -18,6 +19,16 @@ const getCachedWeatherByQuery = unstable_cache(
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "weather-location",
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("query")?.trim();
 

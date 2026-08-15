@@ -19,6 +19,7 @@ import {
   uploadReportImageFile,
 } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { protectApiRequest } from "@/lib/request-security";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -185,6 +186,16 @@ async function reconcileReportLifecycle(
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "reports-list",
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const parsedFilters = parseReportFilters(searchParams);
     const sessionHash = getReportSessionHashFromRequest(request);
@@ -332,7 +343,23 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-create",
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const sessionHash = getReportSessionHashFromRequest(request);
+
+    if (!sessionHash) {
+      return errorResponse("Session initialization is required to submit a report.", 401);
+    }
+
     const formData = await request.formData();
     const imageFile = formData.get("image");
 
@@ -380,7 +407,7 @@ export async function POST(request: Request) {
         latitude,
         longitude,
         imageUrl,
-        ownerSessionHash: sessionHash || undefined,
+        ownerSessionHash: sessionHash,
         reportedByName,
         sourceType: "Community",
         confirmationCount: 0,
