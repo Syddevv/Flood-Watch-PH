@@ -46,6 +46,7 @@ model ReportConfirmation {
   createdAt        DateTime    @default(now())
   report           FloodReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  @@unique([reportId, confirmationType, ipHash])
   @@index([reportId])
 }
 

@@ -3,7 +3,11 @@ import {
   deriveReportLifecycleStatus,
   getLifecyclePersistencePatch,
 } from "@/lib/report-lifecycle";
-import { prisma, type PrismaTransactionClient } from "@/lib/prisma";
+import {
+  isPrismaUniqueConstraintError,
+  prisma,
+  type PrismaTransactionClient,
+} from "@/lib/prisma";
 import {
   getReportSessionHashFromRequest,
   REPORT_ACTION_UNDO_WINDOW_MS,
@@ -58,18 +62,6 @@ export async function POST(request: Request, context: RouteContext) {
         });
       }
 
-      const existingResolution = await tx.reportConfirmation.findFirst({
-        where: {
-          reportId: id,
-          confirmationType: "resolved",
-          ipHash: sessionHash,
-        },
-      });
-
-      if (existingResolution) {
-        throw new Error("DUPLICATE_RESOLVED_ACTION");
-      }
-
       await tx.reportConfirmation.create({
         data: {
           reportId: id,
@@ -108,7 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     return successResponse(updatedReport);
   } catch (error) {
-    if (error instanceof Error && error.message === "DUPLICATE_RESOLVED_ACTION") {
+    if (isPrismaUniqueConstraintError(error)) {
       return errorResponse("This report has already been updated from this browser.", 409);
     }
 
