@@ -38,6 +38,7 @@ import type { IncidentReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
+import { useReportSessionReady } from "@/components/report-session-provider";
 import type {
   ReportDetailResponse,
   NearbyReportRecord,
@@ -60,14 +61,11 @@ import {
   getReportFreshnessBadge,
 } from "@/lib/report-trust";
 import {
-  createReportActionHeaders,
-  REPORT_ACTION_UNDO_WINDOW_MS,
-} from "@/lib/report-session";
-import {
   buildReportDirectionsUrl,
   buildReportEvacuationCentersHref,
   buildReportUpdateHref,
   REPORT_ACTION_MESSAGES,
+  REPORT_ACTION_UNDO_WINDOW_MS,
   type ReportActionLoadingState,
 } from "@/lib/report-actions";
 import { fetchWeatherLocation } from "@/lib/weather-client";
@@ -546,6 +544,7 @@ function ReportCard({
 
 export function IncidentReportsContent() {
   const router = useRouter();
+  const reportSessionReady = useReportSessionReady();
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [updatesByReportId, setUpdatesByReportId] = useState<Record<string, ReportUpdateItem[]>>({});
   const [confirmedReportIds, setConfirmedReportIds] = useState<Record<string, boolean>>({});
@@ -657,7 +656,6 @@ export function IncidentReportsContent() {
     try {
       const response = await fetch("/api/reports?limit=50", {
         cache: "no-store",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as ReportsResponse | { error: string };
 
@@ -691,12 +689,16 @@ export function IncidentReportsContent() {
   }
 
   useEffect(() => {
+    if (!reportSessionReady) {
+      return;
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       void loadReports();
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, []);
+  }, [reportSessionReady]);
 
   useEffect(() => {
     if (!pendingNearbyDuplicate) {
@@ -719,7 +721,7 @@ export function IncidentReportsContent() {
   ]);
 
   useEffect(() => {
-    if (!selectedReportId || !modalOpen) {
+    if (!reportSessionReady || !selectedReportId || !modalOpen) {
       return;
     }
 
@@ -730,7 +732,6 @@ export function IncidentReportsContent() {
       try {
         const response = await fetch(`/api/reports/${reportId}`, {
           cache: "no-store",
-          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -760,7 +761,7 @@ export function IncidentReportsContent() {
     return () => {
       isMounted = false;
     };
-  }, [modalOpen, selectedReportId]);
+  }, [modalOpen, reportSessionReady, selectedReportId]);
 
   useEffect(() => {
     if (!toast) {
@@ -924,7 +925,6 @@ export function IncidentReportsContent() {
     try {
       const response = await fetch(`/api/reports/${reportId}/confirm`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -1001,7 +1001,6 @@ export function IncidentReportsContent() {
     try {
       const response = await fetch(`/api/reports/${reportId}/resolve`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -1097,7 +1096,6 @@ export function IncidentReportsContent() {
           : `/api/reports/${reportId}/resolve`,
         {
           method: "DELETE",
-          headers: createReportActionHeaders(),
         },
       );
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
@@ -1258,7 +1256,6 @@ export function IncidentReportsContent() {
   async function submitPreparedReport(requestBody: FormData, photoAttached: boolean) {
     const response = await fetch("/api/reports", {
       method: "POST",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as { data?: ReportRecord; error?: string };
@@ -1286,7 +1283,6 @@ export function IncidentReportsContent() {
         `/api/reports/nearby?lat=${encodeURIComponent(String(latitude))}&lng=${encodeURIComponent(String(longitude))}&radiusMeters=300&limit=3`,
         {
           cache: "no-store",
-          headers: createReportActionHeaders(),
         },
       );
       const nearbyPayload =
@@ -1452,7 +1448,6 @@ export function IncidentReportsContent() {
   async function handleEditSelectedReport(report: IncidentReport, requestBody: FormData) {
     const response = await fetch(`/api/reports/${report.id}`, {
       method: "PATCH",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };
@@ -1475,7 +1470,6 @@ export function IncidentReportsContent() {
   async function handleSubmitSelectedReportUpdate(report: IncidentReport, requestBody: FormData) {
     const response = await fetch(`/api/reports/${report.id}/updates`, {
       method: "POST",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };

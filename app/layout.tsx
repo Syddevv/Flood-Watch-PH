@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeScript } from "@/components/theme-script";
+import { ReportSessionProvider } from "@/components/report-session-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +33,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[var(--color-background)] font-sans text-[var(--color-foreground)]">
         <ThemeScript />
-        {children}
+        <ReportSessionProvider>{children}</ReportSessionProvider>
       </body>
     </html>
   );

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { IncidentReportModal } from "@/components/incident-report-modal";
+import { useReportSessionReady } from "@/components/report-session-provider";
 import {
   buildReportDirectionsUrl,
   buildReportEvacuationCentersHref,
@@ -17,7 +18,6 @@ import {
   type ReportActionLoadingState,
   type ReportActionType,
 } from "@/lib/report-actions";
-import { createReportActionHeaders } from "@/lib/report-session";
 import {
   buildStoredActionKey,
   mapReportToIncident,
@@ -75,6 +75,7 @@ function ReportToast({
 
 export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   const router = useRouter();
+  const reportSessionReady = useReportSessionReady();
   const [report, setReport] = useState<IncidentReport | null>(null);
   const [updates, setUpdates] = useState<ReportUpdateItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +100,10 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   }, [toast]);
 
   useEffect(() => {
+    if (!reportSessionReady) {
+      return;
+    }
+
     let isMounted = true;
     const abortController = new AbortController();
 
@@ -109,7 +114,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
       try {
         const response = await fetch(`/api/reports/${reportId}`, {
           cache: "no-store",
-          headers: createReportActionHeaders(),
           signal: abortController.signal,
         });
         const payload = (await response.json()) as
@@ -164,7 +168,7 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
       isMounted = false;
       abortController.abort();
     };
-  }, [reportId]);
+  }, [reportId, reportSessionReady]);
 
   function applyReportDetailPayload(payload: ReportDetailResponse) {
     setReport(mapReportToIncident(payload.data));
@@ -204,7 +208,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
     try {
       const response = await fetch(`/api/reports/${nextReportId}/confirm`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as {
         data?: ReportRecord;
@@ -256,7 +259,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
     try {
       const response = await fetch(`/api/reports/${nextReportId}/resolve`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as {
         data?: ReportRecord;
@@ -304,7 +306,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   ) {
     const response = await fetch(`/api/reports/${selectedReport.id}`, {
       method: "PATCH",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };
@@ -330,7 +331,6 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   ) {
     const response = await fetch(`/api/reports/${selectedReport.id}/updates`, {
       method: "POST",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };

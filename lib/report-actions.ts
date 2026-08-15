@@ -2,6 +2,8 @@ import type { IncidentReport } from "@/lib/types";
 
 export type ReportActionType = "confirmed" | "resolved";
 
+export const REPORT_ACTION_UNDO_WINDOW_MS = 30_000;
+
 export type ReportActionLoadingState = {
   reportId: string;
   type: ReportActionType;

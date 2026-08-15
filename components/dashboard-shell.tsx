@@ -14,6 +14,7 @@ import { IncidentReportsContent } from "@/components/incident-reports-content";
 import { LiveAlertsPanel } from "@/components/live-alerts-panel";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
+import { useReportSessionReady } from "@/components/report-session-provider";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
 import { WeatherAlertViewer } from "@/components/weather-alert-viewer";
@@ -36,6 +37,7 @@ import {
   buildReportEvacuationCentersHref,
   buildReportUpdateHref,
   REPORT_ACTION_MESSAGES,
+  REPORT_ACTION_UNDO_WINDOW_MS,
   type ReportActionLoadingState,
 } from "@/lib/report-actions";
 import {
@@ -58,10 +60,6 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fetchWeatherOverview } from "@/lib/weather-client";
-import {
-  createReportActionHeaders,
-  REPORT_ACTION_UNDO_WINDOW_MS,
-} from "@/lib/report-session";
 import { getSidebarWeatherOverview } from "@/lib/weather";
 import {
   hasValidCoordinates,
@@ -236,6 +234,7 @@ export function DashboardShell({
   pageMode = "flood-map",
 }: DashboardShellProps) {
   const router = useRouter();
+  const reportSessionReady = useReportSessionReady();
   const [theme, setTheme] = useState<Theme>("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -456,7 +455,7 @@ export function DashboardShell({
   }, [isContentOnlyView, isWeatherMonitoringView]);
 
   useEffect(() => {
-    if (!isFloodMapView) {
+    if (!isFloodMapView || !reportSessionReady) {
       return;
     }
 
@@ -469,7 +468,6 @@ export function DashboardShell({
       try {
         const response = await fetch("/api/reports?limit=50", {
           cache: "no-store",
-          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportsResponse | { error: string };
 
@@ -517,10 +515,15 @@ export function DashboardShell({
     return () => {
       isMounted = false;
     };
-  }, [isFloodMapView]);
+  }, [isFloodMapView, reportSessionReady]);
 
   useEffect(() => {
-    if (!isFloodMapView || typeof window === "undefined" || floodMapLoadingReports) {
+    if (
+      !isFloodMapView ||
+      !reportSessionReady ||
+      typeof window === "undefined" ||
+      floodMapLoadingReports
+    ) {
       return;
     }
 
@@ -549,7 +552,6 @@ export function DashboardShell({
         try {
           const response = await fetch(`/api/reports/${queryReportId}`, {
             cache: "no-store",
-            headers: createReportActionHeaders(),
           });
           const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -592,10 +594,15 @@ export function DashboardShell({
     return () => {
       isMounted = false;
     };
-  }, [floodMapLoadingReports, floodMapReports, isFloodMapView]);
+  }, [floodMapLoadingReports, floodMapReports, isFloodMapView, reportSessionReady]);
 
   useEffect(() => {
-    if (!isFloodMapView || !floodMapSelectedReportId || !floodMapModalOpen) {
+    if (
+      !isFloodMapView ||
+      !reportSessionReady ||
+      !floodMapSelectedReportId ||
+      !floodMapModalOpen
+    ) {
       return;
     }
 
@@ -606,7 +613,6 @@ export function DashboardShell({
       try {
         const response = await fetch(`/api/reports/${reportId}`, {
           cache: "no-store",
-          headers: createReportActionHeaders(),
         });
         const payload = (await response.json()) as ReportDetailResponse | { error: string };
 
@@ -636,7 +642,12 @@ export function DashboardShell({
     return () => {
       isMounted = false;
     };
-  }, [floodMapModalOpen, floodMapSelectedReportId, isFloodMapView]);
+  }, [
+    floodMapModalOpen,
+    floodMapSelectedReportId,
+    isFloodMapView,
+    reportSessionReady,
+  ]);
 
   const floodMapMappedReports = useMemo(
     () => floodMapReports.filter((report) => hasValidCoordinates(report)),
@@ -1030,7 +1041,6 @@ export function DashboardShell({
   async function handleEditFloodMapReport(report: IncidentReport, requestBody: FormData) {
     const response = await fetch(`/api/reports/${report.id}`, {
       method: "PATCH",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };
@@ -1053,7 +1063,6 @@ export function DashboardShell({
   async function handleSubmitFloodMapReportUpdate(report: IncidentReport, requestBody: FormData) {
     const response = await fetch(`/api/reports/${report.id}/updates`, {
       method: "POST",
-      headers: createReportActionHeaders(),
       body: requestBody,
     });
     const payload = (await response.json()) as ReportDetailResponse | { error?: string };
@@ -1142,7 +1151,6 @@ export function DashboardShell({
     try {
       const response = await fetch(`/api/reports/${reportId}/confirm`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -1197,7 +1205,6 @@ export function DashboardShell({
     try {
       const response = await fetch(`/api/reports/${reportId}/resolve`, {
         method: "POST",
-        headers: createReportActionHeaders(),
       });
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };
 
@@ -1282,7 +1289,6 @@ export function DashboardShell({
           : `/api/reports/${reportId}/resolve`,
         {
           method: "DELETE",
-          headers: createReportActionHeaders(),
         },
       );
       const payload = (await response.json()) as { data?: ReportRecord; error?: string };

@@ -25,7 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
     const sessionHash = getReportSessionHashFromRequest(request);
 
     if (!sessionHash) {
-      return errorResponse("Missing session information for this action.", 400);
+      return errorResponse("A valid report session is required for this action.", 401);
     }
 
     const report = await prisma.floodReport.findUnique({
@@ -112,7 +112,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     const sessionHash = getReportSessionHashFromRequest(request);
 
     if (!sessionHash) {
-      return errorResponse("Missing session information for this action.", 400);
+      return errorResponse("A valid report session is required for this action.", 401);
     }
 
     const report = await prisma.floodReport.findUnique({

@@ -108,6 +108,7 @@ Create a `.env.local` file.
 
 ```env
 DATABASE_URL=
+REPORT_SESSION_SECRET=
 
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -116,6 +117,11 @@ SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 Fill in the values from your Supabase project.
+
+`REPORT_SESSION_SECRET` must be a cryptographically random value containing at
+least 32 characters. It signs the anonymous `HttpOnly` session cookie used for
+report ownership and community actions. Keep the same value across deployments;
+changing it invalidates existing anonymous sessions.
 
 ### Apply database migrations
 
