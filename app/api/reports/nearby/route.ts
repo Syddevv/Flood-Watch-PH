@@ -9,6 +9,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { serializeReportRecord } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { protectApiRequest } from "@/lib/request-security";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
 const DEFAULT_RADIUS_METERS = 300;
@@ -117,6 +118,16 @@ async function reconcileNearbyReport(
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "reports-nearby",
+      limit: 60,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const sessionHash = getReportSessionHashFromRequest(request);
     const latitude = Number(searchParams.get("lat"));

@@ -1,5 +1,6 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { protectApiRequest } from "@/lib/request-security";
 import {
   createReportSession,
   getReportSessionHashFromRequest,
@@ -17,6 +18,17 @@ function getLegacySessionHash(value: unknown) {
 
 export async function POST(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-session",
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     if (getReportSessionHashFromRequest(request)) {
       return successResponse({ initialized: true, migrated: false });
     }

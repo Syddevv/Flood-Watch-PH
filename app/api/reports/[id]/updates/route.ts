@@ -10,6 +10,7 @@ import {
   type PublicReportRecord,
 } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { protectApiRequest } from "@/lib/request-security";
 
 type RouteContext = {
   params: Promise<{
@@ -19,6 +20,17 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-update",
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const sessionHash = getReportSessionHashFromRequest(request);
 

@@ -1,9 +1,20 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { reverseGeocodeReportLocation } from "@/lib/report-location";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
+import { protectApiRequest } from "@/lib/request-security";
 
 export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "reports-reverse-geocode",
+      limit: 30,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { searchParams } = new URL(request.url);
     const latitude = Number(searchParams.get("lat"));
     const longitude = Number(searchParams.get("lng") ?? searchParams.get("lon"));

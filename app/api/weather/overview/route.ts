@@ -8,13 +8,24 @@ import {
   getWeatherUnavailableMessage,
 } from "@/lib/weather";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { protectApiRequest } from "@/lib/request-security";
 
 const getCachedWeatherOverview = unstable_cache(getWeatherOverview, ["weather-overview"], {
   revalidate: WEATHER_SOURCE_CACHE_SECONDS,
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "weather-overview",
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const overview = await getCachedWeatherOverview();
     return successResponse(overview, {
       headers: getWeatherCacheHeaders(),

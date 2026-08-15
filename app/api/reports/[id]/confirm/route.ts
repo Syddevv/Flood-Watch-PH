@@ -12,6 +12,7 @@ import {
   getReportSessionHashFromRequest,
   REPORT_ACTION_UNDO_WINDOW_MS,
 } from "@/lib/report-session";
+import { protectApiRequest } from "@/lib/request-security";
 
 type RouteContext = {
   params: Promise<{
@@ -21,6 +22,17 @@ type RouteContext = {
 
 export async function POST(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-confirm",
+      limit: 30,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const sessionHash = getReportSessionHashFromRequest(request);
 
@@ -108,6 +120,17 @@ export async function POST(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-confirm-undo",
+      limit: 30,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const sessionHash = getReportSessionHashFromRequest(request);
 

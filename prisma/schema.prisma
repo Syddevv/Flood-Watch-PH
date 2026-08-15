@@ -110,3 +110,12 @@ model AboutContent {
   content    String
   updatedAt  DateTime @updatedAt
 }
+
+model RequestRateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}

@@ -14,6 +14,7 @@ import {
   type PublicReportRecord,
 } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { protectApiRequest } from "@/lib/request-security";
 
 type RouteContext = {
   params: Promise<{
@@ -23,6 +24,16 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-detail",
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const includeArchived = new URL(request.url).searchParams.get("includeArchived") === "true";
     const sessionHash = getReportSessionHashFromRequest(request);
@@ -62,6 +73,17 @@ export async function GET(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-edit",
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const sessionHash = getReportSessionHashFromRequest(request);
 
@@ -122,6 +144,17 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(request: Request, context: RouteContext) {
   try {
+    const protectionResponse = await protectApiRequest(request, {
+      scope: "report-delete",
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+      requireTrustedOrigin: true,
+    });
+
+    if (protectionResponse) {
+      return protectionResponse;
+    }
+
     const { id } = await context.params;
     const sessionHash = getReportSessionHashFromRequest(request);
 
