@@ -117,6 +117,24 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 Fill in the values from your Supabase project.
 
+### Apply database migrations
+
+For a new database, apply the complete migration history:
+
+```bash
+npx prisma migrate deploy
+```
+
+This repository now includes the baseline migration
+`20260601_initial_schema`. Existing deployments that already contain the
+baseline schema must mark it as applied before their next deploy, then run the
+normal migration command:
+
+```bash
+npx prisma migrate resolve --applied 20260601_initial_schema
+npx prisma migrate deploy
+```
+
 ---
 
 ## Run the development server
