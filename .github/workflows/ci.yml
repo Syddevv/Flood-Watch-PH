@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 22
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/floodwatch_ci
+  DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/floodwatch_ci
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+  REPORT_SESSION_SECRET: ci-report-session-secret-32-characters-long
+  ABUSE_PROTECTION_SECRET: ci-abuse-protection-secret-32-characters-long
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+  integration:
+    name: Report API integration tests
+    runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.TEST_DATABASE_URL }}
+
+    steps:
+      - name: Integration database not configured
+        if: env.TEST_DATABASE_URL == ''
+        run: echo "Skipping integration tests because TEST_DATABASE_URL is not configured."
+
+      - name: Check out repository
+        if: env.TEST_DATABASE_URL != ''
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        if: env.TEST_DATABASE_URL != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        if: env.TEST_DATABASE_URL != ''
+        run: npm ci
+
+      - name: Apply test database migrations
+        if: env.TEST_DATABASE_URL != ''
+        run: npx prisma migrate deploy
+
+      - name: Run API integration tests
+        if: env.TEST_DATABASE_URL != ''
+        run: npm run test:integration
