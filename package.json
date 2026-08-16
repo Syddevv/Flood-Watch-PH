@@ -6,6 +6,7 @@
     "dev": "next dev",
     "prebuild": "prisma generate",
     "build": "next build",
+    "pretypecheck": "prisma generate",
     "typecheck": "tsc --noEmit --pretty false",
     "check:deploy": "npm run lint && npm run typecheck && npm run build",
     "start": "next start",
