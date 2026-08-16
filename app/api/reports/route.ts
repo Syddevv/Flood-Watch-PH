@@ -14,6 +14,7 @@ import { compareReportsByPriority } from "@/lib/report-trust";
 import { prisma } from "@/lib/prisma";
 import {
   parseReportDetailsFormData,
+  parseReportRequestFormData,
   reportListInclude,
   serializeReportRecord,
   uploadReportImageFile,
@@ -360,7 +361,13 @@ export async function POST(request: Request) {
       return errorResponse("Session initialization is required to submit a report.", 401);
     }
 
-    const formData = await request.formData();
+    const parsedFormData = await parseReportRequestFormData(request);
+
+    if (parsedFormData.error || !parsedFormData.formData) {
+      return errorResponse(parsedFormData.error ?? "Invalid multipart form data.", 400);
+    }
+
+    const formData = parsedFormData.formData;
     const imageFile = formData.get("image");
 
     if (imageFile && typeof imageFile === "string") {

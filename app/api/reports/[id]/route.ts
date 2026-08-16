@@ -8,6 +8,7 @@ import {
   REPORT_OWNER_FORBIDDEN_MESSAGE,
   isReportOwner,
   parseReportDetailsFormData,
+  parseReportRequestFormData,
   reportDetailInclude,
   serializeReportRecord,
   uploadReportImageFile,
@@ -100,7 +101,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
     }
 
-    const formData = await request.formData();
+    const parsedFormData = await parseReportRequestFormData(request);
+
+    if (parsedFormData.error || !parsedFormData.formData) {
+      return errorResponse(parsedFormData.error ?? "Invalid multipart form data.", 400);
+    }
+
+    const formData = parsedFormData.formData;
     const imageFile = formData.get("image");
 
     if (imageFile && typeof imageFile === "string") {

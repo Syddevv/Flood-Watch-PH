@@ -121,6 +121,18 @@ export function getOptionalText(value: unknown) {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+export async function parseReportRequestFormData(request: Request) {
+  try {
+    return {
+      formData: await request.formData(),
+    };
+  } catch {
+    return {
+      error: "Invalid multipart form data.",
+    };
+  }
+}
+
 export function buildInlineImageDataUrl(fileBuffer: Buffer, mimeType: string) {
   return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
 }
