@@ -19,6 +19,39 @@ test("malformed multipart requests return a client-safe parsing error", async ()
 
   assert.deepEqual(await parseReportRequestFormData(request), {
     error: "Invalid multipart form data.",
+    status: 400,
+  });
+});
+
+test("oversized multipart requests are rejected before parsing", async () => {
+  const request = new Request("http://localhost/api/reports", {
+    method: "POST",
+    headers: {
+      "content-type": "multipart/form-data; boundary=unused",
+      "content-length": String(6 * 1024 * 1024),
+    },
+    body: "unused",
+  });
+
+  assert.deepEqual(await parseReportRequestFormData(request), {
+    error: "Report form data must not exceed 5.25 MB.",
+    status: 413,
+  });
+});
+
+test("oversized multipart requests without content length are rejected after parsing", async () => {
+  const formData = new FormData();
+  formData.set("image", new File([new Uint8Array(6 * 1024 * 1024)], "large.png", {
+    type: "image/png",
+  }));
+  const request = new Request("http://localhost/api/reports", {
+    method: "POST",
+    body: formData,
+  });
+
+  assert.deepEqual(await parseReportRequestFormData(request), {
+    error: "Report form data must not exceed 5.25 MB.",
+    status: 413,
   });
 });
 

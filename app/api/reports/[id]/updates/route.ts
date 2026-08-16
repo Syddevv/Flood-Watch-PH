@@ -51,7 +51,10 @@ export async function POST(request: Request, context: RouteContext) {
     const parsedFormData = await parseReportRequestFormData(request);
 
     if (parsedFormData.error || !parsedFormData.formData) {
-      return errorResponse(parsedFormData.error ?? "Invalid multipart form data.", 400);
+      return errorResponse(
+        parsedFormData.error ?? "Invalid multipart form data.",
+        parsedFormData.status ?? 400,
+      );
     }
 
     const formData = parsedFormData.formData;
@@ -73,7 +76,7 @@ export async function POST(request: Request, context: RouteContext) {
       const uploadResult = await uploadReportImageFile(imageFile);
 
       if (uploadResult.error) {
-        return errorResponse(uploadResult.error, 400);
+        return errorResponse(uploadResult.error, uploadResult.status ?? 400);
       }
 
       imageUrl = uploadResult.imageUrl;

@@ -1,5 +1,9 @@
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
-import { validateReportImageFile } from "@/lib/report-image-validation";
+import {
+  REPORT_MULTIPART_MAX_BYTES,
+  validateReportImageBuffer,
+  validateReportImageFile,
+} from "@/lib/report-image-validation";
 import { isSupportedReportCategory } from "@/lib/reporting";
 import {
   isValidLatitude,
@@ -122,19 +126,39 @@ export function getOptionalText(value: unknown) {
 }
 
 export async function parseReportRequestFormData(request: Request) {
-  try {
+  const contentLength = Number(request.headers.get("content-length"));
+
+  if (Number.isFinite(contentLength) && contentLength > REPORT_MULTIPART_MAX_BYTES) {
     return {
-      formData: await request.formData(),
+      error: "Report form data must not exceed 5.25 MB.",
+      status: 413,
+    };
+  }
+
+  try {
+    const formData = await request.formData();
+    let parsedSize = 0;
+
+    for (const value of formData.values()) {
+      parsedSize += typeof value === "string" ? Buffer.byteLength(value) : value.size;
+    }
+
+    if (parsedSize > REPORT_MULTIPART_MAX_BYTES) {
+      return {
+        error: "Report form data must not exceed 5.25 MB.",
+        status: 413,
+      };
+    }
+
+    return {
+      formData,
     };
   } catch {
     return {
       error: "Invalid multipart form data.",
+      status: 400,
     };
   }
-}
-
-export function buildInlineImageDataUrl(fileBuffer: Buffer, mimeType: string) {
-  return `data:${mimeType};base64,${fileBuffer.toString("base64")}`;
 }
 
 export async function uploadReportImageFile(imageFile: File) {
@@ -145,6 +169,11 @@ export async function uploadReportImageFile(imageFile: File) {
   }
 
   const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+  const imageContentError = validateReportImageBuffer(imageBuffer, imageFile.type);
+
+  if (imageContentError) {
+    return { error: imageContentError, status: 400 };
+  }
 
   try {
     return {
@@ -153,7 +182,8 @@ export async function uploadReportImageFile(imageFile: File) {
   } catch (error) {
     console.error("Failed to upload report image.", error);
     return {
-      imageUrl: buildInlineImageDataUrl(imageBuffer, imageFile.type),
+      error: "Image storage is temporarily unavailable. Submit the report without an image or try again later.",
+      status: 503,
     };
   }
 }

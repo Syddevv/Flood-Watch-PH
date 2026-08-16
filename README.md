@@ -112,6 +112,10 @@ REPORT_SESSION_SECRET=
 ABUSE_PROTECTION_SECRET=
 NEXT_PUBLIC_APP_URL=
 
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
@@ -130,6 +134,10 @@ database-backed API rate limiter. It may be omitted to reuse
 `REPORT_SESSION_SECRET`. Set `NEXT_PUBLIC_APP_URL` to the deployed application
 origin, such as `https://flood-watch-ph.vercel.app`, so mutation requests can be
 validated against the expected origin.
+
+The three `CLOUDINARY_*` values are required for report image uploads. Reports
+without images remain available if Cloudinary is unavailable, but image uploads
+are rejected instead of being stored as large Base64 values in PostgreSQL.
 
 ### Apply database migrations
 
