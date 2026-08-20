@@ -5,7 +5,7 @@ import {
   parseReportFilters,
 } from "@/lib/api-utils";
 import {
-  getLifecyclePersistencePatch,
+  deriveReportLifecycleStatus,
   isVisiblePublicLifecycleStatus,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
@@ -24,6 +24,7 @@ import { protectApiRequest } from "@/lib/request-security";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_REPORTS_TO_PROCESS = 500;
 
 function buildReportListResponse(
   data: ReportListRecord[],
@@ -163,26 +164,11 @@ function buildReportWhereClause(filters: {
   };
 }
 
-async function reconcileReportLifecycle(
-  report: ReportListRecord,
-): Promise<ReportListRecord> {
-  const now = new Date();
-  const patch = getLifecyclePersistencePatch(report, now);
-
-  if (Object.keys(patch).length === 0) {
-    return {
-      ...report,
-      status: report.status as ReportLifecycleStatus,
-    };
-  }
-
-  const updatedReport = await prisma.floodReport.update({
-    where: { id: report.id },
-    data: patch,
-    include: reportListInclude,
-  });
-
-  return updatedReport as ReportListRecord;
+function reconcileReportLifecycle(report: ReportListRecord): ReportListRecord {
+  return {
+    ...report,
+    status: deriveReportLifecycleStatus(report) as ReportLifecycleStatus,
+  };
 }
 
 export async function GET(request: Request) {
@@ -221,6 +207,7 @@ export async function GET(request: Request) {
     const reports = (await prisma.floodReport.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: MAX_REPORTS_TO_PROCESS,
     })) as ReportListRecord[];
 
     if (reports.length === 0) {
@@ -260,11 +247,7 @@ export async function GET(request: Request) {
       }),
     );
 
-    const reconciledReports: ReportListRecord[] = await Promise.all(
-      reportsWithConfirmations.map((report: ReportListRecord) =>
-        reconcileReportLifecycle(report),
-      ),
-    );
+    const reconciledReports = reportsWithConfirmations.map(reconcileReportLifecycle);
 
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       const lifecycleStatus = report.status as ReportLifecycleStatus;

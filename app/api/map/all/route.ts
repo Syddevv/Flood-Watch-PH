@@ -2,7 +2,7 @@ import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
 import { EVACUATION_CENTERS } from "@/lib/constants";
 import {
-  getLifecyclePersistencePatch,
+  deriveReportLifecycleStatus,
   isVisiblePublicLifecycleStatus,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
@@ -28,6 +28,7 @@ const mapReportSelect = {
   resolvedAt: true,
   archivedAt: true,
 } as const;
+const MAX_MAP_REPORTS = 500;
 
 type MapReportRecord = {
   id: string;
@@ -110,24 +111,14 @@ export async function GET(request: Request) {
           : {}),
       },
       select: mapReportSelect,
+      orderBy: { createdAt: "desc" },
+      take: MAX_MAP_REPORTS,
     });
 
-    const reconciledReports: MapReportRecord[] = await Promise.all(
-      reports.map(async (report: MapReportRecord) => {
-        const patch = getLifecyclePersistencePatch(report);
-        if (Object.keys(patch).length === 0) {
-          return report;
-        }
-
-        const updatedReport: MapReportRecord = await prisma.floodReport.update({
-          where: { id: report.id },
-          data: patch,
-          select: mapReportSelect,
-        });
-
-        return updatedReport;
-      }),
-    );
+    const reconciledReports = reports.map((report) => ({
+      ...report,
+      status: deriveReportLifecycleStatus(report),
+    }));
 
     const filteredReports = reconciledReports
       .filter((report: MapReportRecord) => {
