@@ -1,8 +1,7 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createBoundingBox, calculateDistanceMeters } from "@/lib/report-geo";
 import {
-  applyReportLifecycleUpdates,
-  getLifecyclePersistencePatch,
+  deriveReportLifecycleStatus,
   isActiveLifecycleStatus,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
@@ -86,34 +85,11 @@ type NearbyReportDistanceEntry = {
   distanceMeters: number;
 };
 
-async function reconcileNearbyReport(
-  report: NearbyReportRecord,
-): Promise<NearbyReportRecord> {
-  const nextLifecycle = applyReportLifecycleUpdates(report);
-  const patch = getLifecyclePersistencePatch(report);
-  if (Object.keys(patch).length === 0) {
-    return {
-      ...report,
-      status: nextLifecycle.status,
-    };
-  }
-
-  try {
-    const updatedReport = await prisma.floodReport.update({
-      where: { id: report.id },
-      data: patch,
-      include: nearbyInclude,
-    });
-
-    return updatedReport as NearbyReportRecord;
-  } catch (error) {
-    console.warn("Failed to persist nearby report lifecycle update.", error);
-
-    return {
-      ...report,
-      ...nextLifecycle,
-    };
-  }
+function reconcileNearbyReport(report: NearbyReportRecord): NearbyReportRecord {
+  return {
+    ...report,
+    status: deriveReportLifecycleStatus(report),
+  };
 }
 
 export async function GET(request: Request) {
@@ -157,11 +133,10 @@ export async function GET(request: Request) {
         },
       },
       include: nearbyInclude,
+      take: 100,
     })) as NearbyReportRecord[];
 
-    const reconciledReports: NearbyReportRecord[] = await Promise.all(
-      reports.map((report: NearbyReportRecord) => reconcileNearbyReport(report)),
-    );
+    const reconciledReports = reports.map(reconcileNearbyReport);
 
     const nearbyReports = reconciledReports
       .filter((report: NearbyReportRecord) =>

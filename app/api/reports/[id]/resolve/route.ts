@@ -5,6 +5,7 @@ import {
 } from "@/lib/report-lifecycle";
 import {
   isPrismaUniqueConstraintError,
+  lockFloodReportForUpdate,
   prisma,
   type PrismaTransactionClient,
 } from "@/lib/prisma";
@@ -166,26 +167,31 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("This report can no longer be updated.", 400);
     }
 
-    const matchingResolution = await prisma.reportConfirmation.findFirst({
-      where: {
-        reportId: id,
-        confirmationType: "resolved",
-        ipHash: sessionHash,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    if (!matchingResolution) {
-      return errorResponse("Unable to undo this action.", 400);
-    }
-
-    if (Date.now() - matchingResolution.createdAt.getTime() > REPORT_ACTION_UNDO_WINDOW_MS) {
-      return errorResponse("Undo window has expired.", 400);
-    }
-
     const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      await lockFloodReportForUpdate(tx, id);
+
+      const matchingResolution = await tx.reportConfirmation.findFirst({
+        where: {
+          reportId: id,
+          confirmationType: "resolved",
+          ipHash: sessionHash,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (!matchingResolution) {
+        return null;
+      }
+
+      if (
+        Date.now() - matchingResolution.createdAt.getTime() >
+        REPORT_ACTION_UNDO_WINDOW_MS
+      ) {
+        return "expired" as const;
+      }
+
       await tx.reportConfirmation.delete({
         where: {
           id: matchingResolution.id,
@@ -200,17 +206,22 @@ export async function DELETE(request: Request, context: RouteContext) {
           createdAt: true,
         },
       });
+      const resolvedCount = await tx.reportConfirmation.count({
+        where: {
+          reportId: id,
+          confirmationType: "resolved",
+        },
+      });
 
       const lastActivityAt =
         remainingActivity._max.createdAt ?? report.updatedAt ?? report.createdAt;
-      const nextResolvedCount = Math.max(report.resolvedCount - 1, 0);
 
       const nextReport = await tx.floodReport.update({
         where: { id },
         data: {
-          resolvedCount: nextResolvedCount,
+          resolvedCount,
           lastActivityAt,
-          ...(nextResolvedCount < 3 ? { resolvedAt: null } : {}),
+          ...(resolvedCount < 3 ? { resolvedAt: null } : {}),
         },
       });
 
@@ -224,6 +235,14 @@ export async function DELETE(request: Request, context: RouteContext) {
         data: nextPatch,
       });
     });
+
+    if (!updatedReport) {
+      return errorResponse("Unable to undo this action.", 400);
+    }
+
+    if (updatedReport === "expired") {
+      return errorResponse("Undo window has expired.", 400);
+    }
 
     return successResponse(updatedReport);
   } catch (error) {

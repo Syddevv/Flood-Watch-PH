@@ -36,3 +36,17 @@ export function isPrismaUniqueConstraintError(error: unknown) {
       error.code === "P2002",
   );
 }
+
+export async function lockFloodReportForUpdate(
+  tx: PrismaTransactionClient,
+  reportId: string,
+) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "FloodReport"
+    WHERE "id" = ${reportId}
+    FOR UPDATE
+  `;
+
+  return rows.length > 0;
+}

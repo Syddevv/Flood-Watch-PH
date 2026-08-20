@@ -5,15 +5,17 @@ import {
   parseReportFilters,
 } from "@/lib/api-utils";
 import {
-  getLifecyclePersistencePatch,
+  deriveReportLifecycleStatus,
   isVisiblePublicLifecycleStatus,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { compareReportsByPriority } from "@/lib/report-trust";
+import { isReportDatabaseUnavailableError } from "@/lib/report-db-errors";
 import { prisma } from "@/lib/prisma";
 import {
   parseReportDetailsFormData,
+  parseReportRequestFormData,
   reportListInclude,
   serializeReportRecord,
   uploadReportImageFile,
@@ -23,6 +25,7 @@ import { protectApiRequest } from "@/lib/request-security";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_REPORTS_TO_PROCESS = 500;
 
 function buildReportListResponse(
   data: ReportListRecord[],
@@ -43,60 +46,6 @@ function buildReportListResponse(
       total: pagination.total,
       totalPages: Math.max(1, Math.ceil(pagination.total / pagination.limit)),
     },
-  });
-}
-
-function isReportDatabaseUnavailableError(error: unknown) {
-  if (typeof error === "object" && error && "code" in error) {
-    const code = (error as { code?: unknown }).code;
-    if (
-      typeof code === "string" &&
-      ["EACCES", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND"].includes(code)
-    ) {
-      return true;
-    }
-  }
-
-  if (typeof error === "object" && error && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (
-      typeof message === "string" &&
-      /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
-        message,
-      )
-    ) {
-      return true;
-    }
-  }
-
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  if (
-    /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
-      error.message,
-    )
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function buildEmptyReportListResponseFromRequest(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const page = parsePositiveInteger(searchParams.get("page"), 1);
-  const limit = clampLimit(
-    parsePositiveInteger(searchParams.get("limit"), DEFAULT_LIMIT),
-    MAX_LIMIT,
-  );
-
-  return buildReportListResponse([], {
-    page,
-    limit,
-    total: 0,
-    sessionHash: getReportSessionHashFromRequest(request),
   });
 }
 
@@ -162,26 +111,11 @@ function buildReportWhereClause(filters: {
   };
 }
 
-async function reconcileReportLifecycle(
-  report: ReportListRecord,
-): Promise<ReportListRecord> {
-  const now = new Date();
-  const patch = getLifecyclePersistencePatch(report, now);
-
-  if (Object.keys(patch).length === 0) {
-    return {
-      ...report,
-      status: report.status as ReportLifecycleStatus,
-    };
-  }
-
-  const updatedReport = await prisma.floodReport.update({
-    where: { id: report.id },
-    data: patch,
-    include: reportListInclude,
-  });
-
-  return updatedReport as ReportListRecord;
+function reconcileReportLifecycle(report: ReportListRecord): ReportListRecord {
+  return {
+    ...report,
+    status: deriveReportLifecycleStatus(report) as ReportLifecycleStatus,
+  };
 }
 
 export async function GET(request: Request) {
@@ -220,6 +154,7 @@ export async function GET(request: Request) {
     const reports = (await prisma.floodReport.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: MAX_REPORTS_TO_PROCESS,
     })) as ReportListRecord[];
 
     if (reports.length === 0) {
@@ -259,11 +194,7 @@ export async function GET(request: Request) {
       }),
     );
 
-    const reconciledReports: ReportListRecord[] = await Promise.all(
-      reportsWithConfirmations.map((report: ReportListRecord) =>
-        reconcileReportLifecycle(report),
-      ),
-    );
+    const reconciledReports = reportsWithConfirmations.map(reconcileReportLifecycle);
 
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       const lifecycleStatus = report.status as ReportLifecycleStatus;
@@ -334,7 +265,10 @@ export async function GET(request: Request) {
     console.error("Failed to fetch reports.", error);
 
     if (isReportDatabaseUnavailableError(error)) {
-      return buildEmptyReportListResponseFromRequest(request);
+      return errorResponse(
+        "Report data is temporarily unavailable. Please try again later.",
+        503,
+      );
     }
 
     return errorResponse("Something went wrong while fetching reports.");
@@ -360,7 +294,16 @@ export async function POST(request: Request) {
       return errorResponse("Session initialization is required to submit a report.", 401);
     }
 
-    const formData = await request.formData();
+    const parsedFormData = await parseReportRequestFormData(request);
+
+    if (parsedFormData.error || !parsedFormData.formData) {
+      return errorResponse(
+        parsedFormData.error ?? "Invalid multipart form data.",
+        parsedFormData.status ?? 400,
+      );
+    }
+
+    const formData = parsedFormData.formData;
     const imageFile = formData.get("image");
 
     if (imageFile && typeof imageFile === "string") {
@@ -379,7 +322,7 @@ export async function POST(request: Request) {
       const uploadResult = await uploadReportImageFile(imageFile);
 
       if (uploadResult.error) {
-        return errorResponse(uploadResult.error, 400);
+        return errorResponse(uploadResult.error, uploadResult.status ?? 400);
       }
 
       imageUrl = uploadResult.imageUrl;
