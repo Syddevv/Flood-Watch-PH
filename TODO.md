@@ -16,7 +16,7 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 
 ## High Priority
 
-- [ ] Make confirmation and resolution undo operations atomic so concurrent requests cannot corrupt denormalized counters.
+- [x] Make confirmation and resolution undo operations atomic so concurrent requests cannot corrupt denormalized counters.
 - [ ] Stop trusting client-controlled proxy headers for rate-limit identity; use a deployment-provided client address or a trusted proxy boundary.
 - [ ] Replace full-table report/map scans and read-time lifecycle writes with bounded database queries and background reconciliation.
 - [ ] Add indexes for report status, severity, category, source type, timestamps, and geographic lookups.

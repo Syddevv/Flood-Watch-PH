@@ -105,7 +105,7 @@ const integrationTest = testDatabaseUrl
   : (test as typeof test).skip;
 
 integrationTest(
-  "report API enforces session ownership and duplicate confirmation rules",
+  "report API enforces ownership, duplicate actions, and concurrent undo consistency",
   async () => {
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
@@ -141,6 +141,8 @@ integrationTest(
 
       ownerCookie = await createSession(baseUrl, ownerAddress);
       const otherCookie = await createSession(baseUrl, otherAddress);
+      const thirdAddress = `integration-third-${runId}`;
+      const thirdCookie = await createSession(baseUrl, thirdAddress);
       const reportResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: {
@@ -181,6 +183,44 @@ integrationTest(
 
       assert.equal((await confirmRequest()).status, 200);
       assert.equal((await confirmRequest()).status, 409);
+
+      const secondConfirm = await fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: thirdCookie,
+          "X-Forwarded-For": thirdAddress,
+        },
+      });
+      assert.equal(secondConfirm.status, 200);
+
+      const [firstUndo, secondUndo] = await Promise.all([
+        fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {
+          method: "DELETE",
+          headers: {
+            Origin: baseUrl,
+            Cookie: otherCookie,
+            "X-Forwarded-For": otherAddress,
+          },
+        }),
+        fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {
+          method: "DELETE",
+          headers: {
+            Origin: baseUrl,
+            Cookie: thirdCookie,
+            "X-Forwarded-For": thirdAddress,
+          },
+        }),
+      ]);
+      assert.deepEqual([firstUndo.status, secondUndo.status].sort(), [200, 200]);
+
+      const reportAfterUndo = await fetch(`${baseUrl}/api/reports/${reportId}`, {
+        headers: { Cookie: ownerCookie, "X-Forwarded-For": ownerAddress },
+      });
+      const reportAfterUndoPayload = (await reportAfterUndo.json()) as {
+        data?: { confirmationCount?: number };
+      };
+      assert.equal(reportAfterUndoPayload.data?.confirmationCount, 0);
 
       const ownerDelete = await fetch(`${baseUrl}/api/reports/${reportId}`, {
         method: "DELETE",
