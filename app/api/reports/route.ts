@@ -11,6 +11,7 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { compareReportsByPriority } from "@/lib/report-trust";
+import { isReportDatabaseUnavailableError } from "@/lib/report-db-errors";
 import { prisma } from "@/lib/prisma";
 import {
   parseReportDetailsFormData,
@@ -45,60 +46,6 @@ function buildReportListResponse(
       total: pagination.total,
       totalPages: Math.max(1, Math.ceil(pagination.total / pagination.limit)),
     },
-  });
-}
-
-function isReportDatabaseUnavailableError(error: unknown) {
-  if (typeof error === "object" && error && "code" in error) {
-    const code = (error as { code?: unknown }).code;
-    if (
-      typeof code === "string" &&
-      ["EACCES", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND"].includes(code)
-    ) {
-      return true;
-    }
-  }
-
-  if (typeof error === "object" && error && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (
-      typeof message === "string" &&
-      /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
-        message,
-      )
-    ) {
-      return true;
-    }
-  }
-
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  if (
-    /\b(connect\s+)?(EACCES|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/i.test(
-      error.message,
-    )
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-function buildEmptyReportListResponseFromRequest(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const page = parsePositiveInteger(searchParams.get("page"), 1);
-  const limit = clampLimit(
-    parsePositiveInteger(searchParams.get("limit"), DEFAULT_LIMIT),
-    MAX_LIMIT,
-  );
-
-  return buildReportListResponse([], {
-    page,
-    limit,
-    total: 0,
-    sessionHash: getReportSessionHashFromRequest(request),
   });
 }
 
@@ -318,7 +265,10 @@ export async function GET(request: Request) {
     console.error("Failed to fetch reports.", error);
 
     if (isReportDatabaseUnavailableError(error)) {
-      return buildEmptyReportListResponseFromRequest(request);
+      return errorResponse(
+        "Report data is temporarily unavailable. Please try again later.",
+        503,
+      );
     }
 
     return errorResponse("Something went wrong while fetching reports.");
