@@ -17,6 +17,7 @@ env:
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
   REPORT_SESSION_SECRET: ci-report-session-secret-32-characters-long
   ABUSE_PROTECTION_SECRET: ci-abuse-protection-secret-32-characters-long
+  TRUSTED_PROXY_CLIENT_IP_HEADER: x-forwarded-for
 
 jobs:
   quality:

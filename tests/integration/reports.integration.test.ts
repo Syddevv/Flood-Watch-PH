@@ -128,6 +128,7 @@ integrationTest(
           ABUSE_PROTECTION_SECRET:
             process.env.ABUSE_PROTECTION_SECRET ??
             "integration-test-abuse-protection-secret-32-chars",
+          TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
         },
         stdio: "ignore",
       },

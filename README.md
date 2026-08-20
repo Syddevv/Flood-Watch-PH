@@ -111,6 +111,7 @@ DATABASE_URL=
 REPORT_SESSION_SECRET=
 ABUSE_PROTECTION_SECRET=
 NEXT_PUBLIC_APP_URL=
+TRUSTED_PROXY_CLIENT_IP_HEADER=
 
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -134,6 +135,14 @@ database-backed API rate limiter. It may be omitted to reuse
 `REPORT_SESSION_SECRET`. Set `NEXT_PUBLIC_APP_URL` to the deployed application
 origin, such as `https://flood-watch-ph.vercel.app`, so mutation requests can be
 validated against the expected origin.
+
+`TRUSTED_PROXY_CLIENT_IP_HEADER` is optional. Set it only when the application
+is behind a proxy that strips client-supplied values and writes the selected
+header itself. Supported values are `x-vercel-forwarded-for`,
+`cf-connecting-ip`, `x-real-ip`, and `x-forwarded-for`. If it is unset, signed
+report sessions are used for rate-limit identity and unauthenticated requests
+share an anonymous bucket. Never enable a header merely because a client sends
+it.
 
 The three `CLOUDINARY_*` values are required for report image uploads. Reports
 without images remain available if Cloudinary is unavailable, but image uploads

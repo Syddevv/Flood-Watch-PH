@@ -4,6 +4,8 @@ import { createHmac } from "node:crypto";
 
 import { errorResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { getRateLimitIdentity } from "@/lib/rate-limit-identity";
+import { getReportSessionHashFromRequest } from "@/lib/report-session";
 
 type RateLimitRow = {
   count: number;
@@ -38,20 +40,14 @@ function getProtectionSecret() {
   return secret;
 }
 
-function getClientAddress(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-
-  return (
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    forwardedFor ||
-    "unknown"
-  );
-}
-
 function createRateLimitKey(request: Request, scope: string) {
+  const identity = getRateLimitIdentity(
+    request,
+    getReportSessionHashFromRequest(request),
+    process.env.TRUSTED_PROXY_CLIENT_IP_HEADER,
+  );
   const addressHash = createHmac("sha256", getProtectionSecret())
-    .update(getClientAddress(request))
+    .update(identity)
     .digest("hex");
 
   return `${scope}:${addressHash}`;
