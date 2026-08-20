@@ -36,6 +36,12 @@ model FloodReport {
   updates           ReportUpdate[]
 
   @@index([ownerSessionHash])
+  @@index([status, createdAt])
+  @@index([severity, createdAt])
+  @@index([category, createdAt])
+  @@index([sourceType, createdAt])
+  @@index([lastActivityAt])
+  @@index([latitude, longitude])
 }
 
 model ReportConfirmation {
@@ -48,6 +54,7 @@ model ReportConfirmation {
 
   @@unique([reportId, confirmationType, ipHash])
   @@index([reportId])
+  @@index([reportId, confirmationType, createdAt])
 }
 
 model ReportUpdate {
