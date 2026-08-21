@@ -12,8 +12,8 @@ import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 import {
   getWeatherByCoordinates,
   getWeatherCacheHeaders,
-  getWeatherUnavailableMessage,
 } from "@/lib/weather";
+import { weatherProviderErrorResponse } from "@/lib/weather-api";
 
 const getCachedWeatherByCoordinates = unstable_cache(
   async (latitude: number, longitude: number, name?: string) =>
@@ -75,9 +75,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Failed to fetch coordinate weather.", error);
-    return errorResponse(
-      error instanceof Error ? error.message : getWeatherUnavailableMessage(),
-      503,
-    );
+    return weatherProviderErrorResponse();
   }
 }

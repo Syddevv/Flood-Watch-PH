@@ -8,8 +8,8 @@ import {
 import {
   getWeatherByQuery,
   getWeatherCacheHeaders,
-  getWeatherUnavailableMessage,
 } from "@/lib/weather";
+import { weatherProviderErrorResponse } from "@/lib/weather-api";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
 import { protectApiRequest } from "@/lib/request-security";
 
@@ -55,9 +55,6 @@ export async function GET(request: Request) {
     return errorResponse("Location not found. Try another city, municipality, or province.", 400);
   } catch (error) {
     console.error("Failed to fetch location weather.", error);
-    return errorResponse(
-      error instanceof Error ? error.message : getWeatherUnavailableMessage(),
-      503,
-    );
+    return weatherProviderErrorResponse();
   }
 }
