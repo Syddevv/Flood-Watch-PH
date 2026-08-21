@@ -6,6 +6,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import {
   REPORT_OWNER_FORBIDDEN_MESSAGE,
+  canAccessArchivedReport,
   isReportOwner,
   parseReportDetailsFormData,
   parseReportRequestFormData,
@@ -59,8 +60,8 @@ export async function GET(request: Request, context: RouteContext) {
         : report;
 
     if (
-      !includeArchived &&
-      (reconciledReport.status as ReportLifecycleStatus) === "Archived"
+      (reconciledReport.status as ReportLifecycleStatus) === "Archived" &&
+      !canAccessArchivedReport(reconciledReport, sessionHash, includeArchived)
     ) {
       return errorResponse("Flood report not found.", 404);
     }

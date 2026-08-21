@@ -100,7 +100,6 @@ export async function GET(request: Request) {
       return errorResponse(parsedFilters.error, 400);
     }
 
-    const includeArchived = searchParams.get("includeArchived") === "true";
     const reports: MapReportRecord[] = await prisma.floodReport.findMany({
       where: {
         ...(parsedFilters.filters.severity
@@ -124,7 +123,7 @@ export async function GET(request: Request) {
       .filter((report: MapReportRecord) => {
         const lifecycleStatus = report.status as ReportLifecycleStatus;
 
-        if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+        if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
           return false;
         }
 

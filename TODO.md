@@ -29,7 +29,7 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 - [x] Configure a dedicated disposable PostgreSQL database in CI and enable the integration job.
 - [x] Expand integration coverage to report updates, resolve/undo, malformed uploads, rate limits, and concurrent actions.
 - [x] Remove the build-time dependency on Google Fonts or vendor the fonts locally.
-- [ ] Decide whether archived reports should be publicly retrievable with `includeArchived=true`; enforce the chosen policy consistently.
+- [x] Restrict archived reports to explicit owner-session retrieval and exclude them from public lists and maps.
 - [ ] Bound search, location, and cache-key input lengths before querying providers or the database.
 - [ ] Return stable generic weather-provider errors instead of forwarding exception messages to clients.
 - [ ] Add database-level constraints or enums for report severity, status, source type, and confirmation type.
