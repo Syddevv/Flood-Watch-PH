@@ -19,6 +19,11 @@ type ApiProtectionOptions = {
   requireTrustedOrigin?: boolean;
 };
 
+const RATE_LIMIT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const RATE_LIMIT_CLEANUP_BATCH_SIZE = 100;
+let nextRateLimitCleanupAt = 0;
+let rateLimitCleanupInFlight: Promise<void> | null = null;
+
 function getProtectionSecret() {
   const secret =
     process.env.ABUSE_PROTECTION_SECRET ?? process.env.REPORT_SESSION_SECRET;
@@ -116,6 +121,36 @@ async function consumeRateLimit(
   };
 }
 
+async function cleanupExpiredRateLimits(now: Date) {
+  await prisma.$executeRaw`
+    DELETE FROM "RequestRateLimit" AS current_limit
+    USING (
+      SELECT "key"
+      FROM "RequestRateLimit"
+      WHERE "expiresAt" <= ${now}
+      ORDER BY "expiresAt" ASC
+      LIMIT ${RATE_LIMIT_CLEANUP_BATCH_SIZE}
+      FOR UPDATE SKIP LOCKED
+    ) AS expired_limits
+    WHERE current_limit."key" = expired_limits."key"
+  `;
+}
+
+function scheduleExpiredRateLimitCleanup(now: Date) {
+  if (Date.now() < nextRateLimitCleanupAt || rateLimitCleanupInFlight) {
+    return;
+  }
+
+  nextRateLimitCleanupAt = Date.now() + RATE_LIMIT_CLEANUP_INTERVAL_MS;
+  rateLimitCleanupInFlight = cleanupExpiredRateLimits(now)
+    .catch((error) => {
+      console.warn("Failed to clean up expired API rate-limit records.", error);
+    })
+    .finally(() => {
+      rateLimitCleanupInFlight = null;
+    });
+}
+
 export async function protectApiRequest(
   request: Request,
   options: ApiProtectionOptions,
@@ -126,6 +161,7 @@ export async function protectApiRequest(
 
   try {
     const result = await consumeRateLimit(request, options);
+    scheduleExpiredRateLimitCleanup(new Date());
 
     if (result.allowed) {
       return null;
