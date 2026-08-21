@@ -105,7 +105,7 @@ const integrationTest = testDatabaseUrl
   : (test as typeof test).skip;
 
 integrationTest(
-  "report API enforces ownership, duplicate actions, and concurrent undo consistency",
+  "report API enforces ownership, validation, rate limits, and concurrent undo consistency",
   async () => {
     const port = await getAvailablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
@@ -172,6 +172,77 @@ integrationTest(
       });
       assert.equal(otherDelete.status, 403);
 
+      const forbiddenUpdate = new FormData();
+      forbiddenUpdate.set("message", "This update must be rejected.");
+      const forbiddenUpdateResponse = await fetch(
+        `${baseUrl}/api/reports/${reportId}/updates`,
+        {
+          method: "POST",
+          headers: {
+            Origin: baseUrl,
+            Cookie: otherCookie,
+            "X-Forwarded-For": otherAddress,
+          },
+          body: forbiddenUpdate,
+        },
+      );
+      assert.equal(forbiddenUpdateResponse.status, 403);
+
+      const ownerUpdate = new FormData();
+      ownerUpdate.set("message", "Water level is increasing near the bridge.");
+      ownerUpdate.set("severity", "Critical");
+      const ownerUpdateResponse = await fetch(
+        `${baseUrl}/api/reports/${reportId}/updates`,
+        {
+          method: "POST",
+          headers: {
+            Origin: baseUrl,
+            Cookie: ownerCookie,
+            "X-Forwarded-For": ownerAddress,
+          },
+          body: ownerUpdate,
+        },
+      );
+      const ownerUpdatePayload = (await ownerUpdateResponse.json()) as {
+        data?: { severity?: string; updates?: Array<{ message?: string }> };
+      };
+      assert.equal(ownerUpdateResponse.status, 200);
+      assert.equal(ownerUpdatePayload.data?.severity, "Critical");
+      assert.equal(
+        ownerUpdatePayload.data?.updates?.some(
+          (update) => update.message === "Water level is increasing near the bridge.",
+        ),
+        true,
+      );
+
+      const malformedResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: ownerCookie,
+          "X-Forwarded-For": ownerAddress,
+          "Content-Type": "multipart/form-data; boundary=broken",
+        },
+        body: "not-valid-multipart-data",
+      });
+      assert.equal(malformedResponse.status, 400);
+
+      const forgedImageForm = createReportForm();
+      forgedImageForm.set(
+        "image",
+        new File(["not a real PNG"], "forged.png", { type: "image/png" }),
+      );
+      const forgedImageResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: ownerCookie,
+          "X-Forwarded-For": ownerAddress,
+        },
+        body: forgedImageForm,
+      });
+      assert.equal(forgedImageResponse.status, 400);
+
       const confirmRequest = () =>
         fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {
           method: "POST",
@@ -222,6 +293,72 @@ integrationTest(
         data?: { confirmationCount?: number };
       };
       assert.equal(reportAfterUndoPayload.data?.confirmationCount, 0);
+
+      const resolveRequest = (cookie: string, address: string) =>
+        fetch(`${baseUrl}/api/reports/${reportId}/resolve`, {
+          method: "POST",
+          headers: {
+            Origin: baseUrl,
+            Cookie: cookie,
+            "X-Forwarded-For": address,
+          },
+        });
+
+      assert.equal((await resolveRequest(otherCookie, otherAddress)).status, 200);
+      assert.equal((await resolveRequest(thirdCookie, thirdAddress)).status, 200);
+
+      const [firstResolveUndo, secondResolveUndo] = await Promise.all([
+        fetch(`${baseUrl}/api/reports/${reportId}/resolve`, {
+          method: "DELETE",
+          headers: {
+            Origin: baseUrl,
+            Cookie: otherCookie,
+            "X-Forwarded-For": otherAddress,
+          },
+        }),
+        fetch(`${baseUrl}/api/reports/${reportId}/resolve`, {
+          method: "DELETE",
+          headers: {
+            Origin: baseUrl,
+            Cookie: thirdCookie,
+            "X-Forwarded-For": thirdAddress,
+          },
+        }),
+      ]);
+      assert.deepEqual(
+        [firstResolveUndo.status, secondResolveUndo.status].sort(),
+        [200, 200],
+      );
+
+      const reportAfterResolveUndo = await fetch(`${baseUrl}/api/reports/${reportId}`, {
+        headers: { Cookie: ownerCookie, "X-Forwarded-For": ownerAddress },
+      });
+      const reportAfterResolveUndoPayload = (await reportAfterResolveUndo.json()) as {
+        data?: { resolvedCount?: number };
+      };
+      assert.equal(reportAfterResolveUndoPayload.data?.resolvedCount, 0);
+
+      const rateLimitAddress = `integration-rate-limit-${runId}`;
+      const rateLimitResponses = await Promise.all(
+        Array.from({ length: 11 }, () =>
+          fetch(`${baseUrl}/api/report-session`, {
+            method: "POST",
+            headers: {
+              Origin: baseUrl,
+              "Content-Type": "application/json",
+              "X-Forwarded-For": rateLimitAddress,
+            },
+            body: "{}",
+          }),
+        ),
+      );
+      assert.equal(rateLimitResponses.filter((response) => response.status === 200).length, 10);
+      assert.equal(rateLimitResponses.filter((response) => response.status === 429).length, 1);
+      assert.ok(
+        rateLimitResponses
+          .find((response) => response.status === 429)
+          ?.headers.get("retry-after"),
+      );
 
       const ownerDelete = await fetch(`${baseUrl}/api/reports/${reportId}`, {
         method: "DELETE",
