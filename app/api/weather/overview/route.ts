@@ -20,6 +20,7 @@ export async function GET(request: Request) {
       scope: "weather-overview",
       limit: 120,
       windowMs: 60 * 1000,
+      databaseFailureFallback: "memory",
     });
 
     if (protectionResponse) {

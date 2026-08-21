@@ -19,6 +19,7 @@ export async function GET(request: Request) {
       scope: "weather-sources",
       limit: 120,
       windowMs: 60 * 1000,
+      databaseFailureFallback: "memory",
     });
 
     if (protectionResponse) {

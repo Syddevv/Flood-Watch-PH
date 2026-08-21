@@ -23,6 +23,7 @@ export async function GET(request: Request) {
       scope: "weather-location",
       limit: 30,
       windowMs: 60 * 1000,
+      databaseFailureFallback: "memory",
     });
 
     if (protectionResponse) {

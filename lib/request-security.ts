@@ -6,6 +6,7 @@ import { errorResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { getRateLimitIdentity } from "@/lib/rate-limit-identity";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { consumeInMemoryRateLimit } from "@/lib/in-memory-rate-limit";
 
 type RateLimitRow = {
   count: number;
@@ -17,6 +18,7 @@ type ApiProtectionOptions = {
   limit: number;
   windowMs: number;
   requireTrustedOrigin?: boolean;
+  databaseFailureFallback?: "memory" | "fail-closed";
 };
 
 const RATE_LIMIT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -121,6 +123,10 @@ async function consumeRateLimit(
   };
 }
 
+function createMemoryRateLimitKey(request: Request, scope: string) {
+  return createRateLimitKey(request, `memory:${scope}`);
+}
+
 async function cleanupExpiredRateLimits(now: Date) {
   await prisma.$executeRaw`
     DELETE FROM "RequestRateLimit" AS current_limit
@@ -182,6 +188,33 @@ export async function protectApiRequest(
     });
   } catch (error) {
     console.error("Failed to apply API abuse protection.", error);
+
+    if (options.databaseFailureFallback === "memory") {
+      const result = consumeInMemoryRateLimit(
+        createMemoryRateLimitKey(request, options.scope),
+        options.limit,
+        options.windowMs,
+      );
+
+      if (result.allowed) {
+        return null;
+      }
+
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((result.expiresAt.getTime() - Date.now()) / 1000),
+      );
+
+      return errorResponse("Too many requests. Please try again later.", 429, {
+        headers: {
+          "Retry-After": String(retryAfterSeconds),
+          "X-RateLimit-Limit": String(options.limit),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(Math.ceil(result.expiresAt.getTime() / 1000)),
+        },
+      });
+    }
+
     return errorResponse("Request protection is temporarily unavailable.", 503);
   }
 }
