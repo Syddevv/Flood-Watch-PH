@@ -16,10 +16,10 @@ import {
   getWeatherDataSource,
   getWeatherSourcesData,
 } from "@/lib/source-metadata";
+import { fetchNominatimReverse } from "@/lib/nominatim";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
-const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
 const WEATHER_TIME_ZONE = "Asia/Manila";
 const REQUEST_TIMEOUT_MS = 15000;
 const PHILIPPINES_COUNTRY_CODE = "PH";
@@ -552,36 +552,19 @@ async function reverseGeocodePhilippineAddress(
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodedPhilippineAddress> {
-  const searchParams = new URLSearchParams({
-    format: "jsonv2",
-    lat: String(latitude),
-    lon: String(longitude),
-    zoom: "12",
-    addressdetails: "1",
-    "accept-language": "en",
-    layer: "address",
-  });
-
-  const { signal, clear } = createAbortSignal(REQUEST_TIMEOUT_MS);
-
   try {
-    const response = await fetch(`${NOMINATIM_REVERSE_URL}?${searchParams.toString()}`, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "FloodWatchPH/1.0",
-      },
-      signal,
-    });
+    const payload = (await fetchNominatimReverse(
+      latitude,
+      longitude,
+      12,
+    )) as ReverseGeocodingResponse | null;
 
-    if (!response.ok) {
+    if (!payload) {
       return {
         locationName: null,
         formattedAddress: null,
       };
     }
-
-    const payload = (await response.json()) as ReverseGeocodingResponse;
     const countryCode = payload.address?.country_code?.toUpperCase();
 
     if (countryCode && countryCode !== PHILIPPINES_COUNTRY_CODE) {
@@ -609,8 +592,6 @@ async function reverseGeocodePhilippineAddress(
       locationName: null,
       formattedAddress: null,
     };
-  } finally {
-    clear();
   }
 }
 

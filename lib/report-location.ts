@@ -1,5 +1,5 @@
-const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
-const REQUEST_TIMEOUT_MS = 8000;
+import { fetchNominatimReverse } from "@/lib/nominatim";
+
 const PHILIPPINES_COUNTRY_CODE = "PH";
 
 type NominatimAddress = {
@@ -38,16 +38,6 @@ export type ReportReverseGeocodeResult = {
   locationName: string | null;
   formattedAddress: string | null;
 };
-
-function createAbortSignal(timeoutMs: number) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  return {
-    signal: controller.signal,
-    clear: () => clearTimeout(timeoutId),
-  };
-}
 
 function appendUnique(parts: string[], value: string | null | undefined) {
   const normalized = value?.trim();
@@ -111,33 +101,19 @@ export async function reverseGeocodeReportLocation(
   latitude: number,
   longitude: number,
 ): Promise<ReportReverseGeocodeResult> {
-  const searchParams = new URLSearchParams({
-    format: "jsonv2",
-    lat: String(latitude),
-    lon: String(longitude),
-    zoom: "18",
-    addressdetails: "1",
-    "accept-language": "en",
-  });
-  const { signal, clear } = createAbortSignal(REQUEST_TIMEOUT_MS);
-
   try {
-    const response = await fetch(`${NOMINATIM_REVERSE_URL}?${searchParams.toString()}`, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "FloodWatchPH/1.0",
-      },
-      signal,
-    });
+    const payload = (await fetchNominatimReverse(
+      latitude,
+      longitude,
+      18,
+    )) as NominatimReverseResponse | null;
 
-    if (!response.ok) {
+    if (!payload) {
       return {
         locationName: null,
         formattedAddress: null,
       };
     }
-
-    const payload = (await response.json()) as NominatimReverseResponse;
     const countryCode = payload.address?.country_code?.toUpperCase();
 
     if (countryCode && countryCode !== PHILIPPINES_COUNTRY_CODE) {
@@ -158,7 +134,5 @@ export async function reverseGeocodeReportLocation(
       locationName: null,
       formattedAddress: null,
     };
-  } finally {
-    clear();
   }
 }

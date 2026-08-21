@@ -33,7 +33,7 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 - [x] Bound search, location, and cache-key input lengths before querying providers or the database.
 - [x] Return stable generic weather-provider errors instead of forwarding exception messages to clients.
 - [x] Add database-level constraints or enums for report severity, status, source type, and confirmation type.
-- [ ] Add global throttling and caching that comply with Nominatim usage limits.
+- [x] Add global throttling and caching that comply with Nominatim usage limits.
 
 ## Lower Priority
 
