@@ -2,6 +2,10 @@ import { unstable_cache } from "next/cache";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
 import {
+  MAX_WEATHER_QUERY_LENGTH,
+  normalizeBoundedText,
+} from "@/lib/api-utils";
+import {
   getWeatherByQuery,
   getWeatherCacheHeaders,
   getWeatherUnavailableMessage,
@@ -31,7 +35,15 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("query")?.trim();
+    const rawQuery = searchParams.get("query");
+    const query = normalizeBoundedText(rawQuery, MAX_WEATHER_QUERY_LENGTH);
+
+    if (rawQuery !== null && query === undefined) {
+      return errorResponse(
+        `Location query must not exceed ${MAX_WEATHER_QUERY_LENGTH} characters.`,
+        400,
+      );
+    }
 
     if (query) {
       const result = await getCachedWeatherByQuery(query);

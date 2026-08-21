@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  MAX_REPORT_SEARCH_LENGTH,
+  MAX_WEATHER_LOCATION_NAME_LENGTH,
+  MAX_WEATHER_QUERY_LENGTH,
+  normalizeBoundedText,
+  parseReportFilters,
+  roundWeatherCoordinate,
+} from "@/lib/api-utils";
+import {
   isValidConfirmationType,
   isValidLatitude,
   isValidLongitude,
@@ -10,6 +18,37 @@ import {
   isValidReportSourceType,
   isValidReportStatus,
 } from "@/lib/validations";
+
+test("bounded text normalization rejects oversized provider and database inputs", () => {
+  assert.equal(
+    normalizeBoundedText("  Manila   City ", MAX_WEATHER_QUERY_LENGTH),
+    "Manila City",
+  );
+  assert.equal(
+    normalizeBoundedText(
+      "x".repeat(MAX_WEATHER_LOCATION_NAME_LENGTH + 1),
+      MAX_WEATHER_LOCATION_NAME_LENGTH,
+    ),
+    undefined,
+  );
+});
+
+test("report search filters reject oversized search terms", () => {
+  const result = parseReportFilters(
+    new URLSearchParams({
+      search: "x".repeat(MAX_REPORT_SEARCH_LENGTH + 1),
+    }),
+  );
+  assert.equal(
+    result.error,
+    `Search must not exceed ${MAX_REPORT_SEARCH_LENGTH} characters.`,
+  );
+});
+
+test("weather coordinates are rounded to a stable cache precision", () => {
+  assert.equal(roundWeatherCoordinate(14.59951234), 14.5995);
+  assert.equal(roundWeatherCoordinate(-121.234567), -121.2346);
+});
 
 test("report enum validation accepts supported values", () => {
   assert.equal(isValidReportSeverity("Critical"), true);

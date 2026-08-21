@@ -13,8 +13,27 @@ type ReportFilters = {
   search?: string;
 };
 
+export const MAX_REPORT_SEARCH_LENGTH = 100;
+export const MAX_WEATHER_QUERY_LENGTH = 120;
+export const MAX_WEATHER_LOCATION_NAME_LENGTH = 160;
+export const WEATHER_COORDINATE_PRECISION = 4;
+
 function normalizeString(value: string | null) {
-  return value?.trim() || "";
+  return value?.trim().replace(/\s+/g, " ") || "";
+}
+
+export function normalizeBoundedText(
+  value: string | null | undefined,
+  maxLength: number,
+) {
+  const normalized =
+    typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  return normalized.length <= maxLength ? normalized : undefined;
+}
+
+export function roundWeatherCoordinate(value: number) {
+  const factor = 10 ** WEATHER_COORDINATE_PRECISION;
+  return Math.round(value * factor) / factor;
 }
 
 export function parsePositiveInteger(
@@ -47,6 +66,13 @@ export function parseReportFilters(searchParams: URLSearchParams): {
   const category = normalizeString(searchParams.get("category"));
   const sourceType = normalizeString(searchParams.get("sourceType"));
   const search = normalizeString(searchParams.get("search"));
+
+  if (search.length > MAX_REPORT_SEARCH_LENGTH) {
+    return {
+      filters: {},
+      error: `Search must not exceed ${MAX_REPORT_SEARCH_LENGTH} characters.`,
+    };
+  }
 
   if (status && !isValidReportStatus(status)) {
     return { filters: {}, error: "Invalid status value." };

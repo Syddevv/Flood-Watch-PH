@@ -30,7 +30,7 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 - [x] Expand integration coverage to report updates, resolve/undo, malformed uploads, rate limits, and concurrent actions.
 - [x] Remove the build-time dependency on Google Fonts or vendor the fonts locally.
 - [x] Restrict archived reports to explicit owner-session retrieval and exclude them from public lists and maps.
-- [ ] Bound search, location, and cache-key input lengths before querying providers or the database.
+- [x] Bound search, location, and cache-key input lengths before querying providers or the database.
 - [ ] Return stable generic weather-provider errors instead of forwarding exception messages to clients.
 - [ ] Add database-level constraints or enums for report severity, status, source type, and confirmation type.
 - [ ] Add global throttling and caching that comply with Nominatim usage limits.
