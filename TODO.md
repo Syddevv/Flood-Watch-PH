@@ -40,4 +40,4 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 - [x] Add rate limiting or internal access controls to the database health endpoint.
 - [x] Add structured error monitoring and request correlation IDs for production diagnosis.
 - [x] Add browser-level coverage for report submission, ownership UI, confirmation undo, and image-upload failure states.
-- [ ] Review public reporter-name handling and add a clear privacy policy for user-supplied identifying information.
+- [x] Review public reporter-name handling and add a clear privacy policy for user-supplied identifying information.

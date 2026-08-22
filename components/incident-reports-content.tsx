@@ -1771,7 +1771,9 @@ export function IncidentReportsContent() {
                     }
                     className="mt-0.5 h-4 w-4 rounded border border-[var(--color-border)]"
                   />
-                  <span>Submit anonymously. Your personal details will not appear on the public report feed.</span>
+                  <span>
+                    Reporter names are private and visible only to the original uploader. The public feed shows every report as anonymous.
+                  </span>
                 </label>
               </FormSection>
 

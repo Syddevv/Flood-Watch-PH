@@ -109,12 +109,16 @@ export function serializeReportRecord<T extends PublicReportRecord>(
       ?.createdAt ?? null;
 
   const safeReport = { ...report };
+  const owner = isReportOwner(report, sessionHash);
   delete safeReport.ownerSessionHash;
   delete safeReport.confirmations;
+  if (!owner) {
+    safeReport.reportedByName = null;
+  }
 
   return {
     ...safeReport,
-    isOwner: isReportOwner(report, sessionHash),
+    isOwner: owner,
     lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
     lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
   };
