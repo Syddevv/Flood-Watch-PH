@@ -1188,6 +1188,7 @@ export function IncidentReportModal({
                   type="button"
                   aria-expanded={ownerSectionOpen}
                   aria-label="Manage this report"
+                  data-testid="manage-report"
                   onClick={() => {
                     setOwnerSectionOpen((current) => !current);
                     setOwnerActionError("");

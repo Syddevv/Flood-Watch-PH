@@ -405,9 +405,10 @@ export function IncidentLocationPicker({
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
+                  <button
+                    type="button"
+                    data-testid="confirm-picked-location"
+                    onClick={handleConfirm}
                   disabled={!selection || resolvingSelection || searching}
                   className="inline-flex h-11 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
@@ -431,6 +432,7 @@ export function IncidentLocationPicker({
             </button>
             <button
               type="button"
+              data-testid="confirm-picked-location-mobile"
               onClick={handleConfirm}
               disabled={!selection || resolvingSelection || searching}
               className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"

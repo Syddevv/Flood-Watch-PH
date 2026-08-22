@@ -183,6 +183,7 @@ function FloodMapUndoToast({
                 </div>
                 <button
                   type="button"
+                  data-testid="undo-report-action"
                   onClick={onUndo}
                   disabled={toast.pending}
                   className={cn(
