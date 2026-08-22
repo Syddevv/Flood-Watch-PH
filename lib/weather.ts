@@ -919,6 +919,24 @@ async function geocodePhilippineLocation(query: string) {
   throw new Error(LOCATION_NOT_FOUND_MESSAGE);
 }
 
+export type PhilippineLocationSearchResult = {
+  name: string;
+  latitude: number;
+  longitude: number;
+};
+
+export async function searchPhilippineLocation(
+  query: string,
+): Promise<PhilippineLocationSearchResult> {
+  const result = await geocodePhilippineLocation(query);
+
+  return {
+    name: buildDisplayLocationName(result),
+    latitude: result.latitude,
+    longitude: result.longitude,
+  };
+}
+
 function sortLocationsByRisk(locations: WeatherLocation[]) {
   return locations
     .map((location, index) => ({ location, index }))
