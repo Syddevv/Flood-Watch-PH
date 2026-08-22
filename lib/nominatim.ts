@@ -7,7 +7,11 @@ const NOMINATIM_REQUEST_TIMEOUT_MS = 15000;
 // Nominatim's usage policy requires a real, reachable contact address in the
 // User-Agent. Its edge blocklists the RFC 2606 placeholder domain
 // example.com specifically, rejecting every request with a 403.
-const NOMINATIM_USER_AGENT = "FloodWatchPH/1.0 (contact: sydbackup08@gmail.com)";
+// The literal address below is only a fallback default for local/dev use;
+// deployments should set NOMINATIM_CONTACT_EMAIL so the address is rotatable
+// without a code change.
+const NOMINATIM_CONTACT = process.env.NOMINATIM_CONTACT_EMAIL?.trim() || "sydbackup08@gmail.com";
+const NOMINATIM_USER_AGENT = `FloodWatchPH/1.0 (contact: ${NOMINATIM_CONTACT})`;
 
 export type NominatimReversePayload = {
   display_name?: string;
@@ -52,8 +56,13 @@ export async function requestNominatimReverse(
         response.status === 429
           ? "Nominatim rate-limited (429)"
           : `Nominatim returned ${response.status}`;
-      const message = `${reason}: ${bodySnippet}`;
-      console.error(message);
+      // The body snippet is untrusted response content; JSON.stringify it so
+      // control characters (e.g. embedded newlines) can't be used to forge
+      // extra lines in a line-oriented log aggregator.
+      const message = `${reason}: ${JSON.stringify(bodySnippet)}`;
+      // Not logged here: the outer `fetchNominatimReverse` catch is the
+      // single place failures are logged, so this thrown message isn't
+      // double-logged. It still carries full status/body detail.
       throw new Error(message);
     }
 
@@ -63,9 +72,14 @@ export async function requestNominatimReverse(
   }
 }
 
+// The "v2" token is an explicit, deliberate cache-buster: unstable_cache's
+// key already incorporates the callback's source text, so a future fix that
+// only changes something referenced by name (not requestNominatimReverse's
+// own body) won't get automatic invalidation of previously-cached entries.
+// Bump this token whenever a future fix needs to invalidate the cache.
 const getCachedNominatimReverse = unstable_cache(
   requestNominatimReverse,
-  ["nominatim-reverse"],
+  ["nominatim-reverse", "v2"],
   { revalidate: NOMINATIM_CACHE_TTL_SECONDS },
 );
 
@@ -97,7 +111,8 @@ export async function fetchNominatimReverse(
 
   try {
     return await getCachedNominatimReverse(latitude, longitude, zoom);
-  } catch {
+  } catch (error) {
+    console.error("Nominatim reverse geocode failed.", { latitude, longitude, zoom, error });
     return null;
   }
 }

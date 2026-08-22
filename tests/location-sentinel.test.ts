@@ -23,6 +23,14 @@ test("the literal 'Your Location' sentinel is not used as a request trigger or f
 test("report reverse geocoding retries at a broader zoom when the precise lookup has no usable address", async () => {
   const source = await readFile("lib/report-location.ts", "utf8");
 
-  assert.match(source, /\b18\b/, "expected the primary zoom level to remain 18");
-  assert.match(source, /\b14\b/, "expected a broader zoom-14 retry");
+  assert.match(
+    source,
+    /reverseGeocodeAtZoom\(\s*latitude,\s*longitude,\s*18\s*\)/,
+    "expected the primary lookup to call reverseGeocodeAtZoom(latitude, longitude, 18)",
+  );
+  assert.match(
+    source,
+    /reverseGeocodeAtZoom\(\s*latitude,\s*longitude,\s*14\s*\)/,
+    "expected the broader retry to call reverseGeocodeAtZoom(latitude, longitude, 14)",
+  );
 });

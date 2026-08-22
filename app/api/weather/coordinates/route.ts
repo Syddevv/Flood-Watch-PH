@@ -64,14 +64,27 @@ export async function GET(request: Request) {
       );
     }
 
-    const result = await getCachedWeatherByCoordinates(
-      roundWeatherCoordinate(latitude),
-      roundWeatherCoordinate(longitude),
-      name,
-    );
+    // Only cache (with a long TTL, and a cacheable CDN response) the
+    // deterministic case where `name` is provided by the caller - there is
+    // no reverse-geocode ambiguity/failure risk there. When `name` is
+    // omitted, `getWeatherByCoordinates` attempts reverse geocoding
+    // internally and, on a transient Nominatim failure, still resolves
+    // normally with a degraded coordinate-label fallback name (it does not
+    // throw). Routing that through the long-TTL cache would pin a single
+    // blip to "no real name" for the full TTL, and a shared CDN cache would
+    // do the same for every visitor. This is a personal, per-user "my
+    // location" ping, not a shared page load, so fetch it directly and
+    // uncached, and tell the CDN not to cache it either.
+    const result = name
+      ? await getCachedWeatherByCoordinates(
+          roundWeatherCoordinate(latitude),
+          roundWeatherCoordinate(longitude),
+          name,
+        )
+      : await getWeatherByCoordinates(latitude, longitude);
 
     return successResponse(result, {
-      headers: getWeatherCacheHeaders(),
+      headers: name ? getWeatherCacheHeaders() : { "Cache-Control": "no-store" },
     });
   } catch (error) {
     console.error("Failed to fetch coordinate weather.", error);

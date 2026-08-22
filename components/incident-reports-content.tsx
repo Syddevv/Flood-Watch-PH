@@ -1172,12 +1172,13 @@ export function IncidentReportsContent() {
             buildCoordinateFallbackLabel(
               position.coords.latitude,
               position.coords.longitude,
-              "Pinned location near",
+              "Location unavailable —",
             ),
           );
           setToast({
-            tone: "error",
-            message: "Reverse-geocoding failed. Coordinates were added; enter the location name manually.",
+            tone: "success",
+            message:
+              "Couldn't find a detailed address. Added your coordinates instead — you can enter a location name if you'd like.",
           });
         } finally {
           setLoadingCurrentLocation(false);
