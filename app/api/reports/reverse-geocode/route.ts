@@ -2,6 +2,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { reverseGeocodeReportLocation } from "@/lib/report-location";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 
 export async function GET(request: Request) {
   try {
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Failed to reverse-geocode report location.", error);
+    logApiError("report-reverse-geocode-failed", request, error);
     return errorResponse("Reverse-geocoding failed.", 502);
   }
 }

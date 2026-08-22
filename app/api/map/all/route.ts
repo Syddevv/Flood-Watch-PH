@@ -9,6 +9,7 @@ import {
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 
 const mapReportSelect = {
   id: true,
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch map data.", error);
+    logApiError("map-data-fetch-failed", request, error);
     return errorResponse("Something went wrong while fetching map data.");
   }
 }

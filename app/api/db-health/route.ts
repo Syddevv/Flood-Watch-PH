@@ -2,12 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { errorResponse } from "@/lib/api-response";
 import { isDatabaseHealthRequestAuthorized } from "@/lib/db-health-auth";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError, withRequestId } from "@/lib/structured-logger";
 
 export async function GET(request: Request) {
   if (!isDatabaseHealthRequestAuthorized(request)) {
-    return errorResponse("Not found.", 404, {
+    return withRequestId(errorResponse("Not found.", 404, {
       headers: { "Cache-Control": "no-store" },
-    });
+    }), request);
   }
 
   const protectionResponse = await protectApiRequest(request, {
@@ -18,20 +19,21 @@ export async function GET(request: Request) {
   });
 
   if (protectionResponse) {
-    return protectionResponse;
+    return withRequestId(protectionResponse, request);
   }
 
   try {
     await prisma.$queryRaw`SELECT 1`;
 
-    return Response.json({
+    return withRequestId(Response.json({
       status: "ok",
       message: "Database connection is healthy",
     }, {
       headers: { "Cache-Control": "no-store" },
-    });
-  } catch {
-    return Response.json(
+    }), request);
+  } catch (error) {
+    logApiError("db-health-check-failed", request, error);
+    return withRequestId(Response.json(
       {
         status: "error",
         message: "Database connection failed",
@@ -40,6 +42,6 @@ export async function GET(request: Request) {
         status: 503,
         headers: { "Cache-Control": "no-store" },
       },
-    );
+    ), request);
   }
 }
