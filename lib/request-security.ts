@@ -67,10 +67,21 @@ function isTrustedOrigin(request: Request) {
     return process.env.NODE_ENV !== "production";
   }
 
-  const requestOrigin = new URL(request.url).origin;
+  const requestHost = request.headers.get("host");
 
-  if (origin === requestOrigin) {
-    return true;
+  if (requestHost) {
+    const requestProtocol =
+      request.headers.get("x-forwarded-proto") ?? new URL(request.url).protocol.replace(":", "");
+
+    try {
+      const parsedOrigin = new URL(origin);
+
+      if (parsedOrigin.host === requestHost && parsedOrigin.protocol.replace(":", "") === requestProtocol) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
   }
 
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
