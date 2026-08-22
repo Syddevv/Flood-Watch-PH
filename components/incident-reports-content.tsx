@@ -68,7 +68,8 @@ import {
   REPORT_ACTION_UNDO_WINDOW_MS,
   type ReportActionLoadingState,
 } from "@/lib/report-actions";
-import { fetchWeatherLocation } from "@/lib/weather-client";
+import { resolveReportLocationName } from "@/lib/report-location-client";
+import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
 type FormState = {
   locationName: string;
@@ -83,17 +84,6 @@ type FormState = {
   submitAnonymously: boolean;
   photos: File[];
 };
-
-type ReportReverseGeocodeResponse =
-  | {
-      data: {
-        locationName: string | null;
-        formattedAddress: string | null;
-      };
-    }
-  | {
-      error: string;
-    };
 
 type ToastState = {
   message: string;
@@ -1163,52 +1153,32 @@ export function IncidentReportsContent() {
         updateFormState("longitude", longitude);
 
         try {
-          const searchParams = new URLSearchParams({
-            lat: latitude,
-            lng: longitude,
-          });
-          const response = await fetch(`/api/reports/reverse-geocode?${searchParams.toString()}`, {
-            cache: "no-store",
-          });
-          const payload = (await response.json()) as ReportReverseGeocodeResponse;
+          const { locationName, precise } = await resolveReportLocationName(
+            position.coords.latitude,
+            position.coords.longitude,
+          );
 
-          if (!response.ok || !("data" in payload)) {
-            throw new Error("error" in payload ? payload.error : "Reverse-geocoding failed.");
-          }
+          updateFormState("locationName", locationName);
 
-          const resolvedLocationName =
-            payload.data.formattedAddress?.trim() || payload.data.locationName?.trim();
-
-          if (!resolvedLocationName) {
-            throw new Error("Reverse-geocoding failed.");
-          }
-
-          updateFormState("locationName", resolvedLocationName);
-        } catch {
-          try {
-            const result = await fetchWeatherLocation({
-              lat: position.coords.latitude,
-              lon: position.coords.longitude,
-              name: "Your Location",
-            });
-            const resolvedLocationName =
-              result.resolvedAddress?.trim() || result.location.name.trim();
-
-            if (!resolvedLocationName) {
-              throw new Error("Reverse-geocoding failed.");
-            }
-
-            updateFormState("locationName", resolvedLocationName);
+          if (!precise) {
             setToast({
               tone: "error",
               message: "Detailed address lookup failed. Coordinates were added with a broader location.",
             });
-          } catch {
-            setToast({
-              tone: "error",
-              message: "Reverse-geocoding failed. Coordinates were added; enter the location name manually.",
-            });
           }
+        } catch {
+          updateFormState(
+            "locationName",
+            buildCoordinateFallbackLabel(
+              position.coords.latitude,
+              position.coords.longitude,
+              "Pinned location near",
+            ),
+          );
+          setToast({
+            tone: "error",
+            message: "Reverse-geocoding failed. Coordinates were added; enter the location name manually.",
+          });
         } finally {
           setLoadingCurrentLocation(false);
         }

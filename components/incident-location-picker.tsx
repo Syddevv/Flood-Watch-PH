@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 
 import { fetchWeatherLocation } from "@/lib/weather-client";
+import { resolveReportLocationName } from "@/lib/report-location-client";
+import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
 const DynamicIncidentLocationPickerMap = dynamic(
   () =>
@@ -43,7 +45,7 @@ type IncidentLocationPickerProps = {
 };
 
 function buildFallbackLocationName(latitude: number, longitude: number) {
-  return `Pinned location near ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+  return buildCoordinateFallbackLabel(latitude, longitude, "Pinned location near");
 }
 
 function isWithinPhilippines(latitude: number, longitude: number) {
@@ -142,15 +144,7 @@ export function IncidentLocationPicker({
     });
 
     try {
-      const result = await fetchWeatherLocation({
-        lat: latitude,
-        lon: longitude,
-        name: "Your Location",
-      });
-      const resolvedLocationName =
-        result.resolvedAddress?.trim() ||
-        result.location.name.trim() ||
-        fallbackLocationName;
+      const { locationName } = await resolveReportLocationName(latitude, longitude);
 
       if (resolveRequestRef.current !== requestId) {
         return;
@@ -160,7 +154,7 @@ export function IncidentLocationPicker({
       setSelection({
         latitude,
         longitude,
-        locationName: resolvedLocationName,
+        locationName,
       });
     } catch {
       if (resolveRequestRef.current !== requestId) {

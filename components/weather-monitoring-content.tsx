@@ -403,7 +403,6 @@ export function WeatherMonitoringContent({
             {
               lat: position.coords.latitude,
               lon: position.coords.longitude,
-              name: "Your Location",
             },
             "Detecting your location...",
             "Unable to detect your location. Please search manually.",

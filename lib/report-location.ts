@@ -97,42 +97,64 @@ function formatReportAddress(payload: NominatimReverseResponse) {
   return payload.display_name?.split(",").slice(0, 4).join(",").trim() || null;
 }
 
+const EMPTY_RESULT: ReportReverseGeocodeResult = {
+  locationName: null,
+  formattedAddress: null,
+};
+
+async function reverseGeocodeAtZoom(
+  latitude: number,
+  longitude: number,
+  zoom: number,
+): Promise<{ payload: NominatimReverseResponse | null; result: ReportReverseGeocodeResult }> {
+  const payload = (await fetchNominatimReverse(
+    latitude,
+    longitude,
+    zoom,
+  )) as NominatimReverseResponse | null;
+
+  if (!payload) {
+    return { payload: null, result: EMPTY_RESULT };
+  }
+
+  const countryCode = payload.address?.country_code?.toUpperCase();
+
+  if (countryCode && countryCode !== PHILIPPINES_COUNTRY_CODE) {
+    return { payload, result: EMPTY_RESULT };
+  }
+
+  const formattedAddress = formatReportAddress(payload);
+
+  return {
+    payload,
+    result: { locationName: formattedAddress, formattedAddress },
+  };
+}
+
 export async function reverseGeocodeReportLocation(
   latitude: number,
   longitude: number,
 ): Promise<ReportReverseGeocodeResult> {
   try {
-    const payload = (await fetchNominatimReverse(
-      latitude,
-      longitude,
-      18,
-    )) as NominatimReverseResponse | null;
+    const primary = await reverseGeocodeAtZoom(latitude, longitude, 18);
 
-    if (!payload) {
-      return {
-        locationName: null,
-        formattedAddress: null,
-      };
-    }
-    const countryCode = payload.address?.country_code?.toUpperCase();
-
-    if (countryCode && countryCode !== PHILIPPINES_COUNTRY_CODE) {
-      return {
-        locationName: null,
-        formattedAddress: null,
-      };
+    if (primary.result.formattedAddress) {
+      return primary.result;
     }
 
-    const formattedAddress = formatReportAddress(payload);
+    // The precise (building/address-level) lookup got a real response but no
+    // usable address (common for flood-prone areas without indexed roads) -
+    // retry once at a broader, neighbourhood-level zoom before giving up.
+    // Skip the retry on a null payload (timeout/non-OK) since it is unlikely
+    // to succeed immediately after and would double the worst-case wait.
+    if (!primary.payload) {
+      return primary.result;
+    }
 
-    return {
-      locationName: formattedAddress,
-      formattedAddress,
-    };
+    const broader = await reverseGeocodeAtZoom(latitude, longitude, 14);
+
+    return broader.result.formattedAddress ? broader.result : primary.result;
   } catch {
-    return {
-      locationName: null,
-      formattedAddress: null,
-    };
+    return EMPTY_RESULT;
   }
 }
