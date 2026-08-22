@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeReportRecord } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
 const DEFAULT_RADIUS_METERS = 300;
@@ -165,7 +166,7 @@ export async function GET(request: Request) {
 
     return successResponse(nearbyReports);
   } catch (error) {
-    console.error("Failed to fetch nearby reports.", error);
+    logApiError("nearby-reports-fetch-failed", request, error);
     return errorResponse("Something went wrong while checking nearby reports.");
   }
 }

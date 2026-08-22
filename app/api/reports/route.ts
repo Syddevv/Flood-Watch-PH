@@ -23,6 +23,7 @@ import {
 } from "@/lib/report-api";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -263,7 +264,7 @@ export async function GET(request: Request) {
       sessionHash,
     });
   } catch (error) {
-    console.error("Failed to fetch reports.", error);
+    logApiError("reports-fetch-failed", request, error);
 
     if (isReportDatabaseUnavailableError(error)) {
       return errorResponse(
@@ -366,7 +367,7 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Failed to create report.", error);
+    logApiError("report-create-failed", request, error);
 
     if (isReportDatabaseUnavailableError(error)) {
       return errorResponse(

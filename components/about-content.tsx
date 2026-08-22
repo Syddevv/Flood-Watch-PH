@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   Bell,
   Eye,
@@ -143,6 +145,12 @@ export function AboutContent() {
             Philippines stay aware, stay prepared, and stay safe during the rainy
             season.
           </p>
+          <Link
+            href="/privacy"
+            className="mt-3 inline-block text-[0.88rem] font-medium text-[var(--color-primary)] hover:underline"
+          >
+            Read our privacy notice
+          </Link>
         </section>
 
         <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-6 shadow-[var(--shadow-soft)]">

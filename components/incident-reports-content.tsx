@@ -1545,6 +1545,7 @@ export function IncidentReportsContent() {
                     </label>
                     <button
                       type="button"
+                      data-testid="use-current-location"
                       onClick={handleUseCurrentLocation}
                       disabled={loadingCurrentLocation}
                       className="flex h-11 items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.88rem] font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-panel)] disabled:cursor-not-allowed disabled:opacity-70"
@@ -1584,9 +1585,10 @@ export function IncidentReportsContent() {
                       />
                     </label>
                     <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => setLocationPickerOpen(true)}
+                    <button
+                      type="button"
+                      data-testid="pick-location-on-map"
+                      onClick={() => setLocationPickerOpen(true)}
                         className="flex h-11 w-full items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_78%,transparent)] px-4 text-[0.88rem] font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-panel)] xl:w-auto"
                       >
                         <MapIcon className="h-4 w-4" />
@@ -1679,6 +1681,7 @@ export function IncidentReportsContent() {
                   />
                   <button
                     type="button"
+                    data-testid="choose-report-image"
                     onClick={handleOpenPhotoPicker}
                     className="flex w-full cursor-pointer flex-col rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-5 text-left"
                   >
@@ -1768,7 +1771,9 @@ export function IncidentReportsContent() {
                     }
                     className="mt-0.5 h-4 w-4 rounded border border-[var(--color-border)]"
                   />
-                  <span>Submit anonymously. Your personal details will not appear on the public report feed.</span>
+                  <span>
+                    Reporter names are private and visible only to the original uploader. The public feed shows every report as anonymous.
+                  </span>
                 </label>
               </FormSection>
 
@@ -1848,6 +1853,7 @@ export function IncidentReportsContent() {
                     </button>
                     <button
                       type="button"
+                      data-testid="submit-report"
                       onClick={() => void handleSubmitReport()}
                       disabled={submittingReport || !canSubmitReport}
                       className={cn(

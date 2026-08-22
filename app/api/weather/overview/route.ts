@@ -9,6 +9,7 @@ import {
 } from "@/lib/weather";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 
 const getCachedWeatherOverview = unstable_cache(getWeatherOverview, ["weather-overview"], {
   revalidate: WEATHER_SOURCE_CACHE_SECONDS,
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
       headers: getWeatherCacheHeaders(),
     });
   } catch (error) {
-    console.error("Failed to fetch weather overview.", error);
+    logApiError("weather-overview-failed", request, error);
     return successResponse(
       createUnavailableWeatherOverview(getWeatherUnavailableMessage()),
       {

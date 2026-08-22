@@ -7,6 +7,7 @@ import {
   roundWeatherCoordinate,
 } from "@/lib/api-utils";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 import {
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
       headers: name ? getWeatherCacheHeaders() : { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    console.error("Failed to fetch coordinate weather.", error);
+    logApiError("weather-coordinates-failed", request, error);
     return weatherProviderErrorResponse();
   }
 }

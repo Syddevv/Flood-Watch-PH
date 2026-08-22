@@ -1,6 +1,7 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { protectApiRequest } from "@/lib/request-security";
+import { logApiError } from "@/lib/structured-logger";
 import {
   createReportSession,
   getReportSessionHashFromRequest,
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
-    console.error("Failed to initialize report session.", error);
+    logApiError("report-session-init-failed", request, error);
     return errorResponse("Unable to initialize the report session.", 503);
   }
 }
