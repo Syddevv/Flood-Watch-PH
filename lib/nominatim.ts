@@ -4,44 +4,67 @@ const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
 const NOMINATIM_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const NOMINATIM_MIN_INTERVAL_MS = 1000;
 const NOMINATIM_REQUEST_TIMEOUT_MS = 15000;
+// Nominatim's usage policy requires a real, reachable contact address in the
+// User-Agent. Its edge blocklists the RFC 2606 placeholder domain
+// example.com specifically, rejecting every request with a 403.
+const NOMINATIM_USER_AGENT = "FloodWatchPH/1.0 (contact: sydbackup08@gmail.com)";
 
 export type NominatimReversePayload = {
   display_name?: string;
   address?: Record<string, string | undefined>;
 };
 
-const getCachedNominatimReverse = unstable_cache(
-  async (latitude: number, longitude: number, zoom: number) => {
-    const searchParams = new URLSearchParams({
-      format: "jsonv2",
-      lat: String(latitude),
-      lon: String(longitude),
-      zoom: String(zoom),
-      addressdetails: "1",
-      "accept-language": "en",
+/**
+ * Performs the actual Nominatim reverse-geocode request and validates the
+ * response. A non-OK response is thrown (never returned as a normal value)
+ * so that the `unstable_cache` wrapper around this function can never
+ * mistake a failed lookup for a real, cacheable result.
+ */
+export async function requestNominatimReverse(
+  latitude: number,
+  longitude: number,
+  zoom: number,
+): Promise<NominatimReversePayload> {
+  const searchParams = new URLSearchParams({
+    format: "jsonv2",
+    lat: String(latitude),
+    lon: String(longitude),
+    zoom: String(zoom),
+    addressdetails: "1",
+    "accept-language": "en",
+  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), NOMINATIM_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${NOMINATIM_REVERSE_URL}?${searchParams.toString()}`, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": NOMINATIM_USER_AGENT,
+      },
+      signal: controller.signal,
     });
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), NOMINATIM_REQUEST_TIMEOUT_MS);
 
-    try {
-      const response = await fetch(`${NOMINATIM_REVERSE_URL}?${searchParams.toString()}`, {
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "FloodWatchPH/1.0 (contact: floodwatchph@example.com)",
-        },
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      return (await response.json()) as NominatimReversePayload;
-    } finally {
-      clearTimeout(timeoutId);
+    if (!response.ok) {
+      const bodySnippet = (await response.text().catch(() => "")).slice(0, 200);
+      const reason =
+        response.status === 429
+          ? "Nominatim rate-limited (429)"
+          : `Nominatim returned ${response.status}`;
+      const message = `${reason}: ${bodySnippet}`;
+      console.error(message);
+      throw new Error(message);
     }
-  },
+
+    return (await response.json()) as NominatimReversePayload;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+const getCachedNominatimReverse = unstable_cache(
+  requestNominatimReverse,
   ["nominatim-reverse"],
   { revalidate: NOMINATIM_CACHE_TTL_SECONDS },
 );
@@ -71,5 +94,10 @@ export async function fetchNominatimReverse(
   zoom: number,
 ): Promise<NominatimReversePayload | null> {
   await reserveNominatimSlot();
-  return getCachedNominatimReverse(latitude, longitude, zoom);
+
+  try {
+    return await getCachedNominatimReverse(latitude, longitude, zoom);
+  } catch {
+    return null;
+  }
 }

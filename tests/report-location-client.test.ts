@@ -64,3 +64,38 @@ test("throws when both the precise and approximate lookups fail", async (t) => {
 
   await assert.rejects(() => resolveReportLocationName(14.65, 121.1));
 });
+
+test("logs a warning when the precise lookup is rate limited (429), and still falls back as before", async (t) => {
+  const warnCalls: unknown[][] = [];
+  t.mock.method(console, "warn", (...args: unknown[]) => {
+    warnCalls.push(args);
+  });
+  t.mock.method(globalThis, "fetch", async (input: string | URL) => {
+    const url = String(input);
+
+    if (url.includes("/api/reports/reverse-geocode")) {
+      return new Response(JSON.stringify({ error: "Too many requests. Please try again later." }), {
+        status: 429,
+        headers: { "content-type": "application/json", "Retry-After": "30" },
+      });
+    }
+
+    assert.match(url, /\/api\/weather\/coordinates/);
+    return jsonResponse({
+      data: {
+        location: { name: "Marikina" },
+        fetchedAt: "now",
+        advisoryMessage: "",
+        resolvedAddress: "Marikina, Metro Manila",
+      },
+    });
+  });
+
+  const result = await resolveReportLocationName(14.65, 121.1);
+
+  assert.deepEqual(result, { locationName: "Marikina, Metro Manila", precise: false });
+  assert.equal(warnCalls.length, 1);
+  assert.match(String(warnCalls[0][0]), /429/);
+  assert.match(String(warnCalls[0][0]), /reverse-geocode/);
+  assert.match(String(warnCalls[0][0]), /30/);
+});

@@ -26,10 +26,18 @@ async function resolvePreciseLocationName(
       lat: String(latitude),
       lng: String(longitude),
     });
-    const response = await fetch(`/api/reports/reverse-geocode?${searchParams.toString()}`, {
+    const url = `/api/reports/reverse-geocode?${searchParams.toString()}`;
+    const response = await fetch(url, {
       cache: "no-store",
       signal,
     });
+
+    if (response.status === 429) {
+      console.warn(
+        `Rate limited (429) by ${url}. Retry-After: ${response.headers.get("Retry-After") ?? "unknown"}`,
+      );
+    }
+
     const payload = (await response.json()) as ReportReverseGeocodeResponse;
 
     if (!response.ok || !("data" in payload)) {
