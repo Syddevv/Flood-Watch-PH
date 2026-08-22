@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 
-import { fetchWeatherLocation } from "@/lib/weather-client";
+import { searchLocation } from "@/lib/location-client";
 import { resolveReportLocationName } from "@/lib/report-location-client";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
@@ -188,12 +188,11 @@ export function IncidentLocationPicker({
     setSelectionWarning(null);
 
     try {
-      const result = await fetchWeatherLocation({ query: trimmedQuery });
+      const result = await searchLocation(trimmedQuery);
       const nextSelection = {
-        latitude: result.location.latitude,
-        longitude: result.location.longitude,
-        locationName:
-          result.resolvedAddress?.trim() || result.location.name.trim() || trimmedQuery,
+        latitude: result.latitude,
+        longitude: result.longitude,
+        locationName: result.name.trim() || trimmedQuery,
       };
 
       setSelection(nextSelection);
