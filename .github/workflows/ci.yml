@@ -52,35 +52,47 @@ jobs:
   integration:
     name: Report API integration tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: floodwatch_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d floodwatch_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     env:
-      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.TEST_DATABASE_URL }}
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/floodwatch_ci
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/floodwatch_ci
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/floodwatch_ci
+      NODE_ENV: test
+      REPORT_SESSION_SECRET: ci-integration-report-session-secret-32-chars
+      ABUSE_PROTECTION_SECRET: ci-integration-abuse-secret-32-characters
+      TRUSTED_PROXY_CLIENT_IP_HEADER: x-forwarded-for
 
     steps:
-      - name: Integration database not configured
-        if: env.TEST_DATABASE_URL == ''
-        run: echo "Skipping integration tests because TEST_DATABASE_URL is not configured."
-
       - name: Check out repository
-        if: env.TEST_DATABASE_URL != ''
         uses: actions/checkout@v4
 
       - name: Set up Node.js
-        if: env.TEST_DATABASE_URL != ''
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
-        if: env.TEST_DATABASE_URL != ''
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
       - name: Apply test database migrations
-        if: env.TEST_DATABASE_URL != ''
         run: npx prisma migrate deploy
 
       - name: Run API integration tests
-        if: env.TEST_DATABASE_URL != ''
         run: npm run test:integration

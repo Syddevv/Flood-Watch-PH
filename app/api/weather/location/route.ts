@@ -2,10 +2,14 @@ import { unstable_cache } from "next/cache";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
 import {
+  MAX_WEATHER_QUERY_LENGTH,
+  normalizeBoundedText,
+} from "@/lib/api-utils";
+import {
   getWeatherByQuery,
   getWeatherCacheHeaders,
-  getWeatherUnavailableMessage,
 } from "@/lib/weather";
+import { weatherProviderErrorResponse } from "@/lib/weather-api";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
 import { protectApiRequest } from "@/lib/request-security";
 
@@ -23,6 +27,7 @@ export async function GET(request: Request) {
       scope: "weather-location",
       limit: 30,
       windowMs: 60 * 1000,
+      databaseFailureFallback: "memory",
     });
 
     if (protectionResponse) {
@@ -30,7 +35,15 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("query")?.trim();
+    const rawQuery = searchParams.get("query");
+    const query = normalizeBoundedText(rawQuery, MAX_WEATHER_QUERY_LENGTH);
+
+    if (rawQuery !== null && query === undefined) {
+      return errorResponse(
+        `Location query must not exceed ${MAX_WEATHER_QUERY_LENGTH} characters.`,
+        400,
+      );
+    }
 
     if (query) {
       const result = await getCachedWeatherByQuery(query);
@@ -42,9 +55,6 @@ export async function GET(request: Request) {
     return errorResponse("Location not found. Try another city, municipality, or province.", 400);
   } catch (error) {
     console.error("Failed to fetch location weather.", error);
-    return errorResponse(
-      error instanceof Error ? error.message : getWeatherUnavailableMessage(),
-      503,
-    );
+    return weatherProviderErrorResponse();
   }
 }

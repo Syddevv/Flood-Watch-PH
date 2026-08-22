@@ -84,6 +84,14 @@ export function isReportOwner(
   return Boolean(report.ownerSessionHash && sessionHash && report.ownerSessionHash === sessionHash);
 }
 
+export function canAccessArchivedReport(
+  report: Pick<PublicReportRecord, "ownerSessionHash">,
+  sessionHash: string,
+  includeArchived: boolean,
+) {
+  return includeArchived && isReportOwner(report, sessionHash);
+}
+
 export function serializeReportRecord<T extends PublicReportRecord>(
   report: T,
   sessionHash = "",

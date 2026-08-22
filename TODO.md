@@ -24,16 +24,16 @@ This list tracks confirmed remaining issues after the critical and first high-pr
 
 ## Medium Priority
 
-- [ ] Add retention cleanup for expired `RequestRateLimit` rows.
-- [ ] Decouple read-only weather and geocoding availability from the database-backed rate limiter, or define an explicit fail-closed policy per endpoint.
-- [ ] Configure a dedicated `TEST_DATABASE_URL` in CI and enable the integration job.
-- [ ] Expand integration coverage to report updates, resolve/undo, malformed uploads, rate limits, and concurrent actions.
-- [ ] Remove the build-time dependency on Google Fonts or vendor the fonts locally.
-- [ ] Decide whether archived reports should be publicly retrievable with `includeArchived=true`; enforce the chosen policy consistently.
-- [ ] Bound search, location, and cache-key input lengths before querying providers or the database.
-- [ ] Return stable generic weather-provider errors instead of forwarding exception messages to clients.
-- [ ] Add database-level constraints or enums for report severity, status, source type, and confirmation type.
-- [ ] Add global throttling and caching that comply with Nominatim usage limits.
+- [x] Add retention cleanup for expired `RequestRateLimit` rows.
+- [x] Decouple read-only weather and geocoding availability from the database-backed rate limiter, or define an explicit fail-closed policy per endpoint.
+- [x] Configure a dedicated disposable PostgreSQL database in CI and enable the integration job.
+- [x] Expand integration coverage to report updates, resolve/undo, malformed uploads, rate limits, and concurrent actions.
+- [x] Remove the build-time dependency on Google Fonts or vendor the fonts locally.
+- [x] Restrict archived reports to explicit owner-session retrieval and exclude them from public lists and maps.
+- [x] Bound search, location, and cache-key input lengths before querying providers or the database.
+- [x] Return stable generic weather-provider errors instead of forwarding exception messages to clients.
+- [x] Add database-level constraints or enums for report severity, status, source type, and confirmation type.
+- [x] Add global throttling and caching that comply with Nominatim usage limits.
 
 ## Lower Priority
 

@@ -2,11 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  canAccessArchivedReport,
   parseReportDetailsFormData,
   parseReportRequestFormData,
   parseReportUpdateFormData,
   trimText,
 } from "@/lib/report-api";
+
+test("archived reports require an explicit request from the owner session", () => {
+  const report = { ownerSessionHash: "owner-session" };
+
+  assert.equal(canAccessArchivedReport(report, "", true), false);
+  assert.equal(canAccessArchivedReport(report, "other-session", true), false);
+  assert.equal(canAccessArchivedReport(report, "owner-session", false), false);
+  assert.equal(canAccessArchivedReport(report, "owner-session", true), true);
+});
 
 test("malformed multipart requests return a client-safe parsing error", async () => {
   const request = new Request("http://localhost/api/reports", {

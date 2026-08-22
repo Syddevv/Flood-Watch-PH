@@ -14,6 +14,7 @@ import { compareReportsByPriority } from "@/lib/report-trust";
 import { isReportDatabaseUnavailableError } from "@/lib/report-db-errors";
 import { prisma } from "@/lib/prisma";
 import {
+  canAccessArchivedReport,
   parseReportDetailsFormData,
   parseReportRequestFormData,
   reportListInclude,
@@ -199,8 +200,8 @@ export async function GET(request: Request) {
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
-      if (!includeArchived && !isVisiblePublicLifecycleStatus(lifecycleStatus)) {
-        return false;
+      if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+        return canAccessArchivedReport(report, sessionHash, includeArchived);
       }
 
       return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
