@@ -17,6 +17,7 @@ import {
   getWeatherSourcesData,
 } from "@/lib/source-metadata";
 import { fetchNominatimReverse } from "@/lib/nominatim";
+import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
@@ -1065,16 +1066,14 @@ export async function getWeatherByCoordinates(
   }
 
   const fallbackName = name?.trim();
-  const reverseGeocodedAddress =
-    !fallbackName || fallbackName === "Your Location"
-      ? await reverseGeocodePhilippineAddress(latitude, longitude)
-      : null;
-  const resolvedLocationName =
-    !fallbackName || fallbackName === "Your Location"
-      ? reverseGeocodedAddress?.locationName ??
-        reverseGeocodedAddress?.formattedAddress ??
-        "Your Location"
-      : fallbackName;
+  const reverseGeocodedAddress = !fallbackName
+    ? await reverseGeocodePhilippineAddress(latitude, longitude)
+    : null;
+  const resolvedLocationName = !fallbackName
+    ? reverseGeocodedAddress?.locationName ??
+      reverseGeocodedAddress?.formattedAddress ??
+      buildCoordinateFallbackLabel(latitude, longitude)
+    : fallbackName;
 
   const location = await fetchWeatherForLocation({
     name: resolvedLocationName,
@@ -1086,7 +1085,8 @@ export async function getWeatherByCoordinates(
     location,
     fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
     advisoryMessage: WEATHER_RISK_DISCLAIMER,
-    resolvedAddress: reverseGeocodedAddress?.formattedAddress ?? undefined,
+    resolvedAddress:
+      reverseGeocodedAddress?.formattedAddress ?? reverseGeocodedAddress?.locationName ?? undefined,
   };
 }
 

@@ -61,6 +61,14 @@ async function readJsonResponse(response: Response) {
   }
 }
 
+function warnIfRateLimited(url: string, response: Response) {
+  if (response.status === 429) {
+    console.warn(
+      `Rate limited (429) by ${url}. Retry-After: ${response.headers.get("Retry-After") ?? "unknown"}`,
+    );
+  }
+}
+
 function getErrorMessage(payload: unknown, fallback = WEATHER_UNAVAILABLE_MESSAGE) {
   if (!isObject(payload) || typeof payload.error !== "string" || payload.error.trim() === "") {
     return fallback;
@@ -135,14 +143,15 @@ export async function fetchWeatherLocation(
   signal?: AbortSignal,
 ) {
   if ("query" in params) {
-    const searchParams = new URLSearchParams({
+    const url = `/api/weather/location?${new URLSearchParams({
       query: params.query,
-    });
+    }).toString()}`;
 
-    const response = await fetch(`/api/weather/location?${searchParams.toString()}`, {
+    const response = await fetch(url, {
       cache: "no-store",
       signal,
     });
+    warnIfRateLimited(url, response);
     const payload = (await response.json()) as WeatherLocationResponse;
 
     if (!response.ok || !("data" in payload)) {
@@ -163,10 +172,12 @@ export async function fetchWeatherLocation(
     searchParams.set("name", params.name.trim());
   }
 
-  const response = await fetch(`/api/weather/coordinates?${searchParams.toString()}`, {
+  const url = `/api/weather/coordinates?${searchParams.toString()}`;
+  const response = await fetch(url, {
     cache: "no-store",
     signal,
   });
+  warnIfRateLimited(url, response);
   const payload = (await response.json()) as WeatherLocationResponse;
 
   if (!response.ok || !("data" in payload)) {
