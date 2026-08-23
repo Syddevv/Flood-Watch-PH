@@ -6,54 +6,58 @@
 
 ---
 
-## Priority 0 — Critical Architecture & Data Integrity
+## Priority 0 — Critical Architecture & Data Integrity ✅ Done (2026-08-23)
 
 ### 1. Decide and Implement Handling for Reports at the Same Location
 
-**Priority:** 🔴 Critical
+**Priority:** 🔴 Critical — **Status: Implemented and verified.**
 
 The reporting system must have a clear, server-enforced strategy for multiple flood reports referring to the same physical location.
 
+> **Implementation summary:** Added a first-class `Incident` model (`prisma/schema.prisma`, migration `prisma/migrations/20260823_incident_grouping/`). `FloodReport` now requires an `incidentId`. Matching is server-enforced inside the `POST /api/reports` transaction (`app/api/reports/route.ts`) using a configurable radius/time-window matcher (`lib/incident-matching.ts`, `lib/incident-config.ts`) and Postgres advisory-lock concurrency safety (`lib/incident-geo-lock.ts`, `lib/prisma.ts`). Incident status rolls up from constituent reports (`lib/incident-lifecycle.ts`, `lib/incident-sync.ts`, wired into the confirm/resolve routes). Frontend surfaces this in `components/incident-reports-content.tsx` (nearby-duplicate warning, `forceNewIncident` flag, incident badges) and `components/flood-map-client.tsx` (popup "N related reports"). Existing data was backfilled with zero loss (every pre-existing report became its own singleton incident). One separately-discovered and fixed bug: a stale `useEffect` dependency in the nearby-duplicate warning UI caused it to flicker and clear itself before a user could interact with it — fixed and covered by `tests/browser/nearby-duplicate-warning.spec.ts`.
+>
+> **Not yet verified:** mobile viewport / touch interaction (only desktop Chromium and direct API testing were performed this pass).
+
 #### Requirements
 
-- [ ] Inspect the current report creation and matching logic.
-- [ ] Determine how reports should be grouped when they represent the same flooding incident.
-- [ ] Define what constitutes a "same location" report.
-- [ ] Use a configurable geographic radius rather than requiring exact latitude/longitude equality.
-- [ ] Consider report recency/time when determining whether reports belong to the same incident.
-- [ ] Prevent duplicate reports from unnecessarily creating separate incidents.
-- [ ] Still allow users to submit a new report when the situation has materially changed.
-- [ ] Preserve individual user reports as historical records.
-- [ ] Do not silently delete or overwrite existing reports.
-- [ ] Make the matching logic server-enforced so clients cannot bypass it.
-- [ ] Ensure concurrent report submissions cannot create inconsistent incident relationships.
-- [ ] Add appropriate database indexes for geographic/time-based lookup where practical.
-- [ ] Update the UI to clearly explain when a report appears to correspond to an existing incident.
-- [ ] Allow users to contribute information to an existing incident when appropriate.
-- [ ] Allow an explicitly separate report/incident when the user indicates that it is a different situation.
-- [ ] Ensure the final behavior works correctly on desktop and mobile.
+- [x] Inspect the current report creation and matching logic.
+- [x] Determine how reports should be grouped when they represent the same flooding incident.
+- [x] Define what constitutes a "same location" report.
+- [x] Use a configurable geographic radius rather than requiring exact latitude/longitude equality. (`INCIDENT_MATCH_RADIUS_METERS`, default 300m, env-overridable)
+- [x] Consider report recency/time when determining whether reports belong to the same incident. (`INCIDENT_MATCH_TIME_WINDOW_MS`, default 12h, compared against `lastActivityAt`)
+- [x] Prevent duplicate reports from unnecessarily creating separate incidents.
+- [x] Still allow users to submit a new report when the situation has materially changed. (`forceNewIncident` flag)
+- [x] Preserve individual user reports as historical records.
+- [x] Do not silently delete or overwrite existing reports.
+- [x] Make the matching logic server-enforced so clients cannot bypass it.
+- [x] Ensure concurrent report submissions cannot create inconsistent incident relationships. (verified live: 5 simultaneous submissions at one spot converged on exactly one incident)
+- [x] Add appropriate database indexes for geographic/time-based lookup where practical.
+- [x] Update the UI to clearly explain when a report appears to correspond to an existing incident.
+- [x] Allow users to contribute information to an existing incident when appropriate.
+- [x] Allow an explicitly separate report/incident when the user indicates that it is a different situation.
+- [ ] Ensure the final behavior works correctly on desktop and mobile. *(desktop verified; mobile viewport not yet tested)*
 
 #### Data integrity
 
-- [ ] Define the relationship between `Report` and `Incident` if an incident abstraction is used.
-- [ ] Ensure reports remain individually attributable to their submitting users.
-- [ ] Store creation/update timestamps consistently.
-- [ ] Ensure incident status can be updated without destroying the original report data.
-- [ ] Add migrations only after validating the existing production/development schema.
-- [ ] Update Prisma models and generated client where necessary.
-- [ ] Add tests for duplicate/same-location scenarios.
+- [x] Define the relationship between `Report` and `Incident` if an incident abstraction is used. (dedicated `Incident` table, `FloodReport.incidentId` FK)
+- [x] Ensure reports remain individually attributable to their submitting users.
+- [x] Store creation/update timestamps consistently.
+- [x] Ensure incident status can be updated without destroying the original report data. (separate `Incident.status`, rolled up via `lib/incident-lifecycle.ts`)
+- [x] Add migrations only after validating the existing production/development schema.
+- [x] Update Prisma models and generated client where necessary.
+- [x] Add tests for duplicate/same-location scenarios.
 
 #### Test cases
 
-- [ ] Two reports within the matching radius and time window.
-- [ ] Two reports at exactly the same coordinates.
-- [ ] Two reports slightly outside the matching radius.
-- [ ] Two reports at the same location but far apart in time.
-- [ ] Multiple users reporting simultaneously.
-- [ ] Same user submitting multiple reports.
-- [ ] Existing incident with several contributing reports.
-- [ ] User intentionally creating a separate incident.
-- [ ] Reports near the boundary of Calumpit.
+- [x] Two reports within the matching radius and time window.
+- [x] Two reports at exactly the same coordinates.
+- [x] Two reports slightly outside the matching radius.
+- [x] Two reports at the same location but far apart in time. *(unit-tested; not exercised at the integration level — the harness uses a real server clock and can't fast-forward it)*
+- [x] Multiple users reporting simultaneously. (5-way concurrency, live-verified against the dev database)
+- [x] Same user submitting multiple reports.
+- [x] Existing incident with several contributing reports.
+- [x] User intentionally creating a separate incident.
+- [ ] Reports near the boundary of Calumpit. *(no Calumpit boundary exists yet — that's Priority 2. A regression-guard unit test confirms P0's matching has no geofence-shaped special case near Calumpit's coordinates, so it won't silently break when Priority 2 adds the real boundary, but the actual boundary test case can't be meaningfully written until then.)*
 
 ---
 
@@ -576,7 +580,7 @@ At minimum, test the following areas.
 
 Coding agents should generally execute the work in this order:
 
-1. **Same-location / incident handling**
+1. ~~**Same-location / incident handling**~~ ✅ Done (2026-08-23)
 2. **Authentication and user accounts**
 3. **Calumpit geographic boundary**
 4. **Server-side reporting-area validation**
