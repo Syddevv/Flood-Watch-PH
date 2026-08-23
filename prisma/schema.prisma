@@ -32,6 +32,8 @@ model FloodReport {
   lastActivityAt    DateTime             @default(now())
   resolvedAt        DateTime?
   archivedAt        DateTime?
+  incidentId        String
+  incident          Incident             @relation(fields: [incidentId], references: [id])
   confirmations     ReportConfirmation[]
   updates           ReportUpdate[]
 
@@ -42,6 +44,27 @@ model FloodReport {
   @@index([sourceType, createdAt])
   @@index([lastActivityAt])
   @@index([latitude, longitude])
+  @@index([incidentId])
+}
+
+model Incident {
+  id                      String        @id @default(cuid())
+  status                  String        @default("Needs More Confirmation")
+  representativeLatitude  Float
+  representativeLongitude Float
+  locationName            String
+  severity                String
+  reportCount             Int           @default(1)
+  firstReportAt           DateTime      @default(now())
+  lastActivityAt          DateTime      @default(now())
+  resolvedAt              DateTime?
+  archivedAt              DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  reports                 FloodReport[]
+
+  @@index([status, lastActivityAt])
+  @@index([representativeLatitude, representativeLongitude])
 }
 
 model ReportConfirmation {

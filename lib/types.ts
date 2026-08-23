@@ -251,6 +251,8 @@ export type IncidentReport = {
   waterLevel?: string;
   note?: string;
   photos: IncidentReportPhoto[];
+  incidentId?: string;
+  incidentReportCount?: number;
 };
 
 export type CommunityActivityStat = {

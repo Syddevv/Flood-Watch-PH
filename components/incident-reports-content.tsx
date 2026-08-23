@@ -43,6 +43,7 @@ import type {
   ReportDetailResponse,
   NearbyReportRecord,
   NearbyReportsResponse,
+  ReportCreateResult,
   ReportUpdateItem,
   ReportRecord,
   ReportsResponse,
@@ -456,6 +457,11 @@ function ReportCard({
                 )}
               >
                 {freshnessBadge.label}
+              </span>
+            ) : null}
+            {report.incidentReportCount && report.incidentReportCount > 1 ? (
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[0.66rem] font-medium leading-4 text-[var(--color-primary)]">
+                Part of an incident with {report.incidentReportCount} reports
               </span>
             ) : null}
           </div>
@@ -1229,7 +1235,7 @@ export function IncidentReportsContent() {
       method: "POST",
       body: requestBody,
     });
-    const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+    const payload = (await response.json()) as { data?: ReportCreateResult; error?: string };
 
     if (!response.ok || !payload.data) {
       throw new Error(payload.error ?? "Failed to submit report.");
@@ -1240,12 +1246,13 @@ export function IncidentReportsContent() {
     );
     setFormState(emptyFormState);
     setPendingNearbyDuplicate(null);
-    setToast({
-      tone: "success",
-      message: photoAttached
-        ? "Community report and photo submitted successfully."
-        : "Community report submitted successfully.",
-    });
+
+    const photoSuffix = photoAttached ? " with your photo" : "";
+    const message = payload.data.incident.matchedExisting
+      ? `Your report was added to an existing incident (${payload.data.incident.contributingReportCount} reports)${photoSuffix}.`
+      : `Community report submitted successfully${photoSuffix}.`;
+
+    setToast({ tone: "success", message });
   }
 
   async function fetchNearbyReportsForDuplicateCheck(latitude: number, longitude: number) {
@@ -1367,6 +1374,7 @@ export function IncidentReportsContent() {
     setSubmittingReport(true);
 
     try {
+      pendingNearbyDuplicate.requestBody.set("forceNewIncident", "true");
       await submitPreparedReport(
         pendingNearbyDuplicate.requestBody,
         pendingNearbyDuplicate.photoAttached,
@@ -1799,6 +1807,9 @@ export function IncidentReportsContent() {
                             </div>
                             <div className="mt-1 tabular-nums text-[0.78rem] text-[var(--color-muted-foreground)]">
                               {nearbyReport.locationName} · ~{Math.max(1, Math.round(nearbyReport.distanceMeters))} m away
+                              {nearbyReport.incidentReportCount && nearbyReport.incidentReportCount > 1
+                                ? ` · already has ${nearbyReport.incidentReportCount} reports`
+                                : ""}
                             </div>
                           </div>
                         ))}

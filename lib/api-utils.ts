@@ -11,6 +11,7 @@ type ReportFilters = {
   category?: string;
   sourceType?: string;
   search?: string;
+  incidentId?: string;
 };
 
 export const MAX_REPORT_SEARCH_LENGTH = 100;
@@ -66,6 +67,7 @@ export function parseReportFilters(searchParams: URLSearchParams): {
   const category = normalizeString(searchParams.get("category"));
   const sourceType = normalizeString(searchParams.get("sourceType"));
   const search = normalizeString(searchParams.get("search"));
+  const incidentId = normalizeString(searchParams.get("incidentId"));
 
   if (search.length > MAX_REPORT_SEARCH_LENGTH) {
     return {
@@ -97,6 +99,7 @@ export function parseReportFilters(searchParams: URLSearchParams): {
       ...(category ? { category } : {}),
       ...(sourceType ? { sourceType } : {}),
       ...(search ? { search } : {}),
+      ...(incidentId ? { incidentId } : {}),
     },
   };
 }

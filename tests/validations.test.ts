@@ -45,6 +45,18 @@ test("report search filters reject oversized search terms", () => {
   );
 });
 
+test("report filters pass through an incidentId filter", () => {
+  const result = parseReportFilters(
+    new URLSearchParams({ incidentId: "incident_abc123" }),
+  );
+  assert.equal(result.filters.incidentId, "incident_abc123");
+});
+
+test("report filters omit incidentId when absent", () => {
+  const result = parseReportFilters(new URLSearchParams());
+  assert.equal("incidentId" in result.filters, false);
+});
+
 test("weather coordinates are rounded to a stable cache precision", () => {
   assert.equal(roundWeatherCoordinate(14.59951234), 14.5995);
   assert.equal(roundWeatherCoordinate(-121.234567), -121.2346);

@@ -209,6 +209,7 @@ export function parseReportDetailsFormData(formData: FormData) {
   const reportedByName = getOptionalText(formData.get("reportedByName"));
   const latitude = Number(formData.get("latitude"));
   const longitude = Number(formData.get("longitude"));
+  const forceNewIncident = formData.get("forceNewIncident") === "true";
 
   if (!title) {
     return { error: "Title is required." };
@@ -272,6 +273,7 @@ export function parseReportDetailsFormData(formData: FormData) {
       reportedByName,
       latitude,
       longitude,
+      forceNewIncident,
     },
   };
 }

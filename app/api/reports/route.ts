@@ -4,6 +4,9 @@ import {
   parsePositiveInteger,
   parseReportFilters,
 } from "@/lib/api-utils";
+import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
+import { findNearestMatchingReport } from "@/lib/incident-matching";
+import { createBoundingBox } from "@/lib/report-geo";
 import {
   deriveReportLifecycleStatus,
   isVisiblePublicLifecycleStatus,
@@ -12,7 +15,12 @@ import {
 } from "@/lib/report-lifecycle";
 import { compareReportsByPriority } from "@/lib/report-trust";
 import { isReportDatabaseUnavailableError } from "@/lib/report-db-errors";
-import { prisma } from "@/lib/prisma";
+import {
+  acquireIncidentGeoLocks,
+  lockIncidentForUpdate,
+  prisma,
+  type PrismaTransactionClient,
+} from "@/lib/prisma";
 import {
   canAccessArchivedReport,
   parseReportDetailsFormData,
@@ -39,9 +47,15 @@ function buildReportListResponse(
   },
 ) {
   return Response.json({
-    data: data.map((report: ReportListRecord) =>
-      serializeReportRecord(report, pagination.sessionHash),
-    ),
+    data: data.map((report: ReportListRecord) => {
+      const serialized = serializeReportRecord(report, pagination.sessionHash);
+      const { incident, ...rest } = serialized;
+
+      return {
+        ...rest,
+        incidentReportCount: incident?.reportCount ?? 1,
+      };
+    }),
     pagination: {
       page: pagination.page,
       limit: pagination.limit,
@@ -72,6 +86,8 @@ type ReportListRecord = {
   lastActivityAt: Date;
   resolvedAt: Date | null;
   archivedAt: Date | null;
+  incidentId: string;
+  incident?: { reportCount: number };
   confirmations?: Array<{
     confirmationType: string;
     createdAt: Date;
@@ -84,6 +100,7 @@ type ReportWhereClause = {
   severity?: string;
   category?: string;
   sourceType?: string;
+  incidentId?: string;
   OR?: Array<{
     title?: { contains: string; mode: "insensitive" };
     description?: { contains: string; mode: "insensitive" };
@@ -96,11 +113,13 @@ function buildReportWhereClause(filters: {
   category?: string;
   sourceType?: string;
   search?: string;
+  incidentId?: string;
 }): ReportWhereClause {
   return {
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.category ? { category: filters.category } : {}),
     ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
+    ...(filters.incidentId ? { incidentId: filters.incidentId } : {}),
     ...(filters.search
       ? {
           OR: [
@@ -151,10 +170,18 @@ export async function GET(request: Request) {
       category: parsedFilters.filters.category,
       sourceType: parsedFilters.filters.sourceType,
       search: parsedFilters.filters.search,
+      incidentId: parsedFilters.filters.incidentId,
     });
 
     const reports = (await prisma.floodReport.findMany({
       where,
+      include: {
+        incident: {
+          select: {
+            reportCount: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: MAX_REPORTS_TO_PROCESS,
     })) as ReportListRecord[];
@@ -339,31 +366,133 @@ export async function POST(request: Request) {
       reportedByName,
       latitude,
       longitude,
+      forceNewIncident,
     } = parsedReport.data;
 
-    const report = await prisma.floodReport.create({
-      data: {
-        title,
-        description,
-        category,
-        severity,
-        status: "Needs More Confirmation",
-        locationName,
-        latitude,
-        longitude,
-        imageUrl,
-        ownerSessionHash: sessionHash,
-        reportedByName,
-        sourceType: "Community",
-        confirmationCount: 0,
-        resolvedCount: 0,
-        lastActivityAt: new Date(),
+    const now = new Date();
+    const { report, incident } = await prisma.$transaction(
+      async (tx: PrismaTransactionClient) => {
+        await acquireIncidentGeoLocks(tx, latitude, longitude);
+
+        const bounds = createBoundingBox(latitude, longitude, INCIDENT_MATCH_RADIUS_METERS);
+        const candidates = await tx.floodReport.findMany({
+          where: {
+            latitude: { gte: bounds.minLatitude, lte: bounds.maxLatitude },
+            longitude: { gte: bounds.minLongitude, lte: bounds.maxLongitude },
+          },
+          select: {
+            incidentId: true,
+            latitude: true,
+            longitude: true,
+            status: true,
+            severity: true,
+            confirmationCount: true,
+            resolvedCount: true,
+            createdAt: true,
+            updatedAt: true,
+            lastActivityAt: true,
+            resolvedAt: true,
+            archivedAt: true,
+          },
+          take: 100,
+        });
+
+        const match = findNearestMatchingReport(candidates, { latitude, longitude }, now);
+
+        if (match && !forceNewIncident) {
+          await lockIncidentForUpdate(tx, match.incidentId);
+
+          const [createdReport, updatedIncident] = await Promise.all([
+            tx.floodReport.create({
+              data: {
+                title,
+                description,
+                category,
+                severity,
+                status: "Needs More Confirmation",
+                locationName,
+                latitude,
+                longitude,
+                imageUrl,
+                ownerSessionHash: sessionHash,
+                reportedByName,
+                sourceType: "Community",
+                confirmationCount: 0,
+                resolvedCount: 0,
+                lastActivityAt: now,
+                incidentId: match.incidentId,
+              },
+              include: reportListInclude,
+            }),
+            tx.incident.update({
+              where: { id: match.incidentId },
+              data: {
+                reportCount: { increment: 1 },
+                lastActivityAt: now,
+              },
+            }),
+          ]);
+
+          return {
+            report: createdReport,
+            incident: { id: updatedIncident.id, matchedExisting: true as const, contributingReportCount: updatedIncident.reportCount },
+          };
+        }
+
+        const newIncident = await tx.incident.create({
+          data: {
+            status: "Needs More Confirmation",
+            representativeLatitude: latitude,
+            representativeLongitude: longitude,
+            locationName,
+            severity,
+            reportCount: 1,
+            firstReportAt: now,
+            lastActivityAt: now,
+          },
+        });
+
+        const createdReport = await tx.floodReport.create({
+          data: {
+            title,
+            description,
+            category,
+            severity,
+            status: "Needs More Confirmation",
+            locationName,
+            latitude,
+            longitude,
+            imageUrl,
+            ownerSessionHash: sessionHash,
+            reportedByName,
+            sourceType: "Community",
+            confirmationCount: 0,
+            resolvedCount: 0,
+            lastActivityAt: now,
+            incidentId: newIncident.id,
+          },
+          include: reportListInclude,
+        });
+
+        return {
+          report: createdReport,
+          incident: {
+            id: newIncident.id,
+            matchedExisting: false as const,
+            contributingReportCount: newIncident.reportCount,
+          },
+        };
       },
-      include: reportListInclude,
-    });
+      { timeout: 10_000 },
+    );
 
     return Response.json(
-      { data: serializeReportRecord(report as ReportListRecord, sessionHash) },
+      {
+        data: {
+          ...serializeReportRecord(report as ReportListRecord, sessionHash),
+          incident,
+        },
+      },
       { status: 201 },
     );
   } catch (error) {

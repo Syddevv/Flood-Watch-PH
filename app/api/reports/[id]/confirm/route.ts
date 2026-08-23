@@ -1,4 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { syncIncidentAggregate } from "@/lib/incident-sync";
 import {
   deriveReportLifecycleStatus,
   getLifecyclePersistencePatch,
@@ -54,6 +55,7 @@ export async function POST(request: Request, context: RouteContext) {
         lastActivityAt: true,
         resolvedAt: true,
         archivedAt: true,
+        incidentId: true,
       },
     });
 
@@ -98,14 +100,17 @@ export async function POST(request: Request, context: RouteContext) {
       });
 
       const nextPatch = getLifecyclePersistencePatch(nextReport);
-      if (Object.keys(nextPatch).length === 0) {
-        return nextReport;
-      }
+      const finalReport =
+        Object.keys(nextPatch).length === 0
+          ? nextReport
+          : await tx.floodReport.update({
+              where: { id },
+              data: nextPatch,
+            });
 
-      return tx.floodReport.update({
-        where: { id },
-        data: nextPatch,
-      });
+      await syncIncidentAggregate(tx, report.incidentId);
+
+      return finalReport;
     });
 
     return successResponse(updatedReport);
@@ -152,6 +157,7 @@ export async function DELETE(request: Request, context: RouteContext) {
         lastActivityAt: true,
         resolvedAt: true,
         archivedAt: true,
+        incidentId: true,
       },
     });
 
@@ -222,14 +228,17 @@ export async function DELETE(request: Request, context: RouteContext) {
       });
 
       const nextPatch = getLifecyclePersistencePatch(nextReport);
-      if (Object.keys(nextPatch).length === 0) {
-        return nextReport;
-      }
+      const finalReport =
+        Object.keys(nextPatch).length === 0
+          ? nextReport
+          : await tx.floodReport.update({
+              where: { id },
+              data: nextPatch,
+            });
 
-      return tx.floodReport.update({
-        where: { id },
-        data: nextPatch,
-      });
+      await syncIncidentAggregate(tx, report.incidentId);
+
+      return finalReport;
     });
 
     if (!updatedReport) {

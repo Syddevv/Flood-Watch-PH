@@ -75,17 +75,52 @@ async function createSession(baseUrl: string, clientAddress: string) {
   return cookieFromResponse(response);
 }
 
-function createReportForm() {
+function createReportForm(
+  overrides: {
+    latitude?: string;
+    longitude?: string;
+    forceNewIncident?: boolean;
+    titleSuffix?: string;
+  } = {},
+) {
   const form = new FormData();
-  form.set("title", `Integration report ${Date.now()}`);
+  form.set("title", `Integration report ${Date.now()}${overrides.titleSuffix ? ` ${overrides.titleSuffix}` : ""}`);
   form.set("description", "Integration test report.");
   form.set("category", "Flooding");
   form.set("severity", "High");
   form.set("locationName", "Marikina City");
   form.set("reportedByName", "Automated integration test");
-  form.set("latitude", "14.6507");
-  form.set("longitude", "121.1029");
+  form.set("latitude", overrides.latitude ?? "14.6507");
+  form.set("longitude", overrides.longitude ?? "121.1029");
+  if (overrides.forceNewIncident) {
+    form.set("forceNewIncident", "true");
+  }
   return form;
+}
+
+async function submitReport(
+  baseUrl: string,
+  cookie: string,
+  address: string,
+  overrides: Parameters<typeof createReportForm>[0] = {},
+) {
+  const response = await fetch(`${baseUrl}/api/reports`, {
+    method: "POST",
+    headers: {
+      Origin: baseUrl,
+      Cookie: cookie,
+      "X-Forwarded-For": address,
+    },
+    body: createReportForm(overrides),
+  });
+  const payload = (await response.json()) as {
+    data?: {
+      id?: string;
+      incidentId?: string;
+      incident?: { id: string; matchedExisting: boolean; contributingReportCount: number };
+    };
+  };
+  return { response, payload };
 }
 
 async function stopServer(process: ChildProcess) {
@@ -100,6 +135,35 @@ async function stopServer(process: ChildProcess) {
   });
 }
 
+async function startTestServer() {
+  const port = await getAvailablePort();
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const server = spawn(
+    process.platform === "win32" ? "npm.cmd" : "npm",
+    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(port)],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        DATABASE_URL: testDatabaseUrl,
+        DIRECT_URL: testDatabaseUrl,
+        NODE_ENV: "test",
+        REPORT_SESSION_SECRET:
+          process.env.REPORT_SESSION_SECRET ??
+          "integration-test-report-session-secret-32-chars",
+        ABUSE_PROTECTION_SECRET:
+          process.env.ABUSE_PROTECTION_SECRET ??
+          "integration-test-abuse-protection-secret-32-chars",
+        TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
+      },
+      stdio: "ignore",
+    },
+  );
+
+  await waitForServer(server, baseUrl);
+  return { baseUrl, server };
+}
+
 const integrationTest = testDatabaseUrl
   ? test
   : (test as typeof test).skip;
@@ -107,38 +171,15 @@ const integrationTest = testDatabaseUrl
 integrationTest(
   "report API enforces ownership, validation, rate limits, and concurrent undo consistency",
   async () => {
-    const port = await getAvailablePort();
-    const baseUrl = `http://127.0.0.1:${port}`;
     const runId = randomUUID();
     const ownerAddress = `integration-owner-${runId}`;
     const otherAddress = `integration-other-${runId}`;
-    const server = spawn(
-      process.platform === "win32" ? "npm.cmd" : "npm",
-      ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(port)],
-      {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          DATABASE_URL: testDatabaseUrl,
-          DIRECT_URL: testDatabaseUrl,
-          NODE_ENV: "test",
-          REPORT_SESSION_SECRET:
-            process.env.REPORT_SESSION_SECRET ??
-            "integration-test-report-session-secret-32-chars",
-          ABUSE_PROTECTION_SECRET:
-            process.env.ABUSE_PROTECTION_SECRET ??
-            "integration-test-abuse-protection-secret-32-chars",
-          TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
-        },
-        stdio: "ignore",
-      },
-    );
+    const { baseUrl, server } = await startTestServer();
 
     let reportId = "";
     let ownerCookie = "";
 
     try {
-      await waitForServer(server, baseUrl);
 
       ownerCookie = await createSession(baseUrl, ownerAddress);
       const otherCookie = await createSession(baseUrl, otherAddress);
@@ -380,6 +421,130 @@ integrationTest(
           },
         }).catch(() => undefined);
       }
+      await stopServer(server);
+    }
+  },
+);
+
+integrationTest(
+  "same-location reports converge on one server-enforced incident under concurrency",
+  async () => {
+    const runId = randomUUID();
+    const { baseUrl, server } = await startTestServer();
+    const spotLatitude = "14.700001";
+    const spotLongitude = "121.100001";
+    const createdReports: Array<{ id: string; cookie: string; address: string }> = [];
+
+    try {
+      const sessions = await Promise.all(
+        Array.from({ length: 5 }, async (_unused, index) => {
+          const address = `integration-concurrency-${runId}-${index}`;
+          const cookie = await createSession(baseUrl, address);
+          return { address, cookie };
+        }),
+      );
+
+      const concurrentResults = await Promise.all(
+        sessions.map(({ cookie, address }) =>
+          submitReport(baseUrl, cookie, address, {
+            latitude: spotLatitude,
+            longitude: spotLongitude,
+            titleSuffix: `concurrent-${runId}`,
+          }),
+        ),
+      );
+
+      concurrentResults.forEach(({ response, payload }, index) => {
+        assert.equal(response.status, 201);
+        assert.ok(payload.data?.id);
+        if (payload.data?.id) {
+          createdReports.push({
+            id: payload.data.id,
+            cookie: sessions[index].cookie,
+            address: sessions[index].address,
+          });
+        }
+      });
+
+      const incidentIds = new Set(
+        concurrentResults.map((result) => result.payload.data?.incident?.id),
+      );
+      assert.equal(incidentIds.size, 1, "all concurrent same-spot reports must share one incident");
+
+      const matchedExistingCount = concurrentResults.filter(
+        (result) => result.payload.data?.incident?.matchedExisting === true,
+      ).length;
+      assert.equal(matchedExistingCount, 4, "exactly one of five reports should found the incident");
+
+      const sharedIncidentId = [...incidentIds][0];
+
+      const secondReportFromOwner = await submitReport(
+        baseUrl,
+        sessions[0].cookie,
+        sessions[0].address,
+        {
+          latitude: spotLatitude,
+          longitude: spotLongitude,
+          titleSuffix: `same-user-second-${runId}`,
+        },
+      );
+      assert.equal(secondReportFromOwner.response.status, 201);
+      assert.equal(secondReportFromOwner.payload.data?.incident?.matchedExisting, true);
+      assert.equal(secondReportFromOwner.payload.data?.incident?.id, sharedIncidentId);
+      assert.equal(secondReportFromOwner.payload.data?.incident?.contributingReportCount, 6);
+      if (secondReportFromOwner.payload.data?.id) {
+        createdReports.push({
+          id: secondReportFromOwner.payload.data.id,
+          cookie: sessions[0].cookie,
+          address: sessions[0].address,
+        });
+      }
+
+      const forcedAddress = `integration-force-new-${runId}`;
+      const forcedCookie = await createSession(baseUrl, forcedAddress);
+      const forcedResult = await submitReport(baseUrl, forcedCookie, forcedAddress, {
+        latitude: spotLatitude,
+        longitude: spotLongitude,
+        forceNewIncident: true,
+        titleSuffix: `forced-separate-${runId}`,
+      });
+      assert.equal(forcedResult.response.status, 201);
+      assert.equal(forcedResult.payload.data?.incident?.matchedExisting, false);
+      assert.notEqual(forcedResult.payload.data?.incident?.id, sharedIncidentId);
+      if (forcedResult.payload.data?.id) {
+        createdReports.push({
+          id: forcedResult.payload.data.id,
+          cookie: forcedCookie,
+          address: forcedAddress,
+        });
+      }
+
+      const farAddress = `integration-far-away-${runId}`;
+      const farCookie = await createSession(baseUrl, farAddress);
+      const farResult = await submitReport(baseUrl, farCookie, farAddress, {
+        latitude: "14.706000",
+        longitude: "121.106000",
+        titleSuffix: `far-away-${runId}`,
+      });
+      assert.equal(farResult.response.status, 201);
+      assert.equal(farResult.payload.data?.incident?.matchedExisting, false);
+      assert.notEqual(farResult.payload.data?.incident?.id, sharedIncidentId);
+      if (farResult.payload.data?.id) {
+        createdReports.push({ id: farResult.payload.data.id, cookie: farCookie, address: farAddress });
+      }
+    } finally {
+      await Promise.all(
+        createdReports.map(({ id, cookie, address }) =>
+          fetch(`${baseUrl}/api/reports/${id}`, {
+            method: "DELETE",
+            headers: {
+              Origin: baseUrl,
+              Cookie: cookie,
+              "X-Forwarded-For": address,
+            },
+          }).catch(() => undefined),
+        ),
+      );
       await stopServer(server);
     }
   },
