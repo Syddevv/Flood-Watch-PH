@@ -706,6 +706,13 @@ export function IncidentReportsContent() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
+    // Intentionally does not depend on pendingNearbyDuplicate itself: this
+    // effect exists to clear a pending duplicate-warning state when the user
+    // edits the form fields it was computed from, not to react to the state
+    // it sets. Including it in the deps caused the effect to re-fire the
+    // instant the warning was shown (since setting it is itself a dependency
+    // change), clearing it again one animation frame later.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formState.category,
     formState.description,
@@ -713,7 +720,6 @@ export function IncidentReportsContent() {
     formState.locationName,
     formState.longitude,
     formState.severity,
-    pendingNearbyDuplicate,
   ]);
 
   useEffect(() => {
