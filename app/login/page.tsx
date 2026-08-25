@@ -1,9 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import Link from "next/link";
 
+import { AuthAlert } from "@/components/auth/auth-alert";
+import { AuthButton } from "@/components/auth/auth-button";
+import { AuthInput } from "@/components/auth/auth-input";
+import { AuthLayout } from "@/components/auth/auth-layout";
+import { PasswordInput } from "@/components/auth/password-input";
 import { useAuthSession } from "@/components/auth-session-provider";
 
 function LoginForm() {
@@ -43,63 +48,51 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-background)] px-5 py-10 text-[var(--color-foreground)] md:px-8">
-      <div className="mx-auto max-w-sm">
-        <Link href="/" className="text-sm text-[var(--color-primary)] hover:underline">
-          Back to FloodWatch PH
+    <AuthLayout>
+      <h1 className="text-[1.7rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)] sm:text-[1.85rem]">
+        Welcome back
+      </h1>
+      <p className="mt-2 text-[0.88rem] leading-6 text-[var(--color-muted-foreground)]">
+        Sign in to submit flood reports and manage the reports you&apos;ve filed.
+      </p>
+
+      <form onSubmit={handleSubmit} noValidate className="mt-7 grid gap-4">
+        <AuthInput
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={setEmail}
+          placeholder="name@example.com"
+        />
+        <PasswordInput
+          id="password"
+          label="Password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={setPassword}
+        />
+
+        {error ? <AuthAlert title="Unable to sign in" message={error} /> : null}
+
+        <AuthButton loading={submitting} loadingLabel="Signing in...">
+          Log in
+        </AuthButton>
+      </form>
+
+      <p className="mt-6 text-center text-[0.85rem] text-[var(--color-muted-foreground)]">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/register"
+          className="font-medium text-[var(--color-primary)] hover:underline"
+        >
+          Create one
         </Link>
-        <h1 className="mt-6 text-2xl font-semibold">Log in</h1>
-        <p className="mt-2 text-[0.88rem] text-[var(--color-muted-foreground)]">
-          Sign in to submit flood reports and manage the reports you&apos;ve filed.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
-          <label className="grid gap-1.5">
-            <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
-              Email
-            </span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="h-11 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
-            />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
-              Password
-            </span>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="h-11 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none focus:border-[var(--color-primary)]"
-            />
-          </label>
-
-          {error ? (
-            <p className="text-[0.84rem] text-[var(--color-danger)]">{error}</p>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="h-11 rounded-[11px] bg-[var(--color-primary)] text-[0.92rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {submitting ? "Signing in..." : "Log in"}
-          </button>
-        </form>
-
-        <p className="mt-5 text-[0.84rem] text-[var(--color-muted-foreground)]">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-[var(--color-primary)] hover:underline">
-            Create one
-          </Link>
-        </p>
-      </div>
-    </main>
+      </p>
+    </AuthLayout>
   );
 }
 
