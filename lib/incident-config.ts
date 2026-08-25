@@ -2,7 +2,7 @@ const DEFAULT_INCIDENT_MATCH_RADIUS_METERS = 300;
 const MAX_INCIDENT_MATCH_RADIUS_METERS = 500;
 const DEFAULT_INCIDENT_MATCH_TIME_WINDOW_MS = 12 * 60 * 60 * 1000;
 
-function parseClampedPositiveNumber(
+export function parseClampedPositiveNumber(
   value: string | undefined,
   fallback: number,
   max: number,

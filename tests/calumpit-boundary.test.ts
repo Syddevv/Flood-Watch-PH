@@ -66,6 +66,7 @@ test("the padded map bounds keep neighbouring-town evacuation centers reachable"
     "plaridel-municipal-gymnasium-reference",
     "guiguinto-athletic-and-cultural-center-reference",
     "balagtas-sports-complex-reference",
+    "bocaue-municipal-gymnasium-reference",
   ];
 
   for (const id of nearbyIds) {

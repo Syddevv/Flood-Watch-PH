@@ -15,14 +15,16 @@ import { LiveAlertsPanel } from "@/components/live-alerts-panel";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { useAuthSession } from "@/components/auth-session-provider";
+import {
+  NEARBY_EVACUATION_CENTERS,
+  NEARBY_EVACUATION_FEATURED_CENTERS,
+} from "@/lib/evacuation-center-scope";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
 import { WeatherAlertViewer } from "@/components/weather-alert-viewer";
 import {
   EMERGENCY_HOTLINES,
-  EVACUATION_CENTERS,
-  EVACUATION_FEATURED_CENTERS,
   FLOOD_LEGEND,
   FLOOD_POLYGONS,
   HOTLINE_NOTICE,
@@ -718,7 +720,7 @@ export function DashboardShell({
 
   const floodMapEvacuationCenterMarkers = useMemo<EvacuationCenterMapMarker[]>(
     () =>
-      EVACUATION_CENTERS.map((center) => ({
+      NEARBY_EVACUATION_CENTERS.map((center) => ({
         id: `center-marker-${center.id}`,
         label: "E",
         category: "center",
@@ -1502,7 +1504,7 @@ export function DashboardShell({
               weatherError={weatherError}
               alertsLoading={weatherLoading}
               alertsError={weatherError}
-               centers={EVACUATION_FEATURED_CENTERS}
+               centers={NEARBY_EVACUATION_FEATURED_CENTERS}
               hotlines={EMERGENCY_HOTLINES}
               hotlineNotice={HOTLINE_NOTICE}
               timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
@@ -1534,7 +1536,7 @@ export function DashboardShell({
           weatherError={weatherError}
           alertsLoading={weatherLoading}
           alertsError={weatherError}
-           centers={EVACUATION_FEATURED_CENTERS}
+           centers={NEARBY_EVACUATION_FEATURED_CENTERS}
           hotlines={EMERGENCY_HOTLINES}
           hotlineNotice={HOTLINE_NOTICE}
           timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}

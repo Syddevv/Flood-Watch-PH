@@ -197,7 +197,7 @@ function iconForCenterMarker(marker: EvacuationCenterMapMarker, selected: boolea
   const statusMeta = EVACUATION_STATUS_META[marker.status];
   const markerClassName = mobilePerformanceMode
     ? `floodwatch-marker-mobile floodwatch-marker-mobile--center${selected ? " floodwatch-marker-mobile--selected" : ""}`
-    : `floodwatch-marker${selected ? " floodwatch-marker--selected" : ""}`;
+    : `floodwatch-marker floodwatch-marker--center${selected ? " floodwatch-marker--selected" : ""}`;
   const iconSize: [number, number] = mobilePerformanceMode
     ? selected
       ? [30, 30]
