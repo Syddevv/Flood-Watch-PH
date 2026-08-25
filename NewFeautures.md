@@ -57,7 +57,7 @@ The reporting system must have a clear, server-enforced strategy for multiple fl
 - [x] Same user submitting multiple reports.
 - [x] Existing incident with several contributing reports.
 - [x] User intentionally creating a separate incident.
-- [ ] Reports near the boundary of Calumpit. *(no Calumpit boundary exists yet — that's Priority 2. A regression-guard unit test confirms P0's matching has no geofence-shaped special case near Calumpit's coordinates, so it won't silently break when Priority 2 adds the real boundary, but the actual boundary test case can't be meaningfully written until then.)*
+- [x] Reports near the boundary of Calumpit. *(closed by Priority 2: the geofence in `parseReportDetailsFormData` sits upstream of incident matching, so a report just inside the boundary is matched exactly like any other and one just outside never reaches matching at all — covered by `tests/calumpit-boundary.test.ts` edge cases plus the untouched P0 regression guard in `tests/incident-matching.test.ts`.)*
 
 ---
 
@@ -112,63 +112,69 @@ FloodWatch PH should move from anonymous reporting toward authenticated reportin
 
 ---
 
-## Priority 2 — Calumpit Geographic Scope
+## Priority 2 — Calumpit Geographic Scope ✅ Done (2026-08-26)
 
 ### 3. Restrict the Main Map to Calumpit, Bulacan
 
-**Priority:** 🔴 High
+**Priority:** 🔴 High — **Status: Implemented and verified.**
 
 FloodWatch PH should operate primarily within the defined Calumpit, Bulacan geographic area.
 
+> **Implementation summary (items 3 & 4 together):** The official boundary is the OpenStreetMap municipal polygon (relation 13255989, 533 points) committed verbatim in `lib/calumpit-boundary.ts` alongside `CALUMPIT_CENTER`, the tight `CALUMPIT_BOUNDS`, the padded `CALUMPIT_MAP_MAX_BOUNDS` (~13 km, sized to keep Hagonoy/Malolos/Pulilan/Plaridel/Guiguinto/Balagtas evacuation centers reachable for Priority 3), a hand-rolled ray-casting `isWithinCalumpit` (no geo dependency added), and one shared `OUTSIDE_CALUMPIT_ERROR_MESSAGE`. Server enforcement lives in `parseReportDetailsFormData` (`lib/report-api.ts`), which both `POST /api/reports` and `PATCH /api/reports/[id]` run — reports can be neither created nor edited to sit outside Calumpit. Per the confirmed decision, existing out-of-area reports are **hidden, not deleted**: `GET /api/reports` and `GET /api/map/all` bbox-prefilter on the existing `[latitude, longitude]` index and polygon-filter in JS, while `GET /api/reports/[id]` is untouched so share links keep working; evacuation centers are a separate data path and were not filtered. Main map (`components/flood-map-client.tsx`, `flood-map.tsx`): opens fitted to Calumpit, `minZoom 11`, hard `maxBounds` at the padded box, a dark translucent mask dimming everything outside the municipality plus a bold dashed boundary, a legend entry, and a "Coverage: Calumpit, Bulacan only" chip. Location picker (`components/incident-location-picker-map.tsx`, `incident-location-picker.tsx`): same bounds/overlay, red "!" pin + warning + disabled "Outside Calumpit" button for out-of-area pins on desktop and mobile (the mobile footer previously had no error slot at all). Report form (`components/incident-reports-content.tsx`): manual coordinates outside Calumpit show an inline message and disable submit before the rest of the form is filled; GPS fixes outside Calumpit are rejected (accuracy shown) and hand off to the picker; placeholders and header copy updated. Location search (`lib/weather.ts`) is biased toward the Calumpit area but not restricted. Seed reports relocated to Poblacion / Iba O'Este / Frances; the Metro Manila demo risk polygons (`FLOOD_POLYGONS`) were emptied rather than faked.
+>
+> Verified: 9 new boundary unit tests (including a bbox-inside/polygon-outside point proving a real polygon test), server 400 on a Marikina submission, list/map excluding out-of-area reports while a direct link still returns 200, and real-browser Playwright specs (`tests/browser/calumpit-picker-scope.spec.ts`: manual coordinates, picker inside→outside, stubbed GPS rejection) plus screenshot passes at 1440/390 px. `tests/browser/nearby-duplicate-warning.spec.ts` was also repaired — it had been silently broken since Priority 1.
+>
+> **Not yet verified:** real-device touch interaction (mobile viewports were screenshot-checked in desktop Chromium only, as with P0/P1).
+
 #### Requirements
 
-- [ ] Define the official Calumpit geographic boundary.
-- [ ] Determine whether the boundary should use:
+- [x] Define the official Calumpit geographic boundary. (OSM relation 13255989)
+- [x] Determine whether the boundary should use:
   - [ ] Bounding box, or
-  - [ ] Polygon/geographic boundary.
+  - [x] Polygon/geographic boundary.
 
-- [ ] Prefer an actual geographic boundary/polygon when feasible.
-- [ ] Update the map's initial viewport to Calumpit.
-- [ ] Prevent normal map navigation from making the application behave as though it supports arbitrary locations.
-- [ ] Ensure map markers primarily represent locations within the supported reporting area.
-- [ ] Clearly communicate the supported geographic coverage in the UI.
-- [ ] Avoid misleading users into believing the system supports all of Bulacan or the entire Philippines.
+- [x] Prefer an actual geographic boundary/polygon when feasible.
+- [x] Update the map's initial viewport to Calumpit.
+- [x] Prevent normal map navigation from making the application behave as though it supports arbitrary locations. (padded `maxBounds`, `minZoom 11`, outside-area mask)
+- [x] Ensure map markers primarily represent locations within the supported reporting area. (report markers filtered server-side; evacuation centers intentionally not)
+- [x] Clearly communicate the supported geographic coverage in the UI. (boundary overlay, legend entry, coverage chip, form copy)
+- [x] Avoid misleading users into believing the system supports all of Bulacan or the entire Philippines.
 
 #### Backend enforcement
 
-- [ ] Validate report coordinates against the Calumpit boundary on the server.
-- [ ] Reject report submissions outside the supported reporting area.
-- [ ] Do not rely only on map UI restrictions.
-- [ ] Validate manually submitted coordinates as well.
-- [ ] Validate coordinates received through APIs.
-- [ ] Add tests for locations inside and outside the boundary.
+- [x] Validate report coordinates against the Calumpit boundary on the server.
+- [x] Reject report submissions outside the supported reporting area.
+- [x] Do not rely only on map UI restrictions.
+- [x] Validate manually submitted coordinates as well.
+- [x] Validate coordinates received through APIs. (create and edit both go through the same parser)
+- [x] Add tests for locations inside and outside the boundary.
 
 ---
 
 ### 4. Restrict Reporting Scope to Calumpit, Bulacan
 
-**Priority:** 🔴 High
+**Priority:** 🔴 High — **Status: Implemented and verified** (see the summary under item 3).
 
 Only locations within the supported Calumpit reporting area should accept flood reports.
 
 #### Requirements
 
-- [ ] Validate latitude/longitude during report creation.
-- [ ] Reject coordinates outside the Calumpit reporting boundary.
-- [ ] Display a clear error when a user attempts to report outside the area.
-- [ ] Ensure map picker cannot accidentally submit an unsupported location.
-- [ ] Ensure search-selected locations are validated.
-- [ ] Ensure GPS-selected locations are validated.
-- [ ] Ensure manually provided coordinates are validated.
-- [ ] Ensure existing report APIs cannot bypass the geographic restriction.
-- [ ] Add automated tests for boundary cases.
+- [x] Validate latitude/longitude during report creation.
+- [x] Reject coordinates outside the Calumpit reporting boundary.
+- [x] Display a clear error when a user attempts to report outside the area.
+- [x] Ensure map picker cannot accidentally submit an unsupported location. (confirm disabled + hard guard in `handleConfirm`)
+- [x] Ensure search-selected locations are validated. (search results land in the picker, which applies the same check)
+- [x] Ensure GPS-selected locations are validated.
+- [x] Ensure manually provided coordinates are validated.
+- [x] Ensure existing report APIs cannot bypass the geographic restriction.
+- [x] Add automated tests for boundary cases.
 
 #### UX
 
-- [ ] Show the supported reporting area visually on the map.
-- [ ] Provide clear feedback when the selected location is outside Calumpit.
-- [ ] Avoid allowing users to complete the report form only to discover at the final submission step that the location is invalid.
-- [ ] Handle GPS accuracy/uncertainty gracefully near the boundary.
+- [x] Show the supported reporting area visually on the map.
+- [x] Provide clear feedback when the selected location is outside Calumpit.
+- [x] Avoid allowing users to complete the report form only to discover at the final submission step that the location is invalid. (inline coordinate validation disables submit immediately; picker blocks confirm)
+- [x] Handle GPS accuracy/uncertainty gracefully near the boundary. (accuracy shown in the rejection message; a low-accuracy fix that is inside still succeeds with a "double-check the pin" note — no tolerance buffer, so client and server apply the identical rule)
 
 ---
 
@@ -588,8 +594,8 @@ Coding agents should generally execute the work in this order:
 
 1. ~~**Same-location / incident handling**~~ ✅ Done (2026-08-23)
 2. ~~**Authentication and user accounts**~~ ✅ Done (2026-08-26)
-3. **Calumpit geographic boundary**
-4. **Server-side reporting-area validation**
+3. ~~**Calumpit geographic boundary**~~ ✅ Done (2026-08-26)
+4. ~~**Server-side reporting-area validation**~~ ✅ Done (2026-08-26)
 5. **Report timestamps and location metadata**
 6. **Direct camera/image capture**
 7. **Admin authentication and roles**
