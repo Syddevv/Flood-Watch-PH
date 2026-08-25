@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
 import test from "node:test";
@@ -123,21 +123,61 @@ async function submitReport(
   return { response, payload };
 }
 
-async function stopServer(process: ChildProcess) {
-  if (process.exitCode !== null) {
+/**
+ * Kills the full process tree spawned for a test server, not just the
+ * immediate `npm` child. `npm run dev` on Linux typically spawns a shell
+ * that spawns `next dev`, which itself may spawn Turbopack workers;
+ * signaling only the top `npm` PID does not reliably reach those
+ * descendants in time. Left-behind descendants keep holding Next's
+ * per-project dev-server lock in `.next/`, causing the *next* `next dev`
+ * invocation from the same working directory to immediately exit instead
+ * of starting (surfaced as "Next.js test server exited with code 1").
+ */
+async function stopServer(server: ChildProcess) {
+  if (server.exitCode !== null || server.pid === undefined) {
     return;
   }
 
-  process.kill();
-  await new Promise<void>((resolve) => {
-    process.once("exit", () => resolve());
-    setTimeout(resolve, 5_000);
+  const exited = new Promise<void>((resolve) => {
+    server.once("exit", () => resolve());
   });
+
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(server.pid), "/t", "/f"]);
+  } else {
+    try {
+      process.kill(-server.pid, "SIGTERM");
+    } catch {
+      server.kill("SIGTERM");
+    }
+  }
+
+  const exitedInTime = await Promise.race([
+    exited.then(() => true),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5_000)),
+  ]);
+
+  if (exitedInTime) {
+    return;
+  }
+
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(server.pid), "/t", "/f"]);
+  } else {
+    try {
+      process.kill(-server.pid, "SIGKILL");
+    } catch {
+      server.kill("SIGKILL");
+    }
+  }
+
+  await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 5_000))]);
 }
 
 async function startTestServer() {
   const port = await getAvailablePort();
   const baseUrl = `http://127.0.0.1:${port}`;
+  const output: string[] = [];
   const server = spawn(
     process.platform === "win32" ? "npm.cmd" : "npm",
     ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(port)],
@@ -156,11 +196,23 @@ async function startTestServer() {
           "integration-test-abuse-protection-secret-32-chars",
         TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
       },
-      stdio: "ignore",
+      // Own process group on POSIX so stopServer() can signal the whole
+      // tree (npm -> shell -> next dev -> Turbopack workers), not just npm.
+      detached: process.platform !== "win32",
+      stdio: ["ignore", "pipe", "pipe"],
     },
   );
+  server.stdout?.on("data", (chunk) => output.push(String(chunk)));
+  server.stderr?.on("data", (chunk) => output.push(String(chunk)));
 
-  await waitForServer(server, baseUrl);
+  try {
+    await waitForServer(server, baseUrl);
+  } catch (error) {
+    throw new Error(
+      `${error instanceof Error ? error.message : String(error)}\n--- test server output ---\n${output.join("")}`,
+    );
+  }
+
   return { baseUrl, server };
 }
 
