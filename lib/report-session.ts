@@ -2,6 +2,8 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
+import { buildSessionCookie, getCookieValue } from "@/lib/cookies";
+
 export const REPORT_SESSION_COOKIE_NAME = "floodwatch_report_session";
 export const REPORT_ACTION_UNDO_WINDOW_MS = 30_000;
 
@@ -34,24 +36,6 @@ function signSessionPayload(sessionId: string, expiresAt: number) {
   return createHmac("sha256", getReportSessionSecret())
     .update(`${sessionId}.${expiresAt}`)
     .digest("base64url");
-}
-
-function getCookieValue(request: Request, name: string) {
-  const cookieHeader = request.headers.get("cookie");
-
-  if (!cookieHeader) {
-    return "";
-  }
-
-  for (const cookie of cookieHeader.split(";")) {
-    const [cookieName, ...valueParts] = cookie.trim().split("=");
-
-    if (cookieName === name) {
-      return valueParts.join("=");
-    }
-  }
-
-  return "";
 }
 
 function verifySessionToken(token: string) {
@@ -99,8 +83,11 @@ export function createReportSession() {
 
   return {
     sessionHash: hashSessionId(sessionId),
-    cookie: `${REPORT_SESSION_COOKIE_NAME}=${sessionId}.${expiresAt}.${signature}; Path=/; Max-Age=${REPORT_SESSION_MAX_AGE_SECONDS}; HttpOnly; SameSite=Lax${
-      process.env.NODE_ENV === "production" ? "; Secure" : ""
-    }`,
+    cookie: buildSessionCookie(
+      REPORT_SESSION_COOKIE_NAME,
+      `${sessionId}.${expiresAt}.${signature}`,
+      REPORT_SESSION_MAX_AGE_SECONDS,
+      process.env.NODE_ENV === "production",
+    ),
   };
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeScript } from "@/components/theme-script";
+import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { ReportSessionProvider } from "@/components/report-session-provider";
 import "./globals.css";
 
@@ -22,7 +23,9 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[var(--color-background)] font-sans text-[var(--color-foreground)]">
         <ThemeScript />
-        <ReportSessionProvider>{children}</ReportSessionProvider>
+        <AuthSessionProvider>
+          <ReportSessionProvider>{children}</ReportSessionProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

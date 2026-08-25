@@ -7,8 +7,8 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
-import { serializeReportRecord } from "@/lib/report-api";
-import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { serializeReportRecord, type ReportIdentity } from "@/lib/report-api";
+import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
@@ -31,6 +31,7 @@ type NearbyReportRecord = {
   longitude: number;
   imageUrl: string | null;
   ownerSessionHash: string | null;
+  userId: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -83,9 +84,9 @@ function clampLimit(value: string | null) {
 function serializeNearbyReport(
   report: NearbyReportRecord,
   distanceMeters: number,
-  sessionHash: string,
+  identity: ReportIdentity,
 ) {
-  const serialized = serializeReportRecord(report, sessionHash);
+  const serialized = serializeReportRecord(report, identity);
   const { incident, ...rest } = serialized;
 
   return {
@@ -120,7 +121,7 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
     const latitude = Number(searchParams.get("lat"));
     const longitude = Number(searchParams.get("lng"));
     const radiusMeters = clampRadiusMeters(searchParams.get("radiusMeters"));
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
       )
       .slice(0, limit)
       .map((entry: NearbyReportDistanceEntry) =>
-        serializeNearbyReport(entry.report, entry.distanceMeters, sessionHash),
+        serializeNearbyReport(entry.report, entry.distanceMeters, identity),
       );
 
     return successResponse(nearbyReports);

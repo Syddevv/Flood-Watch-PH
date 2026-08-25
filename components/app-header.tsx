@@ -2,9 +2,12 @@
 
 import {
   AlertTriangle,
+  LogOut,
   Menu,
   Plus,
+  UserRound,
 } from "lucide-react";
+import Link from "next/link";
 
 import {
   ACTIVE_ALERTS_LABEL,
@@ -13,6 +16,7 @@ import {
 } from "@/lib/constants";
 import type { Theme } from "@/lib/types";
 
+import type { AuthUser } from "./auth-session-provider";
 import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -25,6 +29,8 @@ type AppHeaderProps = {
   onToggleTheme: () => void;
   onOpenSidebar: () => void;
   onReportFlood: () => void;
+  authUser: AuthUser;
+  onLogout: () => void;
 };
 
 export function AppHeader({
@@ -36,6 +42,8 @@ export function AppHeader({
   onToggleTheme,
   onOpenSidebar,
   onReportFlood,
+  authUser,
+  onLogout,
 }: AppHeaderProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-[var(--layer-header)] border-b border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[var(--color-sidebar)] px-3 sm:px-5 md:px-6">
@@ -94,6 +102,29 @@ export function AppHeader({
             <span className="hidden xl:inline">{REPORT_LABEL}</span>
             <span className="xl:hidden">Report</span>
           </button>
+
+          {authUser ? (
+            <button
+              type="button"
+              onClick={onLogout}
+              title={authUser.displayName ?? authUser.email}
+              className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-surface)] px-2.5 text-[0.76rem] font-medium text-[var(--color-foreground)] transition hover:brightness-95 sm:px-3"
+            >
+              <UserRound className="h-[13px] w-[13px]" />
+              <span className="hidden max-w-[10ch] truncate sm:inline">
+                {authUser.displayName ?? authUser.email}
+              </span>
+              <LogOut className="h-[13px] w-[13px]" />
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-surface)] px-2.5 text-[0.76rem] font-medium text-[var(--color-foreground)] transition hover:brightness-95 sm:px-3"
+            >
+              <UserRound className="h-[13px] w-[13px]" />
+              <span>Log in</span>
+            </Link>
+          )}
 
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>

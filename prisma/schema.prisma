@@ -34,6 +34,8 @@ model FloodReport {
   archivedAt        DateTime?
   incidentId        String
   incident          Incident             @relation(fields: [incidentId], references: [id])
+  userId            String?
+  user              User?                @relation(fields: [userId], references: [id])
   confirmations     ReportConfirmation[]
   updates           ReportUpdate[]
 
@@ -45,6 +47,7 @@ model FloodReport {
   @@index([lastActivityAt])
   @@index([latitude, longitude])
   @@index([incidentId])
+  @@index([userId])
 }
 
 model Incident {
@@ -147,5 +150,32 @@ model RequestRateLimit {
   windowStart DateTime
   expiresAt   DateTime
 
+  @@index([expiresAt])
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  displayName  String?
+  role         String        @default("user")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sessions     Session[]
+  reports      FloodReport[]
+
+  @@index([role])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastUsedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
   @@index([expiresAt])
 }

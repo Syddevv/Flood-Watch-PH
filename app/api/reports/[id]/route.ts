@@ -15,7 +15,7 @@ import {
   uploadReportImageFile,
   type PublicReportRecord,
 } from "@/lib/report-api";
-import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
 
 type RouteContext = {
@@ -38,7 +38,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const { id } = await context.params;
     const includeArchived = new URL(request.url).searchParams.get("includeArchived") === "true";
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
@@ -61,12 +61,12 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (
       (reconciledReport.status as ReportLifecycleStatus) === "Archived" &&
-      !canAccessArchivedReport(reconciledReport, sessionHash, includeArchived)
+      !canAccessArchivedReport(reconciledReport, identity, includeArchived)
     ) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    return successResponse(serializeReportRecord(reconciledReport as PublicReportRecord, sessionHash));
+    return successResponse(serializeReportRecord(reconciledReport as PublicReportRecord, identity));
   } catch (error) {
     console.error("Failed to fetch report.", error);
     return errorResponse("Something went wrong while fetching the report.");
@@ -87,7 +87,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
 
     const existingReport = await prisma.floodReport.findUnique({
       where: { id },
@@ -98,7 +98,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (!isReportOwner(existingReport as PublicReportRecord, sessionHash)) {
+    if (!isReportOwner(existingReport as PublicReportRecord, identity)) {
       return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
     }
 
@@ -146,7 +146,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       include: reportDetailInclude,
     });
 
-    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, sessionHash));
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, identity));
   } catch (error) {
     console.error("Failed to update report.", error);
     return errorResponse("Something went wrong while updating the report.");
@@ -167,13 +167,14 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
 
     const existingReport = await prisma.floodReport.findUnique({
       where: { id },
       select: {
         id: true,
         ownerSessionHash: true,
+        userId: true,
       },
     });
 
@@ -181,7 +182,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (!isReportOwner(existingReport, sessionHash)) {
+    if (!isReportOwner(existingReport, identity)) {
       return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
     }
 
