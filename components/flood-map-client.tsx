@@ -34,6 +34,7 @@ import {
   summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
 import {
+  flyToWithOffset,
   panToReportWithOffset,
   type FocusableLeafletMarker,
 } from "@/lib/map-focus";
@@ -60,9 +61,18 @@ import type {
   RiskPolygon,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  CALUMPIT_BOUNDARY_PATH_OPTIONS,
+  CALUMPIT_BOUNDS,
+  CALUMPIT_CENTER,
+  CALUMPIT_MAP_MAX_BOUNDS,
+  CALUMPIT_MASK_PATH_OPTIONS,
+  CALUMPIT_OUTSIDE_MASK,
+  CALUMPIT_POLYGON,
+} from "@/lib/calumpit-boundary";
 
-const DEFAULT_CENTER: [number, number] = [14.6176, 121.0325];
-const DEFAULT_ZOOM = 10;
+const DEFAULT_CENTER: [number, number] = CALUMPIT_CENTER;
+const DEFAULT_ZOOM = 13;
 const MOBILE_SELECTED_REPORT_ZOOM = 15;
 const MOBILE_SELECTED_REPORT_DOWN_OFFSET = 56;
 const STREET_TILES = {
@@ -134,9 +144,19 @@ function openReportMarkerCentered(
   const targetLatLng = marker.getLatLng();
 
   marker.openPopup();
-  marker._map?.flyTo(targetLatLng, options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM, {
-    duration: options.flyDuration ?? 0.45,
-  });
+
+  // Single fly-to with the downward offset folded into the target. A
+  // follow-up animated panBy while the fly-to is still running made the
+  // canvas boundary/mask overlays drift relative to the tiles.
+  if (marker._map) {
+    flyToWithOffset(
+      marker._map,
+      targetLatLng,
+      options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM,
+      [0, MOBILE_SELECTED_REPORT_DOWN_OFFSET],
+      options.flyDuration ?? 0.45,
+    );
+  }
 
   if (typeof window === "undefined") {
     return;
@@ -144,10 +164,6 @@ function openReportMarkerCentered(
 
   window.setTimeout(() => {
     marker.openPopup();
-    marker._map?.panBy?.([0, MOBILE_SELECTED_REPORT_DOWN_OFFSET], {
-      animate: true,
-      duration: 0.25,
-    });
   }, options.reopenDelayMs ?? 180);
 }
 
@@ -181,7 +197,7 @@ function iconForCenterMarker(marker: EvacuationCenterMapMarker, selected: boolea
   const statusMeta = EVACUATION_STATUS_META[marker.status];
   const markerClassName = mobilePerformanceMode
     ? `floodwatch-marker-mobile floodwatch-marker-mobile--center${selected ? " floodwatch-marker-mobile--selected" : ""}`
-    : `floodwatch-marker${selected ? " floodwatch-marker--selected" : ""}`;
+    : `floodwatch-marker floodwatch-marker--center${selected ? " floodwatch-marker--selected" : ""}`;
   const iconSize: [number, number] = mobilePerformanceMode
     ? selected
       ? [30, 30]
@@ -846,7 +862,7 @@ export function FloodMapClient({
           }}
         >
           {isSelected ? (
-            <Popup>
+            <Popup autoPan={false}>
               <CenterPopupContent marker={marker} />
             </Popup>
           ) : null}
@@ -867,6 +883,12 @@ export function FloodMapClient({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
+        bounds={CALUMPIT_BOUNDS}
+        boundsOptions={{ padding: [24, 24] }}
+        minZoom={11}
+        maxZoom={19}
+        maxBounds={CALUMPIT_MAP_MAX_BOUNDS}
+        maxBoundsViscosity={1}
         zoomControl={false}
         attributionControl
         preferCanvas
@@ -888,6 +910,17 @@ export function FloodMapClient({
           onInteractionStart={onMapInteractionStart}
         />
         <FocusMapLocation location={focusedAlertLocation} />
+
+        <Polygon
+          positions={CALUMPIT_OUTSIDE_MASK as [number, number][][]}
+          interactive={false}
+          pathOptions={CALUMPIT_MASK_PATH_OPTIONS}
+        />
+        <Polygon
+          positions={CALUMPIT_POLYGON as [number, number][]}
+          interactive={false}
+          pathOptions={CALUMPIT_BOUNDARY_PATH_OPTIONS}
+        />
 
         {polygons.map((polygon) => (
           <Polygon
@@ -936,7 +969,7 @@ export function FloodMapClient({
                 }}
               >
                 {isSelected ? (
-                  <Popup>
+                  <Popup autoPan={false}>
                     <ReportPopupContent
                       marker={marker}
                       onOpenReportDetails={onOpenReportDetails}

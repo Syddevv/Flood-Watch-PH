@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
+import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
+
 import {
   createAnonymousSession as createSession,
   createAuthenticatedSession,
@@ -22,10 +24,10 @@ function createReportForm(
   form.set("description", "Integration test report.");
   form.set("category", "Flooding");
   form.set("severity", "High");
-  form.set("locationName", "Marikina City");
+  form.set("locationName", "Poblacion, Calumpit");
   form.set("reportedByName", "Automated integration test");
-  form.set("latitude", overrides.latitude ?? "14.6507");
-  form.set("longitude", overrides.longitude ?? "121.1029");
+  form.set("latitude", overrides.latitude ?? "14.916");
+  form.set("longitude", overrides.longitude ?? "120.766");
   if (overrides.forceNewIncident) {
     form.set("forceNewIncident", "true");
   }
@@ -178,6 +180,19 @@ integrationTest(
       });
       assert.equal(forgedImageResponse.status, 400);
 
+      const outsideCalumpitResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: ownerCookie,
+          "X-Forwarded-For": ownerAddress,
+        },
+        body: createReportForm({ latitude: "14.6507", longitude: "121.1029" }),
+      });
+      const outsideCalumpitPayload = (await outsideCalumpitResponse.json()) as { error?: string };
+      assert.equal(outsideCalumpitResponse.status, 400);
+      assert.equal(outsideCalumpitPayload.error, OUTSIDE_CALUMPIT_ERROR_MESSAGE);
+
       const confirmRequest = () =>
         fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {
           method: "POST",
@@ -325,8 +340,8 @@ integrationTest(
   async () => {
     const runId = randomUUID();
     const { baseUrl, server } = await startTestServer();
-    const spotLatitude = "14.700001";
-    const spotLongitude = "121.100001";
+    const spotLatitude = "14.916001";
+    const spotLongitude = "120.766001";
     const createdReports: Array<{ id: string; cookie: string; address: string }> = [];
 
     try {
@@ -416,8 +431,8 @@ integrationTest(
       const farAddress = `integration-far-away-${runId}`;
       const farCookie = await createAuthenticatedSession(baseUrl, farAddress);
       const farResult = await submitReport(baseUrl, farCookie, farAddress, {
-        latitude: "14.706000",
-        longitude: "121.106000",
+        latitude: "14.921000",
+        longitude: "120.771000",
         titleSuffix: `far-away-${runId}`,
       });
       assert.equal(farResult.response.status, 201);

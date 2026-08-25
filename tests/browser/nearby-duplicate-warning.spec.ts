@@ -1,19 +1,27 @@
 import { expect, test } from "@playwright/test";
 
+// Inside Calumpit, Bulacan (Poblacion). Report submission is geofenced.
+const SEED_LATITUDE = 14.916;
+const SEED_LONGITUDE = 120.766;
+
 test.describe("nearby duplicate warning", () => {
   test("stays visible instead of flickering away when a nearby active report exists", async ({
     page,
   }) => {
     await page.goto("/incident-reports");
     const origin = new URL(page.url()).origin;
-    await page.request.post("/api/report-session", {
-      data: "{}",
-      headers: { Origin: origin },
-    });
-    await page.waitForLoadState("networkidle");
 
-    const latitude = 14.601234;
-    const longitude = 120.981234;
+    // Report creation requires a real account (Priority 1). page.request
+    // shares the browser context's cookie jar, so registering here signs
+    // the page in too.
+    const registerResponse = await page.request.post("/api/auth/register", {
+      headers: { Origin: origin, "Content-Type": "application/json" },
+      data: JSON.stringify({
+        email: `nearby-dup-${Date.now()}@example.com`,
+        password: "correct-horse-battery",
+      }),
+    });
+    expect(registerResponse.status()).toBe(201);
 
     const seedResponse = await page.request.post("/api/reports", {
       headers: { Origin: origin },
@@ -22,9 +30,9 @@ test.describe("nearby duplicate warning", () => {
         description: "Seed report used to trigger the nearby-duplicate warning.",
         category: "Flooding",
         severity: "Moderate",
-        locationName: "Bug Repro Seed Spot",
-        latitude: String(latitude),
-        longitude: String(longitude),
+        locationName: "Poblacion, Calumpit",
+        latitude: String(SEED_LATITUDE),
+        longitude: String(SEED_LONGITUDE),
       },
     });
     expect(seedResponse.ok()).toBeTruthy();
@@ -32,11 +40,12 @@ test.describe("nearby duplicate warning", () => {
     const seedReportId = seedPayload.data.id;
 
     try {
+      await page.reload();
       await page
         .getByPlaceholder("Street, barangay, city")
         .fill("Bug Repro Nearby Spot");
-      await page.getByPlaceholder("14.599500").fill(String(latitude + 0.0003));
-      await page.getByPlaceholder("120.984200").fill(String(longitude + 0.0003));
+      await page.getByPlaceholder("14.915000").fill(String(SEED_LATITUDE + 0.0003));
+      await page.getByPlaceholder("120.766000").fill(String(SEED_LONGITUDE + 0.0003));
       await page
         .getByPlaceholder(/Describe the situation/i)
         .fill("Testing the nearby duplicate warning flow.");

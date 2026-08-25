@@ -7,6 +7,8 @@ const COMMUNITY_REFERENCE_SOURCE = "FloodWatch PH reference dataset";
 
 // Future manually verified records can be imported here from LGU/DSWD/OpenStreetMap
 // reference sources without changing UI logic. Phase 13 remains static-only.
+// TODO(data): Apalit and Macabebe (Pampanga) border Calumpit and are inside the
+// map's pannable box but have no reference center yet.
 export const EVACUATION_CENTER_FACILITIES: EvacuationFacility[] = [
   "pwd_accessible",
   "medical_support",
@@ -579,17 +581,6 @@ export const EVACUATION_CENTERS: EvacuationCenter[] = [
     notes: APPROXIMATE_REFERENCE_NOTE,
   },
 ];
-
-export const EVACUATION_FEATURED_CENTER_IDS = [
-  "marikina-sports-complex",
-  "san-jose-del-monte-sports-complex",
-  "malolos-sports-and-convention-center",
-  "ynares-center-antipolo-reference",
-] as const;
-
-export const EVACUATION_FEATURED_CENTERS = EVACUATION_FEATURED_CENTER_IDS.map((id) =>
-  EVACUATION_CENTERS.find((center) => center.id === id),
-).filter((center): center is EvacuationCenter => Boolean(center));
 
 export const EVACUATION_CENTER_DATA_STATUS_NOTE =
   "Evacuation center information is static reference data and may change during emergencies. Confirm availability with your LGU or barangay before going.";

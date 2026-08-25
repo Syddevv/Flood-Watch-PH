@@ -1,6 +1,10 @@
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
-import { EVACUATION_CENTERS } from "@/lib/constants";
+import { CALUMPIT_BOUNDS, isWithinCalumpit } from "@/lib/calumpit-boundary";
+import {
+  EVACUATION_CENTER_NEARBY_RADIUS_KM,
+  NEARBY_EVACUATION_CENTERS,
+} from "@/lib/evacuation-center-scope";
 import {
   deriveReportLifecycleStatus,
   isVisiblePublicLifecycleStatus,
@@ -101,8 +105,11 @@ export async function GET(request: Request) {
       return errorResponse(parsedFilters.error, 400);
     }
 
+    const [[minLatitude, minLongitude], [maxLatitude, maxLongitude]] = CALUMPIT_BOUNDS;
     const reports: MapReportRecord[] = await prisma.floodReport.findMany({
       where: {
+        latitude: { gte: minLatitude, lte: maxLatitude },
+        longitude: { gte: minLongitude, lte: maxLongitude },
         ...(parsedFilters.filters.severity
           ? { severity: parsedFilters.filters.severity }
           : {}),
@@ -122,6 +129,10 @@ export async function GET(request: Request) {
 
     const filteredReports = reconciledReports
       .filter((report: MapReportRecord) => {
+        if (!isWithinCalumpit(report.latitude, report.longitude)) {
+          return false;
+        }
+
         const lifecycleStatus = report.status as ReportLifecycleStatus;
 
         if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
@@ -149,7 +160,11 @@ export async function GET(request: Request) {
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
 
-    const mappedEvacuationCenters = EVACUATION_CENTERS.map((center) => ({
+    // Reports (above) are restricted to the Calumpit polygon. Evacuation
+    // centers deliberately use a different rule - a radius around Calumpit -
+    // so neighbouring-town shelters stay visible. Two distinct rules side by
+    // side is the point: reports are restricted to Calumpit, centers are not.
+    const mappedEvacuationCenters = NEARBY_EVACUATION_CENTERS.map((center) => ({
       ...center,
       type: "evacuation_center" as const,
       updatedAt: center.lastVerifiedAt,
@@ -169,6 +184,7 @@ export async function GET(request: Request) {
       meta: {
         reportCount: filteredReports.length,
         evacuationCenterCount: mappedEvacuationCenters.length,
+        evacuationCenterRadiusKm: EVACUATION_CENTER_NEARBY_RADIUS_KM,
         lastUpdated:
           lastUpdatedCandidates.length > 0
             ? new Date(Math.max(...lastUpdatedCandidates)).toISOString()

@@ -471,3 +471,12 @@ button {
     max-height: 60vh;
   }
 }
+
+/* Evacuation-center markers are rounded squares; report markers stay circles. */
+.floodwatch-marker--center {
+  border-radius: 9px;
+}
+
+.floodwatch-marker-mobile--center {
+  border-radius: 6px;
+}

@@ -34,8 +34,10 @@ export const EVACUATION_STATUS_META: Record<
     label: "Needs Verification",
     badgeClassName:
       "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.08)] text-[#93c5fd]",
-    markerColor: "#60a5fa",
-    markerRing: "rgba(96,165,250,0.2)",
+    // Violet: distinct from active-report blue, receded grey, and the other
+    // status colours, so an unverified shelter never reads as a flood report.
+    markerColor: "#7c3aed",
+    markerRing: "rgba(124,58,237,0.22)",
   },
   temporarily_unavailable: {
     label: "Temporarily Unavailable",

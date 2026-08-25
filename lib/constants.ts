@@ -30,7 +30,6 @@ export {
   EVACUATION_CENTERS,
   EVACUATION_CENTER_DATA_STATUS_NOTE,
   EVACUATION_CENTER_FACILITIES,
-  EVACUATION_FEATURED_CENTERS,
   EVACUATION_CENTER_STATIC_REFERENCE_NOTE,
 } from "@/data/evacuation-centers";
 
@@ -374,40 +373,10 @@ export const MAP_MARKERS: MapMarker[] = [
   },
 ];
 
-export const FLOOD_POLYGONS: RiskPolygon[] = [
-  {
-    id: "poly-marikina",
-    severity: "severe",
-    positions: [
-      [14.6595, 121.0912],
-      [14.6481, 121.1114],
-      [14.6283, 121.1141],
-      [14.6208, 121.0952],
-      [14.6347, 121.0819],
-    ],
-  },
-  {
-    id: "poly-pasig",
-    severity: "high",
-    positions: [
-      [14.5952, 121.0737],
-      [14.5885, 121.1023],
-      [14.5655, 121.1112],
-      [14.5559, 121.0858],
-      [14.5721, 121.0665],
-    ],
-  },
-  {
-    id: "poly-qc",
-    severity: "moderate",
-    positions: [
-      [14.6897, 121.0364],
-      [14.7068, 121.0749],
-      [14.6859, 121.088],
-      [14.6686, 121.0515],
-    ],
-  },
-];
+// Risk overlays are intentionally empty until a real Calumpit hazard layer is
+// available. The type, prop plumbing, and "risk overlays" toggle are kept so a
+// future import can drop straight in without inventing placeholder data.
+export const FLOOD_POLYGONS: RiskPolygon[] = [];
 
 export const FLOOD_LEGEND: LegendItem[] = [
   { id: "safe", label: "Safe", severity: "safe" },

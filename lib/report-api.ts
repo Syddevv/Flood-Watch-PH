@@ -1,3 +1,4 @@
+import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import {
   REPORT_MULTIPART_MAX_BYTES,
@@ -277,6 +278,10 @@ export function parseReportDetailsFormData(formData: FormData) {
 
   if (!Number.isFinite(longitude) || !isValidLongitude(longitude)) {
     return { error: "Invalid longitude value." };
+  }
+
+  if (!isWithinCalumpit(latitude, longitude)) {
+    return { error: OUTSIDE_CALUMPIT_ERROR_MESSAGE };
   }
 
   if (reportedByName && reportedByName.length > 80) {
