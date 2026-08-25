@@ -34,6 +34,7 @@ import {
   summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
 import {
+  flyToWithOffset,
   panToReportWithOffset,
   type FocusableLeafletMarker,
 } from "@/lib/map-focus";
@@ -143,9 +144,19 @@ function openReportMarkerCentered(
   const targetLatLng = marker.getLatLng();
 
   marker.openPopup();
-  marker._map?.flyTo(targetLatLng, options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM, {
-    duration: options.flyDuration ?? 0.45,
-  });
+
+  // Single fly-to with the downward offset folded into the target. A
+  // follow-up animated panBy while the fly-to is still running made the
+  // canvas boundary/mask overlays drift relative to the tiles.
+  if (marker._map) {
+    flyToWithOffset(
+      marker._map,
+      targetLatLng,
+      options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM,
+      [0, MOBILE_SELECTED_REPORT_DOWN_OFFSET],
+      options.flyDuration ?? 0.45,
+    );
+  }
 
   if (typeof window === "undefined") {
     return;
@@ -153,10 +164,6 @@ function openReportMarkerCentered(
 
   window.setTimeout(() => {
     marker.openPopup();
-    marker._map?.panBy?.([0, MOBILE_SELECTED_REPORT_DOWN_OFFSET], {
-      animate: true,
-      duration: 0.25,
-    });
   }, options.reopenDelayMs ?? 180);
 }
 
@@ -855,7 +862,7 @@ export function FloodMapClient({
           }}
         >
           {isSelected ? (
-            <Popup>
+            <Popup autoPan={false}>
               <CenterPopupContent marker={marker} />
             </Popup>
           ) : null}
@@ -962,7 +969,7 @@ export function FloodMapClient({
                 }}
               >
                 {isSelected ? (
-                  <Popup>
+                  <Popup autoPan={false}>
                     <ReportPopupContent
                       marker={marker}
                       onOpenReportDetails={onOpenReportDetails}

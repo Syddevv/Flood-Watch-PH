@@ -1,19 +1,20 @@
 type LeafletLatLng = { lat: number; lng: number };
+type LeafletPoint = { x: number; y: number };
+
+export type FocusableLeafletMap = {
+  flyTo: (
+    center: LeafletLatLng,
+    zoom: number,
+    options?: Record<string, unknown>,
+  ) => void;
+  project: (latLng: LeafletLatLng, zoom: number) => LeafletPoint;
+  unproject: (point: LeafletPoint, zoom: number) => LeafletLatLng;
+};
 
 export type FocusableLeafletMarker = {
   openPopup: () => void;
   getLatLng: () => LeafletLatLng;
-  _map?: {
-    flyTo: (
-      center: LeafletLatLng,
-      zoom: number,
-      options?: Record<string, unknown>,
-    ) => void;
-    panBy?: (
-      offset: [number, number],
-      options?: Record<string, unknown>,
-    ) => void;
-  };
+  _map?: FocusableLeafletMap;
 };
 
 export type ReportMarkerFocusReason = "marker-click" | "external";
@@ -30,13 +31,43 @@ export function getReportMarkerPanOffset(reason: ReportMarkerFocusReason = "exte
   return [-112, reason === "marker-click" ? 70 : 92] as [number, number];
 }
 
+/**
+ * The map center that puts `latLng` at `offset` pixels from the viewport
+ * center at `zoom` - i.e. the same view that `setView(latLng, zoom)` followed
+ * by `panBy(offset)` would produce, but expressed as a single target.
+ *
+ * Folding the offset into the fly-to target matters: running an animated
+ * `panBy` while a `flyTo` is still in flight makes Leaflet's canvas renderer
+ * (the boundary/mask overlays) drift out of alignment with the tiles until the
+ * next redraw. One animation, one destination, no drift.
+ */
+export function getOffsetTargetCenter(
+  map: Pick<FocusableLeafletMap, "project" | "unproject">,
+  latLng: LeafletLatLng,
+  zoom: number,
+  offset: [number, number],
+): LeafletLatLng {
+  const projected = map.project(latLng, zoom);
+  return map.unproject({ x: projected.x + offset[0], y: projected.y + offset[1] }, zoom);
+}
+
+export function flyToWithOffset(
+  map: FocusableLeafletMap,
+  latLng: LeafletLatLng,
+  zoom: number,
+  offset: [number, number],
+  duration: number,
+) {
+  map.flyTo(getOffsetTargetCenter(map, latLng, zoom, offset), zoom, { duration });
+}
+
 export function panToReportWithOffset(
   marker: FocusableLeafletMarker,
   options: {
     zoom?: number;
     reason?: ReportMarkerFocusReason;
     flyDuration?: number;
-    panDelayMs?: number;
+    popupReopenDelayMs?: number;
   } = {},
 ) {
   const latLng = marker.getLatLng();
@@ -44,19 +75,24 @@ export function panToReportWithOffset(
   const reason = options.reason ?? "external";
 
   marker.openPopup();
-  marker._map?.flyTo(latLng, zoom, {
-    duration: options.flyDuration ?? (reason === "marker-click" ? 0.9 : 0.95),
-  });
+
+  if (marker._map) {
+    flyToWithOffset(
+      marker._map,
+      latLng,
+      zoom,
+      getReportMarkerPanOffset(reason),
+      options.flyDuration ?? (reason === "marker-click" ? 0.9 : 0.95),
+    );
+  }
 
   if (typeof window === "undefined") {
     return;
   }
 
+  // Re-assert the popup once the flight is underway (clusters can re-render
+  // the marker during zoom). This does not move the map.
   window.setTimeout(() => {
     marker.openPopup();
-    marker._map?.panBy?.(getReportMarkerPanOffset(reason), {
-      animate: true,
-      duration: 0.35,
-    });
-  }, options.panDelayMs ?? 220);
+  }, options.popupReopenDelayMs ?? 220);
 }
