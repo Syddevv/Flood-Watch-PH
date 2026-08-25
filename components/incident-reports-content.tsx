@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
 import { useAuthSession } from "@/components/auth-session-provider";
+import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import type {
   ReportDetailResponse,
@@ -572,10 +573,14 @@ export function IncidentReportsContent() {
   );
   const hasValidCoordinates =
     Number.isFinite(Number(formState.latitude)) && Number.isFinite(Number(formState.longitude));
+  const coordinatesOutsideArea =
+    hasValidCoordinates &&
+    !isWithinCalumpit(Number(formState.latitude), Number(formState.longitude));
   const canSubmitReport =
     formState.locationName.trim().length > 0 &&
     formState.description.trim().length > 0 &&
-    hasValidCoordinates;
+    hasValidCoordinates &&
+    !coordinatesOutsideArea;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1161,6 +1166,24 @@ export function IncidentReportsContent() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const { accuracy } = position.coords;
+        const accuracyLabel = Number.isFinite(accuracy)
+          ? ` (accuracy about ${Math.round(accuracy)} m)`
+          : "";
+
+        // Same rule as the server: the reported point must be inside Calumpit.
+        // No tolerance buffer - the server has no accuracy value, so a client
+        // that accepted a borderline point would only be rejected later.
+        if (!isWithinCalumpit(position.coords.latitude, position.coords.longitude)) {
+          setLoadingCurrentLocation(false);
+          setToast({
+            tone: "error",
+            message: `Your current location${accuracyLabel} appears to be outside Calumpit, Bulacan. If you are near the boundary, pick the exact spot on the map instead.`,
+          });
+          setLocationPickerOpen(true);
+          return;
+        }
+
         const latitude = String(position.coords.latitude);
         const longitude = String(position.coords.longitude);
 
@@ -1175,7 +1198,12 @@ export function IncidentReportsContent() {
 
           updateFormState("locationName", locationName);
 
-          if (!precise) {
+          if (precise && Number.isFinite(accuracy) && accuracy > 250) {
+            setToast({
+              tone: "success",
+              message: `Location added. GPS accuracy is about ${Math.round(accuracy)} m - double-check the pin on the map if you are near the municipal boundary.`,
+            });
+          } else if (!precise) {
             setToast({
               tone: "error",
               message: "Detailed address lookup failed. Coordinates were added with a broader location.",
@@ -1513,6 +1541,9 @@ export function IncidentReportsContent() {
             <p className="mt-1.5 text-[0.95rem] text-[var(--color-muted-foreground)]">
               Submit flood, weather-related, and community hazard reports to help improve public awareness and situational monitoring.
             </p>
+            <p className="mt-1 text-[0.88rem] font-medium text-[var(--color-primary)]">
+              Reporting is currently available for Calumpit, Bulacan only.
+            </p>
           </section>
 
           <section className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
@@ -1614,7 +1645,7 @@ export function IncidentReportsContent() {
                         type="text"
                         value={formState.latitude}
                         onChange={(event) => updateFormState("latitude", event.target.value)}
-                        placeholder="14.599500"
+                        placeholder="14.915000"
                         className="tabular-nums h-11 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
                       />
                     </label>
@@ -1626,7 +1657,7 @@ export function IncidentReportsContent() {
                         type="text"
                         value={formState.longitude}
                         onChange={(event) => updateFormState("longitude", event.target.value)}
-                        placeholder="120.984200"
+                        placeholder="120.766000"
                         className="tabular-nums h-11 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
                       />
                     </label>
@@ -1642,6 +1673,15 @@ export function IncidentReportsContent() {
                       </button>
                     </div>
                   </div>
+                  {coordinatesOutsideArea ? (
+                    <p
+                      data-testid="coordinates-outside-area"
+                      role="alert"
+                      className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.8rem] leading-5 text-[var(--color-danger-text)]"
+                    >
+                      {OUTSIDE_CALUMPIT_ERROR_MESSAGE}
+                    </p>
+                  ) : null}
                 </div>
               </FormSection>
 
@@ -1885,9 +1925,11 @@ export function IncidentReportsContent() {
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
-                    {!canSubmitReport
-                      ? "Location name, coordinates, and incident description are required before submission."
-                      : "Form ready. Submit the report to publish it to the community incident feed."}
+                    {coordinatesOutsideArea
+                      ? "Location must be within Calumpit, Bulacan."
+                      : !canSubmitReport
+                        ? "Location name, coordinates, and incident description are required before submission."
+                        : "Form ready. Submit the report to publish it to the community incident feed."}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button

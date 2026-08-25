@@ -19,9 +19,9 @@ const prisma = new PrismaClient({
 });
 
 const seedReportTitles = [
-  "Marikina River Basin Severe Flood Alert",
-  "Pasig - Cainta High Flood Risk",
-  "Quezon City North Moderate Flood Watch",
+  "Poblacion Riverside Severe Flood Alert",
+  "Iba O'Este Road Flooding",
+  "Frances Low-Lying Area Flood Watch",
 ] as const;
 
 const evacuationCenterNames = [
@@ -73,9 +73,9 @@ async function main() {
         category: "Overflowing River",
         severity: "Critical",
         status: "Confirmed by Community",
-        locationName: "Marikina River Basin",
-        latitude: 14.6407,
-        longitude: 121.1029,
+        locationName: "Poblacion, Calumpit",
+        latitude: 14.916,
+        longitude: 120.766,
         sourceType: "System",
         confirmationCount: 12,
         lastActivityAt: fortyMinutesAgo,
@@ -88,9 +88,9 @@ async function main() {
         category: "Flood",
         severity: "High",
         status: "Confirmed by Community",
-        locationName: "Pasig - Cainta Area",
-        latitude: 14.5869,
-        longitude: 121.1038,
+        locationName: "Iba O'Este, Calumpit",
+        latitude: 14.908,
+        longitude: 120.758,
         sourceType: "Community",
         reportedByName: "Barangay Response Volunteer",
         confirmationCount: 7,
@@ -103,9 +103,9 @@ async function main() {
         category: "Road Blocked",
         severity: "Moderate",
         status: "Needs More Confirmation",
-        locationName: "Quezon City North",
-        latitude: 14.7004,
-        longitude: 121.0744,
+        locationName: "Frances, Calumpit",
+        latitude: 14.905,
+        longitude: 120.78,
         sourceType: "Community",
         reportedByName: "Community Watch",
         confirmationCount: 3,

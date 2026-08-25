@@ -60,9 +60,17 @@ import type {
   RiskPolygon,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import {
+  CALUMPIT_BOUNDS,
+  CALUMPIT_CENTER,
+  CALUMPIT_MAP_MAX_BOUNDS,
+  CALUMPIT_POLYGON,
+} from "@/lib/calumpit-boundary";
 
-const DEFAULT_CENTER: [number, number] = [14.6176, 121.0325];
-const DEFAULT_ZOOM = 10;
+const DEFAULT_CENTER: [number, number] = CALUMPIT_CENTER;
+const DEFAULT_ZOOM = 13;
+// Leaflet's canvas renderer needs a concrete colour, not a CSS custom property.
+const BOUNDARY_COLOR = "#2563eb";
 const MOBILE_SELECTED_REPORT_ZOOM = 15;
 const MOBILE_SELECTED_REPORT_DOWN_OFFSET = 56;
 const STREET_TILES = {
@@ -867,6 +875,12 @@ export function FloodMapClient({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
+        bounds={CALUMPIT_BOUNDS}
+        boundsOptions={{ padding: [24, 24] }}
+        minZoom={11}
+        maxZoom={19}
+        maxBounds={CALUMPIT_MAP_MAX_BOUNDS}
+        maxBoundsViscosity={1}
         zoomControl={false}
         attributionControl
         preferCanvas
@@ -888,6 +902,19 @@ export function FloodMapClient({
           onInteractionStart={onMapInteractionStart}
         />
         <FocusMapLocation location={focusedAlertLocation} />
+
+        <Polygon
+          positions={CALUMPIT_POLYGON as [number, number][]}
+          interactive={false}
+          pathOptions={{
+            color: BOUNDARY_COLOR,
+            weight: 2,
+            opacity: 0.9,
+            dashArray: "6 6",
+            fillColor: BOUNDARY_COLOR,
+            fillOpacity: 0.04,
+          }}
+        />
 
         {polygons.map((polygon) => (
           <Polygon

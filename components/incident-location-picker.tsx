@@ -6,6 +6,7 @@ import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 
 import { searchLocation } from "@/lib/location-client";
 import { resolveReportLocationName } from "@/lib/report-location-client";
+import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
 const DynamicIncidentLocationPickerMap = dynamic(
@@ -48,10 +49,6 @@ function buildFallbackLocationName(latitude: number, longitude: number) {
   return buildCoordinateFallbackLabel(latitude, longitude, "Pinned location near");
 }
 
-function isWithinPhilippines(latitude: number, longitude: number) {
-  return latitude >= 4 && latitude <= 22.5 && longitude >= 116 && longitude <= 127.5;
-}
-
 export function IncidentLocationPicker({
   open,
   initialLocationName = "",
@@ -65,7 +62,7 @@ export function IncidentLocationPicker({
   const initialCoordinates =
     Number.isFinite(parsedLatitude) &&
     Number.isFinite(parsedLongitude) &&
-    isWithinPhilippines(parsedLatitude, parsedLongitude)
+    isWithinCalumpit(parsedLatitude, parsedLongitude)
       ? {
           latitude: parsedLatitude,
           longitude: parsedLongitude,
@@ -124,6 +121,12 @@ export function IncidentLocationPicker({
         : null,
     [selection],
   );
+
+  // Derived rather than stored so it can never lag behind an in-flight
+  // reverse-geocode (resolveSelection updates selection asynchronously).
+  const selectionOutsideArea = selection
+    ? !isWithinCalumpit(selection.latitude, selection.longitude)
+    : false;
 
   if (!open) {
     return null;
@@ -231,6 +234,11 @@ export function IncidentLocationPicker({
       return;
     }
 
+    if (selectionOutsideArea) {
+      setInlineError(OUTSIDE_CALUMPIT_ERROR_MESSAGE);
+      return;
+    }
+
     onConfirm({
       locationName: selection.locationName,
       latitude: selection.latitude.toFixed(6),
@@ -296,7 +304,7 @@ export function IncidentLocationPicker({
                           void handleSearch();
                         }
                       }}
-                      placeholder="Search barangay, street, city, or landmark"
+                      placeholder="Search a barangay, street, or landmark in Calumpit"
                       className="h-full min-w-0 flex-1 truncate bg-transparent text-base leading-none text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] md:text-[0.9rem]"
                     />
                   </label>
@@ -320,6 +328,7 @@ export function IncidentLocationPicker({
                 <DynamicIncidentLocationPickerMap
                   selectedCoordinates={selectedCoordinates}
                   focusCoordinates={focusCoordinates}
+                  selectionOutsideArea={selectionOutsideArea}
                   onSelect={handleMapSelection}
                 />
               </div>
@@ -370,6 +379,15 @@ export function IncidentLocationPicker({
                         {selectionWarning}
                       </div>
                     ) : null}
+                    {selectionOutsideArea ? (
+                      <div
+                        data-testid="picker-outside-area-warning"
+                        role="alert"
+                        className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-danger-text)]"
+                      >
+                        {OUTSIDE_CALUMPIT_ERROR_MESSAGE} Move the pin inside the dashed boundary.
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <p className="mt-2 text-[0.8rem] leading-5 text-[var(--color-muted-foreground)] md:mt-3 md:text-[0.84rem] md:leading-6">
@@ -383,10 +401,11 @@ export function IncidentLocationPicker({
                   How to use
                 </div>
                 <ol className="mt-3 space-y-2 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
-                  <li>1. Search for the area or move around the map manually.</li>
-                  <li>2. Tap the exact flood location to place the marker.</li>
-                  <li>3. Drag the marker if you need a more precise spot.</li>
-                  <li>4. Confirm the pin to fill the incident form.</li>
+                  <li>1. Reports must be inside Calumpit, Bulacan (the dashed outline).</li>
+                  <li>2. Search for the area or move around the map manually.</li>
+                  <li>3. Tap the exact flood location to place the marker.</li>
+                  <li>4. Drag the marker if you need a more precise spot.</li>
+                  <li>5. Confirm the pin to fill the incident form.</li>
                 </ol>
               </div>
 
@@ -408,20 +427,32 @@ export function IncidentLocationPicker({
                     type="button"
                     data-testid="confirm-picked-location"
                     onClick={handleConfirm}
-                  disabled={!selection || resolvingSelection || searching}
+                  disabled={!selection || resolvingSelection || searching || selectionOutsideArea}
                   className="inline-flex h-11 items-center justify-center rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {resolvingSelection
                     ? "Resolving location..."
                     : searching
                       ? "Please wait..."
-                      : "Use this location"}
+                      : selectionOutsideArea
+                        ? "Outside Calumpit"
+                        : "Use this location"}
                 </button>
               </div>
             </aside>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3 border-t border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-4 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] pt-3 shadow-[0_-12px_28px_color-mix(in_srgb,var(--color-background)_28%,transparent)] backdrop-blur-md md:hidden">
+          <div className="flex shrink-0 flex-col gap-2 border-t border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-4 pb-[calc(env(safe-area-inset-bottom)+0.875rem)] pt-3 shadow-[0_-12px_28px_color-mix(in_srgb,var(--color-background)_28%,transparent)] backdrop-blur-md md:hidden">
+            {selectionOutsideArea || inlineError ? (
+              <div
+                data-testid="picker-mobile-error"
+                role="alert"
+                className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-danger-text)]"
+              >
+                {selectionOutsideArea ? OUTSIDE_CALUMPIT_ERROR_MESSAGE : inlineError}
+              </div>
+            ) : null}
+            <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -433,15 +464,18 @@ export function IncidentLocationPicker({
               type="button"
               data-testid="confirm-picked-location-mobile"
               onClick={handleConfirm}
-              disabled={!selection || resolvingSelection || searching}
+              disabled={!selection || resolvingSelection || searching || selectionOutsideArea}
               className="inline-flex h-11 flex-1 items-center justify-center rounded-xl bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {resolvingSelection
                 ? "Resolving location..."
                 : searching
                   ? "Please wait..."
-                  : "Use this location"}
+                  : selectionOutsideArea
+                    ? "Outside Calumpit"
+                    : "Use this location"}
             </button>
+            </div>
           </div>
         </div>
       </section>

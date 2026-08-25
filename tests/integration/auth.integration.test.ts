@@ -52,9 +52,9 @@ function reportForm(titleSuffix: string) {
   form.set("description", "Created by the auth integration test.");
   form.set("category", "Flooding");
   form.set("severity", "Moderate");
-  form.set("locationName", "Auth Integration Spot");
-  form.set("latitude", "14.7333");
-  form.set("longitude", "121.0833");
+  form.set("locationName", "Poblacion, Calumpit");
+  form.set("latitude", "14.916");
+  form.set("longitude", "120.766");
   return form;
 }
 

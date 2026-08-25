@@ -5,6 +5,7 @@ import {
   parseReportFilters,
 } from "@/lib/api-utils";
 import { getAuthenticatedUserFromRequest } from "@/lib/auth-session";
+import { CALUMPIT_BOUNDS, isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { findNearestMatchingReport } from "@/lib/incident-matching";
 import { createBoundingBox } from "@/lib/report-geo";
@@ -104,6 +105,8 @@ type ReportWhereClause = {
   category?: string;
   sourceType?: string;
   incidentId?: string;
+  latitude?: { gte: number; lte: number };
+  longitude?: { gte: number; lte: number };
   OR?: Array<{
     title?: { contains: string; mode: "insensitive" };
     description?: { contains: string; mode: "insensitive" };
@@ -118,7 +121,14 @@ function buildReportWhereClause(filters: {
   search?: string;
   incidentId?: string;
 }): ReportWhereClause {
+  // Public listings only ever show reports inside the supported reporting
+  // area. The bounding box is a cheap index-backed pre-filter; the exact
+  // polygon check happens in JS below (Prisma can't do point-in-polygon).
+  const [[minLatitude, minLongitude], [maxLatitude, maxLongitude]] = CALUMPIT_BOUNDS;
+
   return {
+    latitude: { gte: minLatitude, lte: maxLatitude },
+    longitude: { gte: minLongitude, lte: maxLongitude },
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.category ? { category: filters.category } : {}),
     ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
@@ -229,6 +239,10 @@ export async function GET(request: Request) {
     const reconciledReports = reportsWithConfirmations.map(reconcileReportLifecycle);
 
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
+      if (!isWithinCalumpit(report.latitude, report.longitude)) {
+        return false;
+      }
+
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
       if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {

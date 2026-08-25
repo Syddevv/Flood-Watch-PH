@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
 import {
   canAccessArchivedReport,
   parseReportDetailsFormData,
@@ -86,8 +87,8 @@ test("report details are normalized and parsed into typed values", () => {
   formData.set("severity", "High");
   formData.set("locationName", "  Marikina   City " );
   formData.set("reportedByName", "  Juan   Dela Cruz " );
-  formData.set("latitude", "14.6507");
-  formData.set("longitude", "121.1029");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
 
   assert.deepEqual(parseReportDetailsFormData(formData), {
     data: {
@@ -97,8 +98,8 @@ test("report details are normalized and parsed into typed values", () => {
       severity: "High",
       locationName: "Marikina City",
       reportedByName: "Juan Dela Cruz",
-      latitude: 14.6507,
-      longitude: 121.1029,
+      latitude: 14.916,
+      longitude: 120.766,
       forceNewIncident: false,
     },
   });
@@ -111,8 +112,8 @@ test("forceNewIncident parses the literal string 'true', defaults to false other
   formData.set("category", "Flooding");
   formData.set("severity", "High");
   formData.set("locationName", "Marikina City");
-  formData.set("latitude", "14.6507");
-  formData.set("longitude", "121.1029");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
   formData.set("forceNewIncident", "true");
 
   const result = parseReportDetailsFormData(formData);
@@ -129,8 +130,8 @@ test("report details reject invalid coordinates and enum values", () => {
   formData.set("category", "Flooding");
   formData.set("severity", "Extreme");
   formData.set("locationName", "Marikina City");
-  formData.set("latitude", "14.6507");
-  formData.set("longitude", "121.1029");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
 
   assert.deepEqual(parseReportDetailsFormData(formData), {
     error: "Invalid severity value.",
@@ -164,4 +165,19 @@ test("report updates accept the legacy description field and validate severity",
 test("text normalization safely handles non-string input", () => {
   assert.equal(trimText("  multiple   spaces \n remain  "), "multiple spaces remain");
   assert.equal(trimText(null), "");
+});
+
+test("report details outside Calumpit are rejected with the shared boundary message", () => {
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Marikina City");
+  formData.set("latitude", "14.6507");
+  formData.set("longitude", "121.1029");
+
+  assert.deepEqual(parseReportDetailsFormData(formData), {
+    error: OUTSIDE_CALUMPIT_ERROR_MESSAGE,
+  });
 });

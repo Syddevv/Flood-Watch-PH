@@ -247,10 +247,23 @@ export function FloodMap({
         "bg-[var(--color-success)] text-white shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-success)_14%,transparent)]",
       glyph: "E",
     },
+    {
+      id: "coverage-area",
+      label: "Reporting area: Calumpit, Bulacan",
+      markerClassName:
+        "border-2 border-dashed border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_8%,transparent)] text-[var(--color-primary)]",
+      glyph: "C",
+    },
   ] as const;
 
   return (
     <div className="relative h-full min-h-0 w-full">
+      <div
+        data-testid="coverage-chip"
+        className="pointer-events-none absolute left-3 top-3 z-[var(--layer-map-overlay)] rounded-full md:bottom-3 md:top-auto border border-[color:color-mix(in_srgb,var(--color-primary)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3 py-1 text-[0.72rem] font-semibold text-[var(--color-primary)] shadow-[var(--shadow-soft)] backdrop-blur-sm"
+      >
+        Coverage: Calumpit, Bulacan only
+      </div>
       <DynamicFloodMap
         reportMarkers={showFloodReports ? reportMarkers : []}
         evacuationCenterMarkers={

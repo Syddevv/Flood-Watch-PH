@@ -1,3 +1,4 @@
+import { isWithinCalumpitMapBounds } from "@/lib/calumpit-boundary";
 import type {
   AlertSeverity,
   FloodAlert,
@@ -913,7 +914,14 @@ async function geocodePhilippineLocation(query: string) {
       (left, right) => scorePhilippineResult(right, attempt) - scorePhilippineResult(left, attempt),
     );
 
-    return philippineResults[0];
+    // Bias, don't restrict: "Poblacion" should resolve to Calumpit's, not
+    // Manila's, but an out-of-area result is still returned so the picker can
+    // show the user where their query landed instead of a bare "not found".
+    const nearbyResult = philippineResults.find((result) =>
+      isWithinCalumpitMapBounds(result.latitude, result.longitude),
+    );
+
+    return nearbyResult ?? philippineResults[0];
   }
 
   throw new Error(LOCATION_NOT_FOUND_MESSAGE);
