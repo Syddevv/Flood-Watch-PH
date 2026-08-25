@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   createAnonymousSession as createSession,
+  createAuthenticatedSession,
   integrationTest,
   startTestServer,
   stopServer,
@@ -69,7 +70,12 @@ integrationTest(
 
     try {
 
-      ownerCookie = await createSession(baseUrl, ownerAddress);
+      // Creating a report now requires real authentication (Priority 1);
+      // the other/third sessions never create anything - they only
+      // confirm/resolve/attempt-delete an existing report - so they stay
+      // anonymous, which also exercises the dual-mode ownership check
+      // (a real account's report vs. anonymous-session confirmers).
+      ownerCookie = await createAuthenticatedSession(baseUrl, ownerAddress);
       const otherCookie = await createSession(baseUrl, otherAddress);
       const thirdAddress = `integration-third-${runId}`;
       const thirdCookie = await createSession(baseUrl, thirdAddress);
@@ -327,7 +333,7 @@ integrationTest(
       const sessions = await Promise.all(
         Array.from({ length: 5 }, async (_unused, index) => {
           const address = `integration-concurrency-${runId}-${index}`;
-          const cookie = await createSession(baseUrl, address);
+          const cookie = await createAuthenticatedSession(baseUrl, address);
           return { address, cookie };
         }),
       );
@@ -389,7 +395,7 @@ integrationTest(
       }
 
       const forcedAddress = `integration-force-new-${runId}`;
-      const forcedCookie = await createSession(baseUrl, forcedAddress);
+      const forcedCookie = await createAuthenticatedSession(baseUrl, forcedAddress);
       const forcedResult = await submitReport(baseUrl, forcedCookie, forcedAddress, {
         latitude: spotLatitude,
         longitude: spotLongitude,
@@ -408,7 +414,7 @@ integrationTest(
       }
 
       const farAddress = `integration-far-away-${runId}`;
-      const farCookie = await createSession(baseUrl, farAddress);
+      const farCookie = await createAuthenticatedSession(baseUrl, farAddress);
       const farResult = await submitReport(baseUrl, farCookie, farAddress, {
         latitude: "14.706000",
         longitude: "121.106000",

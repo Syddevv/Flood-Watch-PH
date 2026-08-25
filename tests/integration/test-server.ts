@@ -168,3 +168,26 @@ export async function createAnonymousSession(baseUrl: string, clientAddress: str
   assert.equal(response.status, 200);
   return cookieFromResponse(response);
 }
+
+/**
+ * Registers a fresh, uniquely-emailed user and returns their auth session
+ * cookie. `POST /api/reports` requires real authentication (Priority 1) -
+ * an anonymous report-session cookie is no longer sufficient to create a
+ * report, so any test that submits a report needs this instead of
+ * `createAnonymousSession`.
+ */
+export async function createAuthenticatedSession(baseUrl: string, clientAddress: string) {
+  const email = `integration-${clientAddress}@example.com`;
+  const response = await fetch(`${baseUrl}/api/auth/register`, {
+    method: "POST",
+    headers: {
+      Origin: baseUrl,
+      "Content-Type": "application/json",
+      "X-Forwarded-For": clientAddress,
+    },
+    body: JSON.stringify({ email, password: "integration-test-password" }),
+  });
+
+  assert.equal(response.status, 201);
+  return cookieFromResponse(response);
+}
