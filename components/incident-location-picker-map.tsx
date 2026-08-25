@@ -7,15 +7,17 @@ import L from "leaflet";
 import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
 
 import {
+  CALUMPIT_BOUNDARY_PATH_OPTIONS,
   CALUMPIT_BOUNDS,
   CALUMPIT_CENTER,
   CALUMPIT_MAP_MAX_BOUNDS,
+  CALUMPIT_MASK_PATH_OPTIONS,
+  CALUMPIT_OUTSIDE_MASK,
   CALUMPIT_POLYGON,
 } from "@/lib/calumpit-boundary";
 
 const DEFAULT_CENTER: [number, number] = CALUMPIT_CENTER;
 const DEFAULT_ZOOM = 13;
-const BOUNDARY_COLOR = "#2563eb";
 
 const pickerMarkerIcon = L.divIcon({
   className: "floodwatch-marker-shell",
@@ -130,16 +132,14 @@ export function IncidentLocationPickerMap({
       />
 
       <Polygon
+        positions={CALUMPIT_OUTSIDE_MASK as [number, number][][]}
+        interactive={false}
+        pathOptions={CALUMPIT_MASK_PATH_OPTIONS}
+      />
+      <Polygon
         positions={CALUMPIT_POLYGON as [number, number][]}
         interactive={false}
-        pathOptions={{
-          color: BOUNDARY_COLOR,
-          weight: 2,
-          opacity: 0.9,
-          dashArray: "6 6",
-          fillColor: BOUNDARY_COLOR,
-          fillOpacity: 0.04,
-        }}
+        pathOptions={CALUMPIT_BOUNDARY_PATH_OPTIONS}
       />
 
       <PickerMapEvents

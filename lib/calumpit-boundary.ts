@@ -170,6 +170,41 @@ export const CALUMPIT_MAP_MAX_BOUNDS: [LatLngTuple, LatLngTuple] = [
   [15.05, 120.93],
 ];
 
+/**
+ * Ring far larger than the map's max bounds, used as the outer ring of a
+ * "mask" polygon whose hole is Calumpit. Rendering it with a dark, translucent
+ * fill dims everything outside the municipality so the reporting area stands
+ * out, while the map inside the boundary stays fully readable.
+ */
+const MASK_OUTER_RING: ReadonlyArray<LatLngTuple> = [
+  [13.5, 119.0],
+  [13.5, 122.5],
+  [16.5, 122.5],
+  [16.5, 119.0],
+];
+
+export const CALUMPIT_OUTSIDE_MASK: ReadonlyArray<ReadonlyArray<LatLngTuple>> = [
+  MASK_OUTER_RING,
+  CALUMPIT_POLYGON,
+];
+
+/** Shared Leaflet path styling so the main map and the picker match. */
+export const CALUMPIT_BOUNDARY_PATH_OPTIONS = {
+  color: "#1d4ed8",
+  weight: 3,
+  opacity: 1,
+  dashArray: "10 6",
+  fillColor: "#2563eb",
+  fillOpacity: 0.06,
+} as const;
+
+export const CALUMPIT_MASK_PATH_OPTIONS = {
+  stroke: false,
+  fillColor: "#0f172a",
+  fillOpacity: 0.28,
+  fillRule: "evenodd",
+} as const;
+
 export const OUTSIDE_CALUMPIT_ERROR_MESSAGE =
   "This location is outside Calumpit, Bulacan. FloodWatch PH currently only accepts flood reports within Calumpit.";
 
