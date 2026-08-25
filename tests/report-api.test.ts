@@ -99,8 +99,27 @@ test("report details are normalized and parsed into typed values", () => {
       reportedByName: "Juan Dela Cruz",
       latitude: 14.6507,
       longitude: 121.1029,
+      forceNewIncident: false,
     },
   });
+});
+
+test("forceNewIncident parses the literal string 'true', defaults to false otherwise", () => {
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising near the bridge.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Marikina City");
+  formData.set("latitude", "14.6507");
+  formData.set("longitude", "121.1029");
+  formData.set("forceNewIncident", "true");
+
+  const result = parseReportDetailsFormData(formData);
+  assert.equal(result.data?.forceNewIncident, true);
+
+  formData.set("forceNewIncident", "yes");
+  assert.equal(parseReportDetailsFormData(formData).data?.forceNewIncident, false);
 });
 
 test("report details reject invalid coordinates and enum values", () => {

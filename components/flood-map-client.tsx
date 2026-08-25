@@ -454,6 +454,11 @@ const ReportPopupContent = memo(function ReportPopupContent({
             {freshnessBadge.label}
           </span>
         ) : null}
+        {marker.report.incidentReportCount && marker.report.incidentReportCount > 1 ? (
+          <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[0.66rem] font-medium text-[var(--color-primary)]">
+            {marker.report.incidentReportCount} related reports
+          </span>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-[0.74rem] text-slate-600">

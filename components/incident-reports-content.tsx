@@ -43,6 +43,7 @@ import type {
   ReportDetailResponse,
   NearbyReportRecord,
   NearbyReportsResponse,
+  ReportCreateResult,
   ReportUpdateItem,
   ReportRecord,
   ReportsResponse,
@@ -458,6 +459,11 @@ function ReportCard({
                 {freshnessBadge.label}
               </span>
             ) : null}
+            {report.incidentReportCount && report.incidentReportCount > 1 ? (
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[0.66rem] font-medium leading-4 text-[var(--color-primary)]">
+                Part of an incident with {report.incidentReportCount} reports
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-1 line-clamp-1 text-[0.95rem] font-semibold leading-5 text-[var(--color-foreground)]">
@@ -700,6 +706,13 @@ export function IncidentReportsContent() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
+    // Intentionally does not depend on pendingNearbyDuplicate itself: this
+    // effect exists to clear a pending duplicate-warning state when the user
+    // edits the form fields it was computed from, not to react to the state
+    // it sets. Including it in the deps caused the effect to re-fire the
+    // instant the warning was shown (since setting it is itself a dependency
+    // change), clearing it again one animation frame later.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     formState.category,
     formState.description,
@@ -707,7 +720,6 @@ export function IncidentReportsContent() {
     formState.locationName,
     formState.longitude,
     formState.severity,
-    pendingNearbyDuplicate,
   ]);
 
   useEffect(() => {
@@ -1229,7 +1241,7 @@ export function IncidentReportsContent() {
       method: "POST",
       body: requestBody,
     });
-    const payload = (await response.json()) as { data?: ReportRecord; error?: string };
+    const payload = (await response.json()) as { data?: ReportCreateResult; error?: string };
 
     if (!response.ok || !payload.data) {
       throw new Error(payload.error ?? "Failed to submit report.");
@@ -1240,12 +1252,13 @@ export function IncidentReportsContent() {
     );
     setFormState(emptyFormState);
     setPendingNearbyDuplicate(null);
-    setToast({
-      tone: "success",
-      message: photoAttached
-        ? "Community report and photo submitted successfully."
-        : "Community report submitted successfully.",
-    });
+
+    const photoSuffix = photoAttached ? " with your photo" : "";
+    const message = payload.data.incident.matchedExisting
+      ? `Your report was added to an existing incident (${payload.data.incident.contributingReportCount} reports)${photoSuffix}.`
+      : `Community report submitted successfully${photoSuffix}.`;
+
+    setToast({ tone: "success", message });
   }
 
   async function fetchNearbyReportsForDuplicateCheck(latitude: number, longitude: number) {
@@ -1367,6 +1380,7 @@ export function IncidentReportsContent() {
     setSubmittingReport(true);
 
     try {
+      pendingNearbyDuplicate.requestBody.set("forceNewIncident", "true");
       await submitPreparedReport(
         pendingNearbyDuplicate.requestBody,
         pendingNearbyDuplicate.photoAttached,
@@ -1799,6 +1813,9 @@ export function IncidentReportsContent() {
                             </div>
                             <div className="mt-1 tabular-nums text-[0.78rem] text-[var(--color-muted-foreground)]">
                               {nearbyReport.locationName} · ~{Math.max(1, Math.round(nearbyReport.distanceMeters))} m away
+                              {nearbyReport.incidentReportCount && nearbyReport.incidentReportCount > 1
+                                ? ` · already has ${nearbyReport.incidentReportCount} reports`
+                                : ""}
                             </div>
                           </div>
                         ))}

@@ -178,5 +178,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
           }
         : undefined,
     photos: createReportPhotos(report),
+    incidentId: report.incidentId,
+    incidentReportCount: report.incidentReportCount,
   };
 }

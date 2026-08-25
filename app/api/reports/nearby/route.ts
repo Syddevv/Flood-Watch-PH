@@ -1,4 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { createBoundingBox, calculateDistanceMeters } from "@/lib/report-geo";
 import {
   deriveReportLifecycleStatus,
@@ -12,7 +13,9 @@ import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
-const DEFAULT_RADIUS_METERS = 300;
+// Shared with the server-enforced incident matcher (app/api/reports/route.ts)
+// so this advisory preview and the authoritative decision can never drift.
+const DEFAULT_RADIUS_METERS = INCIDENT_MATCH_RADIUS_METERS;
 const MAX_RADIUS_METERS = 500;
 const DEFAULT_LIMIT = 3;
 
@@ -37,6 +40,8 @@ type NearbyReportRecord = {
   lastActivityAt: Date;
   resolvedAt: Date | null;
   archivedAt: Date | null;
+  incidentId: string;
+  incident: { reportCount: number };
   confirmations: Array<{
     confirmationType: string;
     createdAt: Date;
@@ -48,6 +53,11 @@ const nearbyInclude = {
     select: {
       confirmationType: true,
       createdAt: true,
+    },
+  },
+  incident: {
+    select: {
+      reportCount: true,
     },
   },
 } as const;
@@ -75,9 +85,13 @@ function serializeNearbyReport(
   distanceMeters: number,
   sessionHash: string,
 ) {
+  const serialized = serializeReportRecord(report, sessionHash);
+  const { incident, ...rest } = serialized;
+
   return {
-    ...serializeReportRecord(report, sessionHash),
+    ...rest,
     distanceMeters,
+    incidentReportCount: incident.reportCount,
   };
 }
 

@@ -42,6 +42,16 @@ export type ReportRecord = {
   lastActivityAt: string;
   resolvedAt: string | null;
   archivedAt: string | null;
+  incidentId: string;
+  incidentReportCount?: number;
+};
+
+export type ReportCreateResult = ReportRecord & {
+  incident: {
+    id: string;
+    matchedExisting: boolean;
+    contributingReportCount: number;
+  };
 };
 
 export type ReportDetailRecord = ReportRecord & {

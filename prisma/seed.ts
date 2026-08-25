@@ -62,56 +62,76 @@ async function main() {
       },
     });
 
-    await tx.floodReport.createMany({
-      data: [
-        {
-          title: seedReportTitles[0],
-          description:
-            "Water levels are rising and low-lying communities should stay alert.",
-          category: "Overflowing River",
-          severity: "Critical",
-          status: "Confirmed by Community",
-          locationName: "Marikina River Basin",
-          latitude: 14.6407,
-          longitude: 121.1029,
-          sourceType: "System",
-          confirmationCount: 12,
-          lastActivityAt: fortyMinutesAgo,
-          createdAt: threeHoursAgo,
+    // Each seed report founds its own singleton incident (createMany can't
+    // populate a required relation, and these three reports aren't meant to
+    // represent the same physical incident anyway).
+    const seedReports = [
+      {
+        title: seedReportTitles[0],
+        description:
+          "Water levels are rising and low-lying communities should stay alert.",
+        category: "Overflowing River",
+        severity: "Critical",
+        status: "Confirmed by Community",
+        locationName: "Marikina River Basin",
+        latitude: 14.6407,
+        longitude: 121.1029,
+        sourceType: "System",
+        confirmationCount: 12,
+        lastActivityAt: fortyMinutesAgo,
+        createdAt: threeHoursAgo,
+      },
+      {
+        title: seedReportTitles[1],
+        description:
+          "Road-level flooding reported near major routes. Avoid the area if possible.",
+        category: "Flood",
+        severity: "High",
+        status: "Confirmed by Community",
+        locationName: "Pasig - Cainta Area",
+        latitude: 14.5869,
+        longitude: 121.1038,
+        sourceType: "Community",
+        reportedByName: "Barangay Response Volunteer",
+        confirmationCount: 7,
+        lastActivityAt: ninetyMinutesAgo,
+        createdAt: threeHoursAgo,
+      },
+      {
+        title: seedReportTitles[2],
+        description: "Street-level flooding reported. Drive with caution.",
+        category: "Road Blocked",
+        severity: "Moderate",
+        status: "Needs More Confirmation",
+        locationName: "Quezon City North",
+        latitude: 14.7004,
+        longitude: 121.0744,
+        sourceType: "Community",
+        reportedByName: "Community Watch",
+        confirmationCount: 3,
+        lastActivityAt: now,
+        createdAt: ninetyMinutesAgo,
+      },
+    ];
+
+    for (const seedReport of seedReports) {
+      await tx.floodReport.create({
+        data: {
+          ...seedReport,
+          incident: {
+            create: {
+              status: seedReport.status,
+              representativeLatitude: seedReport.latitude,
+              representativeLongitude: seedReport.longitude,
+              locationName: seedReport.locationName,
+              severity: seedReport.severity,
+              firstReportAt: seedReport.createdAt,
+              lastActivityAt: seedReport.lastActivityAt,
+            },
+          },
         },
-        {
-          title: seedReportTitles[1],
-          description:
-            "Road-level flooding reported near major routes. Avoid the area if possible.",
-          category: "Flood",
-          severity: "High",
-          status: "Confirmed by Community",
-          locationName: "Pasig - Cainta Area",
-          latitude: 14.5869,
-          longitude: 121.1038,
-          sourceType: "Community",
-          reportedByName: "Barangay Response Volunteer",
-          confirmationCount: 7,
-          lastActivityAt: ninetyMinutesAgo,
-          createdAt: threeHoursAgo,
-        },
-        {
-          title: seedReportTitles[2],
-          description: "Street-level flooding reported. Drive with caution.",
-          category: "Road Blocked",
-          severity: "Moderate",
-          status: "Needs More Confirmation",
-          locationName: "Quezon City North",
-          latitude: 14.7004,
-          longitude: 121.0744,
-          sourceType: "Community",
-          reportedByName: "Community Watch",
-          confirmationCount: 3,
-          lastActivityAt: now,
-          createdAt: ninetyMinutesAgo,
-        },
-      ],
-    });
+      });
+    }
 
     await tx.evacuationCenter.deleteMany({
       where: {
