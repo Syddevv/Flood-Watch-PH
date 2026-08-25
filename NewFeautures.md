@@ -136,7 +136,7 @@ FloodWatch PH should operate primarily within the defined Calumpit, Bulacan geog
 - [x] Prefer an actual geographic boundary/polygon when feasible.
 - [x] Update the map's initial viewport to Calumpit.
 - [x] Prevent normal map navigation from making the application behave as though it supports arbitrary locations. (padded `maxBounds`, `minZoom 11`, outside-area mask)
-- [x] Ensure map markers primarily represent locations within the supported reporting area. (report markers filtered server-side; evacuation centers intentionally not)
+- [x] Ensure map markers primarily represent locations within the supported reporting area. (report markers filtered server-side; evacuation centers intentionally not — they follow the separate nearby-radius rule from Priority 3)
 - [x] Clearly communicate the supported geographic coverage in the UI. (boundary overlay, legend entry, coverage chip, form copy)
 - [x] Avoid misleading users into believing the system supports all of Bulacan or the entire Philippines.
 
@@ -178,34 +178,44 @@ Only locations within the supported Calumpit reporting area should accept flood 
 
 ---
 
-## Priority 3 — Evacuation Center Coverage
+## Priority 3 — Evacuation Center Coverage ✅ Done (2026-08-25)
 
 ### 5. Keep Nearby Bulacan Evacuation Centers Visible
 
-**Priority:** 🟠 High
+**Priority:** 🟠 High — **Status: Implemented and verified.**
 
 Although reporting should be restricted to Calumpit, nearby evacuation centers outside Calumpit should remain visible when they are relevant to people in the area.
 
+> **Implementation summary:** Evacuation-center visibility now has its own rule, separate from the report geofence, in a new plain-TypeScript module `lib/evacuation-center-scope.ts` (no Prisma/`server-only` imports, so the map, the list page and the API route all share it). "Nearby" is defined as **within a configurable radius of `CALUMPIT_CENTER` *and* inside the padded `CALUMPIT_MAP_MAX_BOUNDS`** — the box clip keeps the list and the locked map in agreement (Santa Maria is 23.6 km away but outside the pannable box, so it is excluded; a unit test pins this so widening the box later surfaces it automatically). The radius is `NEXT_PUBLIC_EVACUATION_CENTER_NEARBY_RADIUS_KM` (default **25 km**, clamped 1–100; `NEXT_PUBLIC_` because the nearby set is computed client-side from the static dataset and an un-prefixed variable would cause a server/browser mismatch). With the defaults, exactly **8** Bulacan centers are nearby, sorted by distance: Calumpit 0.2 km, Malolos 8.9, Pulilan 9.1, Hagonoy 10.1, Plaridel 10.4, Guiguinto 15.2, Balagtas 15.4, Bocaue 21.6. The remaining 27 entries (Marilao, Meycauayan, Obando, SJDM, Santa Maria, and every Metro Manila / Rizal center) are **hidden, not deleted** — the dataset is untouched and the list page can still show them behind a toggle.
+>
+> Backend: `GET /api/map/all` serves only the nearby centers and reports `meta.evacuationCenterRadiusKm`; the route now carries the polygon rule for reports and the radius rule for centers side by side, which is the architectural expression of the principle. Map (`components/dashboard-shell.tsx`, `flood-map.tsx`, `flood-map-client.tsx`): markers use the nearby set; the "Nearby evacuation centers" sidebar panel is now derived from the four nearest centers instead of the old hard-coded featured list (which pointed at Marikina / San Jose del Monte / Antipolo); center markers are **violet rounded squares** (reports remain circles — shape *and* hue differ), the legend swatch was fixed to use the real marker colour (it previously showed green while every marker was light blue), and the coverage chip reads *"Reports: Calumpit only · Shelters: within 25 km"*. List page (`components/evacuation-centers-content.tsx`): shows the 8 nearby centers by default with "~N km from Calumpit" on every card, a "Show all 35 reference centers (outside coverage)" toggle (`aria-pressed`), an "Outside coverage" badge that sits *beside* the status badge rather than replacing it, and "Evacuation Center Near Me" / `?fromReport` ranking that only considers nearby centers so it can never recommend an NCR shelter. Old `?center=<id>` deep links to far centers still resolve. Search, status and facility filters apply on top of whichever set is active. No status values, verification badges, notes, DB schema or migrations changed. A data gap is recorded as a `TODO(data)` in `data/evacuation-centers.ts`: Apalit and Macabebe (Pampanga) border Calumpit and are inside the map box but have no reference center yet.
+>
+> Verified: 9 new unit tests (`tests/evacuation-center-scope.test.ts` — exact ordered nearby set, exclusions, sort order, map-box invariant, Santa Maria clip, env clamping, custom radius, "all nearby centers are still `needs_verification`" guard, featured derivation), `tests/calumpit-boundary.test.ts` extended with Bocaue, a production-build Playwright spec (`tests/browser/evacuation-center-scope.spec.ts`: list default vs. show-all with badges, API count/radius/province assertions, map caption + chip + legend), `curl /api/map/all` → 8 centers / 25 km / Bulacan only, and screenshot passes at 1440/390 px.
+>
+> **Not yet verified:** real-device touch interaction (same standing gap as P0–P2).
+
 #### Requirements
 
-- [ ] Separate the **reporting boundary** from the **evacuation center visibility boundary**.
-- [ ] Do not apply the Calumpit reporting restriction to evacuation center data.
-- [ ] Keep relevant nearby Bulacan evacuation centers visible.
-- [ ] Define what "nearby" means.
-- [ ] Prefer a configurable distance/radius around Calumpit.
-- [ ] Ensure evacuation centers just outside Calumpit are not unnecessarily hidden.
-- [ ] Clearly distinguish evacuation center markers from flood report markers.
-- [ ] Preserve evacuation center information such as:
-  - [ ] Name
-  - [ ] Address/location
-  - [ ] Coordinates
-  - [ ] Capacity, if available
-  - [ ] Contact information, if available
-  - [ ] Verification status
+- [x] Separate the **reporting boundary** from the **evacuation center visibility boundary**. (`isWithinCalumpit` polygon for reports vs. `isNearbyEvacuationCenter` radius + map box for centers)
+- [x] Do not apply the Calumpit reporting restriction to evacuation center data.
+- [x] Keep relevant nearby Bulacan evacuation centers visible. (8 centers across 8 municipalities)
+- [x] Define what "nearby" means. (≤ radius from `CALUMPIT_CENTER` **and** inside `CALUMPIT_MAP_MAX_BOUNDS`)
+- [x] Prefer a configurable distance/radius around Calumpit. (`NEXT_PUBLIC_EVACUATION_CENTER_NEARBY_RADIUS_KM`, default 25, clamped 1–100)
+- [x] Ensure evacuation centers just outside Calumpit are not unnecessarily hidden. (Malolos, Pulilan, Hagonoy, Plaridel all inside the default radius; the full dataset remains one toggle away on the list page)
+- [x] Clearly distinguish evacuation center markers from flood report markers. (rounded-square violet "E" vs. circular report pins; legend swatch now matches)
+- [x] Preserve evacuation center information such as:
+  - [x] Name
+  - [x] Address/location
+  - [x] Coordinates
+  - [x] Capacity, if available
+  - [x] Contact information, if available
+  - [x] Verification status
 
-- [ ] Preserve the existing `Needs Verification` concept where applicable.
-- [ ] Avoid presenting unverified evacuation-center information as confirmed.
-- [ ] Ensure evacuation center filtering/search still works.
+  *(the dataset and `EvacuationCenterResource` type are unchanged; hidden centers keep every field)*
+
+- [x] Preserve the existing `Needs Verification` concept where applicable. (only the marker colour changed; labels, badges and notes untouched — a unit test asserts every nearby center is still `needs_verification` and must be updated, not deleted, when the first verified record lands)
+- [x] Avoid presenting unverified evacuation-center information as confirmed.
+- [x] Ensure evacuation center filtering/search still works. (filters apply on top of the nearby or show-all set; verified in the browser)
 
 #### Important distinction
 
@@ -213,7 +223,7 @@ The system should follow this principle:
 
 > **Reports are restricted to Calumpit. Evacuation centers are not.**
 
-This distinction must exist in both the frontend and backend architecture.
+This distinction must exist in both the frontend and backend architecture. *(Implemented: `lib/report-api.ts` + `lib/calumpit-boundary.ts` enforce the report polygon; `lib/evacuation-center-scope.ts` defines center visibility independently, and `app/api/map/all/route.ts` applies the two rules side by side.)*
 
 ---
 
@@ -492,13 +502,13 @@ Once geographic restrictions are implemented, update the map experience to make 
 
 - [ ] Set Calumpit as the default map viewport.
 - [ ] Display the Calumpit reporting boundary.
-- [ ] Clearly distinguish the reporting area from nearby evacuation-center coverage.
+- [x] Clearly distinguish the reporting area from nearby evacuation-center coverage. *(closed by Priority 3: boundary mask + legend + "Reports: Calumpit only · Shelters: within 25 km" chip)*
 - [ ] Keep map interactions usable on mobile.
 - [ ] Prevent confusing behavior when users attempt to move outside the supported area.
 - [ ] Update location picker behavior.
 - [ ] Ensure search results outside the reporting area cannot be submitted as flood reports.
-- [ ] Preserve the ability to navigate to nearby evacuation centers outside Calumpit.
-- [ ] Ensure report markers and evacuation-center markers remain visually distinguishable.
+- [x] Preserve the ability to navigate to nearby evacuation centers outside Calumpit. *(closed by Priorities 2–3: the padded map box was sized to keep the nearby centers reachable, and "View on Map" from the list only targets centers inside it)*
+- [x] Ensure report markers and evacuation-center markers remain visually distinguishable. *(closed by Priority 3: shape + hue)*
 - [ ] Verify clustering behavior after geographic restrictions are introduced.
 
 ---
@@ -603,7 +613,7 @@ Coding agents should generally execute the work in this order:
 9. **Report monitoring and management**
 10. **Rescue request workflow**
 11. **Administrator response/action workflow**
-12. **Nearby evacuation-center visibility**
+12. ~~**Nearby evacuation-center visibility**~~ ✅ Done (2026-08-25, pulled forward as Priority 3)
 13. **Administrator notifications**
 14. **Map/UX refinements**
 15. **Security hardening**
