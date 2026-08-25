@@ -29,6 +29,12 @@ export type ReportConfirmationRecord = {
   createdAt: Date;
 };
 
+export type ReportIdentity = {
+  sessionHash?: string;
+  userId?: string;
+  role?: string;
+};
+
 export type PublicReportRecord = {
   id: string;
   title: string;
@@ -41,6 +47,7 @@ export type PublicReportRecord = {
   longitude: number;
   imageUrl: string | null;
   ownerSessionHash?: string | null;
+  userId?: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -78,23 +85,35 @@ export const reportListInclude = {
 } as const;
 
 export function isReportOwner(
-  report: Pick<PublicReportRecord, "ownerSessionHash">,
-  sessionHash: string,
+  report: Pick<PublicReportRecord, "ownerSessionHash" | "userId">,
+  identity: ReportIdentity,
 ) {
-  return Boolean(report.ownerSessionHash && sessionHash && report.ownerSessionHash === sessionHash);
+  if (identity.role === "admin") {
+    return true;
+  }
+
+  if (report.userId && identity.userId) {
+    return report.userId === identity.userId;
+  }
+
+  return Boolean(
+    report.ownerSessionHash &&
+      identity.sessionHash &&
+      report.ownerSessionHash === identity.sessionHash,
+  );
 }
 
 export function canAccessArchivedReport(
-  report: Pick<PublicReportRecord, "ownerSessionHash">,
-  sessionHash: string,
+  report: Pick<PublicReportRecord, "ownerSessionHash" | "userId">,
+  identity: ReportIdentity,
   includeArchived: boolean,
 ) {
-  return includeArchived && isReportOwner(report, sessionHash);
+  return includeArchived && isReportOwner(report, identity);
 }
 
 export function serializeReportRecord<T extends PublicReportRecord>(
   report: T,
-  sessionHash = "",
+  identity: ReportIdentity = {},
 ) {
   const confirmations = report.confirmations ?? [];
   const lastConfirmedAt =
@@ -109,8 +128,9 @@ export function serializeReportRecord<T extends PublicReportRecord>(
       ?.createdAt ?? null;
 
   const safeReport = { ...report };
-  const owner = isReportOwner(report, sessionHash);
+  const owner = isReportOwner(report, identity);
   delete safeReport.ownerSessionHash;
+  delete safeReport.userId;
   delete safeReport.confirmations;
   if (!owner) {
     safeReport.reportedByName = null;

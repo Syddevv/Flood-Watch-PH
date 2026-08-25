@@ -4,6 +4,7 @@ import {
   parsePositiveInteger,
   parseReportFilters,
 } from "@/lib/api-utils";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth-session";
 import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { findNearestMatchingReport } from "@/lib/incident-matching";
 import { createBoundingBox } from "@/lib/report-geo";
@@ -28,8 +29,9 @@ import {
   reportListInclude,
   serializeReportRecord,
   uploadReportImageFile,
+  type ReportIdentity,
 } from "@/lib/report-api";
-import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
@@ -43,12 +45,12 @@ function buildReportListResponse(
     page: number;
     limit: number;
     total: number;
-    sessionHash: string;
+    identity: ReportIdentity;
   },
 ) {
   return Response.json({
     data: data.map((report: ReportListRecord) => {
-      const serialized = serializeReportRecord(report, pagination.sessionHash);
+      const serialized = serializeReportRecord(report, pagination.identity);
       const { incident, ...rest } = serialized;
 
       return {
@@ -77,6 +79,7 @@ type ReportListRecord = {
   longitude: number;
   imageUrl: string | null;
   ownerSessionHash: string | null;
+  userId: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -153,7 +156,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const parsedFilters = parseReportFilters(searchParams);
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
 
     if (parsedFilters.error) {
       return errorResponse(parsedFilters.error, 400);
@@ -187,7 +190,7 @@ export async function GET(request: Request) {
     })) as ReportListRecord[];
 
     if (reports.length === 0) {
-      return buildReportListResponse([], { page, limit, total: 0, sessionHash });
+      return buildReportListResponse([], { page, limit, total: 0, identity });
     }
 
     const confirmations = await prisma.reportConfirmation.findMany({
@@ -229,7 +232,7 @@ export async function GET(request: Request) {
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
       if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
-        return canAccessArchivedReport(report, sessionHash, includeArchived);
+        return canAccessArchivedReport(report, identity, includeArchived);
       }
 
       return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
@@ -288,7 +291,7 @@ export async function GET(request: Request) {
       page,
       limit,
       total,
-      sessionHash,
+      identity,
     });
   } catch (error) {
     logApiError("reports-fetch-failed", request, error);
@@ -317,10 +320,10 @@ export async function POST(request: Request) {
       return protectionResponse;
     }
 
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const authenticatedUser = await getAuthenticatedUserFromRequest(request);
 
-    if (!sessionHash) {
-      return errorResponse("Session initialization is required to submit a report.", 401);
+    if (!authenticatedUser) {
+      return errorResponse("You must be signed in to submit a report.", 401);
     }
 
     const parsedFormData = await parseReportRequestFormData(request);
@@ -414,7 +417,7 @@ export async function POST(request: Request) {
                 latitude,
                 longitude,
                 imageUrl,
-                ownerSessionHash: sessionHash,
+                userId: authenticatedUser.id,
                 reportedByName,
                 sourceType: "Community",
                 confirmationCount: 0,
@@ -463,7 +466,7 @@ export async function POST(request: Request) {
             latitude,
             longitude,
             imageUrl,
-            ownerSessionHash: sessionHash,
+            userId: authenticatedUser.id,
             reportedByName,
             sourceType: "Community",
             confirmationCount: 0,
@@ -489,7 +492,10 @@ export async function POST(request: Request) {
     return Response.json(
       {
         data: {
-          ...serializeReportRecord(report as ReportListRecord, sessionHash),
+          ...serializeReportRecord(report as ReportListRecord, {
+            userId: authenticatedUser.id,
+            role: authenticatedUser.role,
+          }),
           incident,
         },
       },

@@ -10,6 +10,7 @@ import {
   Flame,
   ImageUp,
   LoaderCircle,
+  LogIn,
   Map as MapIcon,
   MapPin,
   Phone,
@@ -38,6 +39,7 @@ import type { IncidentReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
+import { useAuthSession } from "@/components/auth-session-provider";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import type {
   ReportDetailResponse,
@@ -541,6 +543,7 @@ function ReportCard({
 export function IncidentReportsContent() {
   const router = useRouter();
   const reportSessionReady = useReportSessionReady();
+  const { user: authUser, isLoading: authLoading } = useAuthSession();
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [updatesByReportId, setUpdatesByReportId] = useState<Record<string, ReportUpdateItem[]>>({});
   const [confirmedReportIds, setConfirmedReportIds] = useState<Record<string, boolean>>({});
@@ -1514,6 +1517,35 @@ export function IncidentReportsContent() {
 
           <section className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_396px]">
             <div className="space-y-4">
+              {!authLoading && !authUser ? (
+                <section className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-8 text-center shadow-[var(--shadow-soft)]">
+                  <LogIn className="mx-auto h-8 w-8 text-[var(--color-primary)]" />
+                  <div className="mt-3 text-[1.05rem] font-semibold text-[var(--color-foreground)]">
+                    Sign in to submit a flood report
+                  </div>
+                  <p className="mx-auto mt-1.5 max-w-sm text-[0.86rem] leading-6 text-[var(--color-muted-foreground)]">
+                    Creating an account takes a moment and only requires an email and password.
+                    Viewing the map and existing reports never requires signing in.
+                  </p>
+                  <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/login?next=/incident-reports")}
+                      className="h-11 rounded-[11px] bg-[var(--color-primary)] px-5 text-[0.9rem] font-semibold text-white"
+                    >
+                      Log in
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/register?next=/incident-reports")}
+                      className="h-11 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 text-[0.9rem] font-medium text-[var(--color-foreground)]"
+                    >
+                      Create account
+                    </button>
+                  </div>
+                </section>
+              ) : (
+                <>
               {updateContext ? (
                 <section className="rounded-[18px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
                   <div className="text-[0.88rem] font-semibold text-[var(--color-info-text)]">
@@ -1890,6 +1922,8 @@ export function IncidentReportsContent() {
                   </div>
                 </div>
               </FormSection>
+                </>
+              )}
             </div>
 
             <div className="flex min-h-0 flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-var(--header-height)-2rem)] lg:self-start lg:overflow-hidden">

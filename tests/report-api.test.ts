@@ -10,12 +10,12 @@ import {
 } from "@/lib/report-api";
 
 test("archived reports require an explicit request from the owner session", () => {
-  const report = { ownerSessionHash: "owner-session" };
+  const report = { ownerSessionHash: "owner-session", userId: null };
 
-  assert.equal(canAccessArchivedReport(report, "", true), false);
-  assert.equal(canAccessArchivedReport(report, "other-session", true), false);
-  assert.equal(canAccessArchivedReport(report, "owner-session", false), false);
-  assert.equal(canAccessArchivedReport(report, "owner-session", true), true);
+  assert.equal(canAccessArchivedReport(report, {}, true), false);
+  assert.equal(canAccessArchivedReport(report, { sessionHash: "other-session" }, true), false);
+  assert.equal(canAccessArchivedReport(report, { sessionHash: "owner-session" }, false), false);
+  assert.equal(canAccessArchivedReport(report, { sessionHash: "owner-session" }, true), true);
 });
 
 test("malformed multipart requests return a client-safe parsing error", async () => {

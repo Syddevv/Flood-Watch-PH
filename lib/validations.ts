@@ -55,3 +55,10 @@ export function isValidLatitude(value: number): boolean {
 export function isValidLongitude(value: number): boolean {
   return Number.isFinite(value) && value >= -180 && value <= 180;
 }
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 254;
+
+export function isValidEmail(value: string): boolean {
+  return value.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.test(value);
+}

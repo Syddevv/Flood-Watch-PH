@@ -10,7 +10,7 @@ import {
   uploadReportImageFile,
   type PublicReportRecord,
 } from "@/lib/report-api";
-import { getReportSessionHashFromRequest } from "@/lib/report-session";
+import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
 
 type RouteContext = {
@@ -33,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const sessionHash = getReportSessionHashFromRequest(request);
+    const identity = await getReportIdentityFromRequest(request);
 
     const existingReport = await prisma.floodReport.findUnique({
       where: { id },
@@ -44,7 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (!isReportOwner(existingReport as PublicReportRecord, sessionHash)) {
+    if (!isReportOwner(existingReport as PublicReportRecord, identity)) {
       return errorResponse(REPORT_OWNER_FORBIDDEN_MESSAGE, 403);
     }
 
@@ -105,7 +105,7 @@ export async function POST(request: Request, context: RouteContext) {
       });
     });
 
-    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, sessionHash));
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, identity));
   } catch (error) {
     console.error("Failed to create report update.", error);
     return errorResponse("Something went wrong while updating the report.");

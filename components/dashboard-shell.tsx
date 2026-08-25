@@ -14,6 +14,7 @@ import { IncidentReportsContent } from "@/components/incident-reports-content";
 import { LiveAlertsPanel } from "@/components/live-alerts-panel";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RightInfoPanel } from "@/components/right-info-panel";
+import { useAuthSession } from "@/components/auth-session-provider";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
@@ -236,6 +237,17 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const router = useRouter();
   const reportSessionReady = useReportSessionReady();
+  const { user: authUser, refresh: refreshAuthSession } = useAuthSession();
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Failed to sign out.", error);
+    } finally {
+      await refreshAuthSession();
+    }
+  }
   const [theme, setTheme] = useState<Theme>("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -1355,6 +1367,8 @@ export function DashboardShell({
         onToggleTheme={toggleTheme}
         onOpenSidebar={() => setSidebarOpen(true)}
         onReportFlood={() => router.push("/incident-reports")}
+        authUser={authUser}
+        onLogout={() => void handleLogout()}
       />
 
       <div

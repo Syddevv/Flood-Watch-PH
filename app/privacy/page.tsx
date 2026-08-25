@@ -9,9 +9,10 @@ export default function PrivacyPage() {
         </Link>
         <h1 className="mt-6 text-3xl font-semibold">Privacy Notice</h1>
         <p className="mt-3 leading-7 text-[var(--color-muted-foreground)]">
-          FloodWatch PH accepts community flood reports without requiring an account.
-          Reporter names and optional contact details are collected only when you choose
-          to provide them for follow-up.
+          Viewing the flood map and existing reports never requires an account. Submitting a
+          new flood report requires signing in with an email and password &mdash; that&apos;s
+          the only account information collected. Reporter display names and optional contact
+          details remain separate and are only shown when you choose to provide them.
         </p>
 
         <section className="mt-8 space-y-5 leading-7 text-[var(--color-muted-foreground)]">
@@ -19,15 +20,17 @@ export default function PrivacyPage() {
             <h2 className="font-semibold text-[var(--color-foreground)]">Public display</h2>
             <p>
               Reporter names are not shown in public feeds, maps, nearby-report results,
-              or shared report links. Public reports are labeled as anonymous community reports.
+              or shared report links. Public reports are labeled as anonymous community reports
+              unless you choose to display a name.
             </p>
           </div>
           <div>
             <h2 className="font-semibold text-[var(--color-foreground)]">Owner access</h2>
             <p>
-              The anonymous browser session that submitted a report can view its own
-              submitted reporter name while managing that report. The session cookie is
-              HttpOnly and is not a user account or identity verification system.
+              The account (or, for reports submitted before accounts existed, the anonymous
+              browser session) that submitted a report can view its own submitted reporter name
+              while managing that report. Session cookies are HttpOnly and passwords are never
+              stored in plain text.
             </p>
           </div>
           <div>

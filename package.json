@@ -9,7 +9,7 @@
     "pretypecheck": "prisma generate",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "tsx --test tests/*.test.ts",
-    "test:integration": "tsx --test tests/integration/*.test.ts",
+    "test:integration": "tsx --test --test-concurrency=1 tests/integration/*.test.ts",
     "check:deploy": "npm run lint && npm run typecheck && npm run test && npm run build",
     "start": "next start",
     "lint": "eslint",

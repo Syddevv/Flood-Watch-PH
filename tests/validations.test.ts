@@ -11,6 +11,7 @@ import {
 } from "@/lib/api-utils";
 import {
   isValidConfirmationType,
+  isValidEmail,
   isValidLatitude,
   isValidLongitude,
   isValidReportCategory,
@@ -95,4 +96,14 @@ test("longitude validation enforces finite geographic bounds", () => {
   assert.equal(isValidLongitude(180.0001), false);
   assert.equal(isValidLongitude(Number.NaN), false);
   assert.equal(isValidLongitude(Number.NEGATIVE_INFINITY), false);
+});
+
+test("email validation accepts well-formed addresses and rejects malformed ones", () => {
+  assert.equal(isValidEmail("resident@example.com"), true);
+  assert.equal(isValidEmail("first.last+tag@sub.example.com"), true);
+  assert.equal(isValidEmail("no-at-sign.example.com"), false);
+  assert.equal(isValidEmail("missing-domain@"), false);
+  assert.equal(isValidEmail("@missing-local.com"), false);
+  assert.equal(isValidEmail("has spaces@example.com"), false);
+  assert.equal(isValidEmail(`${"a".repeat(255)}@example.com`), false);
 });

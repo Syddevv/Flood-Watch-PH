@@ -61,48 +61,54 @@ The reporting system must have a clear, server-enforced strategy for multiple fl
 
 ---
 
-## Priority 1 — Authentication & User Accountability
+## Priority 1 — Authentication & User Accountability ✅ Done (2026-08-26)
 
 ### 2. Require Users to Create an Account
 
-**Priority:** 🔴 Critical
+**Priority:** 🔴 Critical — **Status: Implemented and verified.**
 
 FloodWatch PH should move from anonymous reporting toward authenticated reporting.
 
+> **Implementation summary:** Added `User` and `Session` models (DB-backed, revocable sessions — not the anonymous cookie's stateless HMAC pattern), migration `prisma/migrations/20260826_user_accounts/`. New `app/api/auth/{register,login,logout,session}/route.ts` endpoints, password hashing via Node's built-in `crypto.scrypt` (`lib/password.ts`, no new dependency), session cookie handling in `lib/auth-session.ts`/`lib/auth-session-token.ts`/`lib/cookies.ts` (the last extracted from `lib/report-session.ts` to share the cookie-parsing convention). `POST /api/reports` now hard-requires authentication (401 if signed out) and stamps `userId` instead of the anonymous `ownerSessionHash` on new reports. `isReportOwner`/`canAccessArchivedReport`/`serializeReportRecord` (`lib/report-api.ts`) became dual-mode — reports created before this shipped keep working via their `ownerSessionHash` for their original anonymous session, new reports are owned via `userId`, and an admin-role bypass exists in the check (no admin UI yet — that's Priority 5). Frontend: `app/login/page.tsx`, `app/register/page.tsx`, `components/auth-session-provider.tsx` (mounted in `app/layout.tsx` alongside the existing anonymous-session provider), a login/account chip in `components/app-header.tsx`, and the report form in `components/incident-reports-content.tsx` now shows a "sign in to report" prompt in place of the form when signed out — the server-side 401 remains the actual enforcement.
+>
+> Verified live end-to-end (register → create report → wrong/right password login → session check → logout → re-gate; a synthetic pre-existing anonymous-owned report confirmed still editable by its original session and rejected for others) and via a real-browser Playwright pass. Rescue requests as a distinct entity don't exist yet (Priority 6), so "require authentication before submitting a rescue request" isn't separately actionable — "Rescue Needed" still flows through the same now-authenticated report path. The admin dashboard itself (Priority 5) wasn't built; only the `role` field and the authorization primitive exist.
+>
+> **Not yet verified:** mobile viewport / touch interaction for the login/register forms and header chip (same gap noted for Priority 0).
+
 #### Requirements
 
-- [ ] Inspect the existing authentication architecture before introducing a new system.
-- [ ] Require authentication before submitting a flood report.
-- [ ] Require authentication before submitting a rescue request.
-- [ ] Preserve public access to viewing the flood map unless requirements state otherwise.
-- [ ] Clearly distinguish public map access from authenticated actions.
-- [ ] Associate every report with the authenticated user.
-- [ ] Associate every rescue request with the authenticated user.
-- [ ] Prevent spoofing another user's identity.
-- [ ] Validate authorization on the server/API layer.
-- [ ] Do not rely solely on client-side route protection.
-- [ ] Add appropriate login/register/logout flows.
-- [ ] Add session handling and expiration.
-- [ ] Handle unauthenticated users gracefully when they attempt restricted actions.
-- [ ] Preserve existing report links and public report viewing where possible.
-- [ ] Update the UI to communicate which actions require an account.
-- [ ] Ensure mobile authentication flows work correctly.
+- [x] Inspect the existing authentication architecture before introducing a new system.
+- [x] Require authentication before submitting a flood report.
+- [ ] Require authentication before submitting a rescue request. *(no separate rescue-request entity exists yet — deferred to Priority 6; the shared report path is now authenticated)*
+- [x] Preserve public access to viewing the flood map unless requirements state otherwise.
+- [x] Clearly distinguish public map access from authenticated actions.
+- [x] Associate every report with the authenticated user. (`FloodReport.userId`, new reports only — pre-existing reports keep their anonymous `ownerSessionHash`)
+- [ ] Associate every rescue request with the authenticated user. *(deferred with the item above — Priority 6)*
+- [x] Prevent spoofing another user's identity. (dual-mode ownership check, session tokens hashed before storage, generic login-failure messaging to prevent user enumeration)
+- [x] Validate authorization on the server/API layer.
+- [x] Do not rely solely on client-side route protection. (the form gate is UX only; `POST /api/reports` enforces the real 401 server-side)
+- [x] Add appropriate login/register/logout flows.
+- [x] Add session handling and expiration. (30-day DB-backed sessions, real revocation on logout)
+- [x] Handle unauthenticated users gracefully when they attempt restricted actions.
+- [x] Preserve existing report links and public report viewing where possible.
+- [x] Update the UI to communicate which actions require an account.
+- [ ] Ensure mobile authentication flows work correctly. *(not yet tested on a mobile viewport)*
 
 #### User data
 
-- [ ] Define the minimum user information required.
-- [ ] Avoid collecting unnecessary personal information.
-- [ ] Store passwords securely using the chosen authentication solution.
-- [ ] Never expose password hashes or sensitive authentication data through API responses.
-- [ ] Add role support for regular users and administrators.
-- [ ] Add database constraints/indexes where appropriate.
+- [x] Define the minimum user information required. (email + password only; display name optional)
+- [x] Avoid collecting unnecessary personal information.
+- [x] Store passwords securely using the chosen authentication solution. (`crypto.scrypt`, random per-user salt, timing-safe comparison)
+- [x] Never expose password hashes or sensitive authentication data through API responses.
+- [x] Add role support for regular users and administrators. (`User.role`, `"user"` default, `"admin"` supported — no admin UI yet)
+- [x] Add database constraints/indexes where appropriate.
 
 #### Authorization
 
-- [ ] Regular users can manage only actions they are authorized to perform.
-- [ ] Administrators can access administrative functionality.
-- [ ] Verify authorization on every protected API endpoint.
-- [ ] Do not rely on hidden UI elements as an authorization mechanism.
+- [x] Regular users can manage only actions they are authorized to perform.
+- [x] Administrators can access administrative functionality. *(primitive only — `isReportOwner`'s admin-role bypass; no admin-only routes exist yet to exercise it end-to-end)*
+- [x] Verify authorization on every protected API endpoint.
+- [x] Do not rely on hidden UI elements as an authorization mechanism.
 
 ---
 
@@ -581,7 +587,7 @@ At minimum, test the following areas.
 Coding agents should generally execute the work in this order:
 
 1. ~~**Same-location / incident handling**~~ ✅ Done (2026-08-23)
-2. **Authentication and user accounts**
+2. ~~**Authentication and user accounts**~~ ✅ Done (2026-08-26)
 3. **Calumpit geographic boundary**
 4. **Server-side reporting-area validation**
 5. **Report timestamps and location metadata**
