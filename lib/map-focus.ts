@@ -9,6 +9,7 @@ export type FocusableLeafletMap = {
   ) => void;
   project: (latLng: LeafletLatLng, zoom: number) => LeafletPoint;
   unproject: (point: LeafletPoint, zoom: number) => LeafletLatLng;
+  getZoom?: () => number;
 };
 
 export type FocusableLeafletMarker = {
@@ -51,6 +52,28 @@ export function getOffsetTargetCenter(
   return map.unproject({ x: projected.x + offset[0], y: projected.y + offset[1] }, zoom);
 }
 
+/**
+ * The zoom to focus a report at: the preferred zoom, or the user's current
+ * zoom when they are already closer in.
+ *
+ * Never zooming out is the point. Report pins can sit tens of metres apart,
+ * which is inside `maxClusterRadius` at the preferred zoom, so flying out to a
+ * fixed zoom hands the clicked marker back to leaflet.markercluster. The
+ * cluster then detaches the marker from the map and its popup closes on its
+ * own about a second after opening - right after the user drilled in to
+ * separate those pins in the first place.
+ */
+export function getReportFocusZoom(
+  currentZoom: number | undefined,
+  preferredZoom: number,
+): number {
+  if (typeof currentZoom !== "number" || !Number.isFinite(currentZoom)) {
+    return preferredZoom;
+  }
+
+  return Math.max(currentZoom, preferredZoom);
+}
+
 export function flyToWithOffset(
   map: FocusableLeafletMap,
   latLng: LeafletLatLng,
@@ -71,7 +94,7 @@ export function panToReportWithOffset(
   } = {},
 ) {
   const latLng = marker.getLatLng();
-  const zoom = options.zoom ?? 13;
+  const preferredZoom = options.zoom ?? 13;
   const reason = options.reason ?? "external";
 
   marker.openPopup();
@@ -80,7 +103,7 @@ export function panToReportWithOffset(
     flyToWithOffset(
       marker._map,
       latLng,
-      zoom,
+      getReportFocusZoom(marker._map.getZoom?.(), preferredZoom),
       getReportMarkerPanOffset(reason),
       options.flyDuration ?? (reason === "marker-click" ? 0.9 : 0.95),
     );

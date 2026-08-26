@@ -35,6 +35,7 @@ import {
 } from "@/lib/emergency-resources";
 import {
   flyToWithOffset,
+  getReportFocusZoom,
   panToReportWithOffset,
   type FocusableLeafletMarker,
 } from "@/lib/map-focus";
@@ -152,7 +153,10 @@ function openReportMarkerCentered(
     flyToWithOffset(
       marker._map,
       targetLatLng,
-      options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM,
+      getReportFocusZoom(
+        marker._map.getZoom?.(),
+        options.zoom ?? MOBILE_SELECTED_REPORT_ZOOM,
+      ),
       [0, MOBILE_SELECTED_REPORT_DOWN_OFFSET],
       options.flyDuration ?? 0.45,
     );
@@ -960,7 +964,10 @@ export function FloodMapClient({
                     selectedReportOpenReasonRef.current = "marker-click";
                     targetMarker._map?.flyTo(
                       targetMarker.getLatLng(),
-                      mobilePerformanceMode ? MOBILE_SELECTED_REPORT_ZOOM : 13,
+                      getReportFocusZoom(
+                        targetMarker._map.getZoom?.(),
+                        mobilePerformanceMode ? MOBILE_SELECTED_REPORT_ZOOM : 13,
+                      ),
                       {
                       duration: mobilePerformanceMode ? 0.45 : 0.9,
                       },

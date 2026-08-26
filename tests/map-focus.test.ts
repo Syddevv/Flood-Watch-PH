@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getOffsetTargetCenter } from "@/lib/map-focus";
+import { getOffsetTargetCenter, getReportFocusZoom } from "@/lib/map-focus";
 
 // A fake Leaflet map whose projection is a plain linear scale, so pixel
 // offsets translate into predictable lat/lng deltas: 1 px = 0.001 deg.
@@ -45,4 +45,22 @@ test("projection is evaluated at the target zoom, not the current one", () => {
 
   getOffsetTargetCenter(zoomTrackingMap, { lat: 14.9, lng: 120.7 }, 15, [10, 10]);
   assert.deepEqual(seenZooms, [15, 15]);
+});
+
+test("focusing a marker never zooms out from where the user already is", () => {
+  // Zooming out on a marker click is what re-clusters nearby pins: the clicked
+  // marker gets absorbed into a cluster, Leaflet detaches it from the map, and
+  // its popup closes on its own a second after opening.
+  assert.equal(getReportFocusZoom(17, 13), 17);
+  assert.equal(getReportFocusZoom(16.4, 13), 16.4);
+});
+
+test("focusing a marker zooms in when the user is further out", () => {
+  assert.equal(getReportFocusZoom(11, 13), 13);
+  assert.equal(getReportFocusZoom(13, 13), 13);
+});
+
+test("an unknown current zoom falls back to the preferred zoom", () => {
+  assert.equal(getReportFocusZoom(Number.NaN, 13), 13);
+  assert.equal(getReportFocusZoom(undefined, 13), 13);
 });
