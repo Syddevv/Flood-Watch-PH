@@ -122,6 +122,34 @@ export function formatRelativeTime(dateInput: Date | string) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+/**
+ * FloodWatch PH covers one municipality, so report times are always read in
+ * Philippine time regardless of where the browser happens to be. Same choice
+ * as the weather module's WEATHER_TIME_ZONE.
+ */
+export const REPORT_TIME_ZONE = "Asia/Manila";
+
+const reportTimestampFormatter = new Intl.DateTimeFormat("en-PH", {
+  timeZone: REPORT_TIME_ZONE,
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+/**
+ * The exact instant, for the report detail view. `formatRelativeTime` answers
+ * "how fresh is this?" but bottoms out at "N days ago"; an incident log needs
+ * a real date too.
+ */
+export function formatAbsoluteTime(dateInput: Date | string) {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return reportTimestampFormatter.format(date);
+}
+
 export function toCoordinatesLabel(latitude: number, longitude: number) {
   return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 }

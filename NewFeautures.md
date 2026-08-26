@@ -227,88 +227,112 @@ This distinction must exist in both the frontend and backend architecture. *(Imp
 
 ---
 
-## Priority 4 — Evidence Capture & Report Metadata
+## Priority 4 — Evidence Capture & Report Metadata ✅ Done (2026-08-26)
 
 ### 6. Allow Users to Capture an Image Directly Inside the Website
 
-**Priority:** 🟠 High
+**Priority:** 🟠 High — **Status: Implemented and verified.**
 
 Users should be able to capture flood evidence directly through the website rather than being limited to uploading an existing image.
 
+> **Implementation summary:** Capture happens in the page via `getUserMedia`, not by handing off to the OS camera app — the confirmed decision, because the native `capture` attribute is ignored by desktop browsers and puts retake outside the site. New `components/report-camera-capture.tsx` is a modal state machine (`requesting → streaming → capturing → captured → error`) following the dialog conventions of `components/weather-alert-viewer.tsx` — the repo's best a11y reference: `role="dialog"` + `aria-modal`, Escape to close, body scroll lock, initial focus on the shutter, bottom sheet on mobile and a centred card on desktop. Two supporting modules split by testability: `lib/report-image-capture.ts` is DOM-free (sizing maths, file naming, capability detection, error wording) and unit-tested; `lib/report-image-browser.ts` owns the `<canvas>`/`<video>` work and is covered by Playwright. The shutter stays disabled until the video reports real frame dimensions — a resolved stream is not yet a drawable one, and capturing early yields a 0×0 frame (found and fixed during browser testing). **Every** exit path — Use photo, Escape, scrim click, unmount, upload-instead — stops the media tracks; a leaked track leaves the device's camera light on after the user believes they closed it. Frames the user rejects never leave the browser.
+>
+> The photo section of `components/incident-reports-content.tsx` was reworked: **Take photo** and **Upload photo** as two distinct controls, a **remove** button (previously there was no way to un-attach a photo short of reloading), and working drag-and-drop — the copy had advertised "drop" since before this change while no `onDrop` handler existed. Captures always downscale to 1600 px / JPEG q0.85, and uploads over ~1.5 MB or 1600 px do too; the helper returns the **original file untouched** if anything fails, because a failed optimisation must never cost someone their report. Captures are named `flood-capture-YYYYMMDD-HHMMSS.jpg` — the `.jpg` is load-bearing, since `validateReportImageFile` cross-checks extension against MIME type and would reject a canvas JPEG named otherwise. Server-side image handling is unchanged: a canvas JPEG passes the existing `FF D8 FF` magic-byte check, and the 5 MB / 5.25 MB caps in `parseReportRequestFormData` still apply (Next 16 Route Handlers have no configurable body limit, so that application-level guard remains the only one).
+>
+> Verified: 9 unit tests (`tests/report-image-capture.test.ts` — aspect-preserving sizing, never upscaling, integer pixels, a generated filename round-tripped through the real `validateReportImageFile`, one message per `DOMException` name, secure-context detection) and 4 Playwright specs (`tests/browser/report-camera-capture.spec.ts` — capture → retake → use → remove, Escape leaving the form untouched, a `NotAllowedError` camera still offering upload, and the file input remaining singular so the existing `report-flows` locator holds). Chromium's synthetic capture device is enabled for every project in `playwright.config.ts`; the denial path is injected with `addInitScript`. Screenshots taken at 1440/390 px.
+>
+> **Not yet verified:** that the hardware camera indicator actually goes dark on exit — Playwright's fake device cannot show it, so only a real device can confirm the track cleanup. Real-device touch interaction remains the standing gap from P0–P3.
+
 #### Requirements
 
-- [ ] Add an option to open the device camera from the report form.
-- [ ] Support mobile browsers where camera access is available.
-- [ ] Allow users to take a photo directly from the browser.
-- [ ] Allow users to retake the photo.
-- [ ] Allow users to accept/use the captured photo.
-- [ ] Preserve the existing image upload option if already supported.
-- [ ] Clearly distinguish:
-  - [ ] Take Photo
-  - [ ] Upload Photo
+- [x] Add an option to open the device camera from the report form. (`data-testid="capture-report-image"`, hidden entirely when the browser or context cannot support it)
+- [x] Support mobile browsers where camera access is available. (`facingMode: { ideal: "environment" }`, `playsInline`, bottom-sheet layout)
+- [x] Allow users to take a photo directly from the browser.
+- [x] Allow users to retake the photo. (the stream is deliberately left running, so retake is instant)
+- [x] Allow users to accept/use the captured photo.
+- [x] Preserve the existing image upload option if already supported. (same single `<input type="file">`, same `choose-report-image` testid)
+- [x] Clearly distinguish:
+  - [x] Take Photo
+  - [x] Upload Photo
 
-- [ ] Handle camera permission denial gracefully.
-- [ ] Handle unsupported browsers gracefully.
-- [ ] Do not make camera access mandatory.
-- [ ] Compress/resize images when appropriate to control storage and upload size.
-- [ ] Validate image type and size on the server.
-- [ ] Prevent arbitrary non-image files from being uploaded.
-- [ ] Provide upload/capture progress where appropriate.
-- [ ] Ensure the feature works on common mobile browsers.
+- [x] Handle camera permission denial gracefully. (`NotAllowedError`/`SecurityError` → how to re-enable, plus an "Upload photo instead" action)
+- [x] Handle unsupported browsers gracefully. (the button never renders outside a secure context or without `mediaDevices`; unknown failures fall back to "This browser can't open the camera")
+- [x] Do not make camera access mandatory. (every error message names uploading as the way forward; the camera is an addition to the file picker, never a gate in front of it)
+- [x] Compress/resize images when appropriate to control storage and upload size. (1600 px / q0.85 for captures and oversized uploads; small images pass through untouched, as does anything the re-encode would enlarge)
+- [x] Validate image type and size on the server. (unchanged `validateReportImageFile` + magic-byte `validateReportImageBuffer`)
+- [x] Prevent arbitrary non-image files from being uploaded.
+- [x] Provide upload/capture progress where appropriate. ("Optimising photo..." with a spinner while downscaling; "Capturing..." on the shutter; the existing "Uploading report..." on submit)
+- [ ] Ensure the feature works on common mobile browsers. *(exercised in desktop Chromium at a 390 px viewport with a synthetic camera; not yet run on real iOS Safari or Android Chrome)*
 
 #### Privacy
 
-- [ ] Camera access must require explicit browser permission.
-- [ ] Do not activate the camera automatically without user interaction.
-- [ ] Do not retain camera data that the user did not submit.
-- [ ] Clearly communicate when a captured image will be attached to a report.
+- [x] Camera access must require explicit browser permission. (the browser's own prompt; nothing is pre-granted)
+- [x] Do not activate the camera automatically without user interaction. (`getUserMedia` is called only from the explicit "Take photo" press, never on mount)
+- [x] Do not retain camera data that the user did not submit. (tracks stopped on every exit path, object URLs revoked, rejected frames discarded in the browser)
+- [x] Clearly communicate when a captured image will be attached to a report. (modal copy: "It is attached only when you submit the report", and the attached card reads "Captured photo. It uploads when you submit this report.")
+
+> **Privacy improvement not asked for but worth recording:** both the capture and the upload path re-encode through a `<canvas>`, which drops EXIF. An uploaded phone photo therefore no longer carries the camera's embedded GPS coordinates into Cloudinary.
 
 ---
 
 ### 7. Add Reliable Report Timestamps, Latitude, Longitude, and Time Metadata
 
-**Priority:** 🟠 High
+**Priority:** 🟠 High — **Status: Implemented and verified.**
 
 Every report should contain reliable location and time information.
 
+> **Implementation summary:** The gap this closes: GPS accuracy was **already being read** in `components/incident-reports-content.tsx` and thrown away inside a toast string — the code even carried a comment explaining that the server had no accuracy value — and nothing recorded whether a pin came from GPS, a map tap, a search result or hand-typed numbers, so a ±5 m fix and a guess were indistinguishable to a responder. New `lib/report-location-metadata.ts` (plain TypeScript, no Prisma, shared by the form, the picker, the API route and the tests) defines the vocabulary `gps | map | search | manual` plus parsing and labelling. Migration `prisma/migrations/20260826_report_capture_metadata/` adds `locationSource` (NOT NULL, default `manual`), `gpsAccuracyMeters` and `photoCapturedAt`, an index, and two `NOT VALID` CHECK constraints — one pinning the vocabulary, one making "accuracy only ever accompanies a positive GPS reading" structural rather than merely enforced in code. Purely additive; all 42 pre-existing reports backfilled to `manual` with a null accuracy, which is the honest reading — their provenance genuinely is unknown.
+>
+> Accuracy is deliberately bound to `source === "gps"`: only the Geolocation API measures it, so letting any other source carry one would let a hand-typed coordinate render as an instrument reading. Provenance is captured at each of the four entry points — the GPS handler, the picker (which now distinguishes a map tap/drag from a search result and passes it through `onConfirm`), and the manual latitude/longitude inputs, which reset the source to `manual` and clear the accuracy because a GPS fix nudged by hand is no longer a GPS fix. Coordinates are normalised to **6 decimal places (~0.11 m) before** the Calumpit polygon test, so the value that gets validated is the value that gets stored; previously the picker emitted `toFixed(6)` while a GPS fix arrived as a full unrounded double. Far below the 300 m incident-matching radius, so P0 matching is untouched.
+>
+> Display (`lib/reporting.ts`, `lib/report-ui.ts`, `components/incident-report-modal.tsx`): a new `formatAbsoluteTime` renders `Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila" })` — FloodWatch PH covers one municipality, so report times are read in Philippine time wherever the browser is. `formatRelativeTime` is untouched, so the ~10 components that render it did not churn; instead the report detail shows the absolute stamp as a hint beneath the relative one, a provenance line beside the coordinates ("14.9165, 120.7662 · GPS · ±8 m"), and a "Photo taken ..." badge over the image when a capture time exists. All report rendering is client-only, so no hydration risk was introduced.
+>
+> **A pre-existing bug was found and fixed first, because it blocked this work:** `app/api/reports/[id]/route.ts` spread `parsedReport.data` — which contained `forceNewIncident`, a submission flag rather than a column — straight into `prisma.floodReport.update`, so **every PATCH raised `PrismaClientValidationError` and returned a generic 500**. There was no PATCH test. `parseReportDetailsFormData` now returns `forceNewIncident` as a sibling of `data`, so `data` holds columns only, and a regression test pins it. The PATCH route additionally leaves capture metadata alone unless the request actually carries a `locationSource`: the edit form omits it, and parsing an absent field yields `manual`, which would have quietly downgraded every GPS report the first time somebody fixed a typo in its description.
+>
+> Verified: 9 unit tests in `tests/report-location-metadata.test.ts`, 4 in `tests/report-time-format.test.ts` (including a UTC instant that crosses midnight in Manila), plus new cases in `tests/report-api.test.ts` and `tests/validations.test.ts`. Live against the database: a GPS submission stored `gps`/12.4 m with coordinates rounded to 6 dp; a `map` source carrying an accuracy had it dropped; `locationSource=hack-attempt` degraded to `manual` rather than erroring; a 3-day-old `photoCapturedAt` was discarded while an in-window one persisted; and a description-only PATCH returned 200 with GPS provenance intact.
+>
+> **Not yet verified:** real-device touch interaction (standing gap from P0–P3).
+
 #### Required report metadata
 
-- [ ] Report creation timestamp.
-- [ ] Report update timestamp.
-- [ ] Latitude.
-- [ ] Longitude.
-- [ ] User/report author.
-- [ ] Optional photo timestamp/metadata where appropriate.
-- [ ] Location accuracy when available from device GPS.
+- [x] Report creation timestamp. (`createdAt`, server-generated)
+- [x] Report update timestamp. (`updatedAt` via Prisma `@updatedAt`, plus `lastActivityAt`)
+- [x] Latitude.
+- [x] Longitude.
+- [x] User/report author. (`userId` since Priority 1)
+- [x] Optional photo timestamp/metadata where appropriate. (`photoCapturedAt`, set only by in-app captures and stored only when an image is actually attached)
+- [x] Location accuracy when available from device GPS. (`gpsAccuracyMeters`)
 
 #### Requirements
 
-- [ ] Generate the authoritative report creation timestamp on the server.
-- [ ] Do not trust a client-provided timestamp as the canonical creation time.
-- [ ] Store timestamps consistently in UTC.
-- [ ] Convert/display timestamps according to the user's locale where appropriate.
-- [ ] Store coordinates using an appropriate numeric precision.
-- [ ] Validate latitude range: `-90` to `90`.
-- [ ] Validate longitude range: `-180` to `180`.
-- [ ] Validate that coordinates fall within the allowed reporting area.
-- [ ] Capture GPS coordinates when the user grants location permission.
-- [ ] Allow map selection when GPS is unavailable.
-- [ ] Store GPS accuracy when available.
-- [ ] Clearly identify whether a location came from:
-  - [ ] GPS
-  - [ ] Map selection
-  - [ ] Search/geocoding
+- [x] Generate the authoritative report creation timestamp on the server. (one `new Date()` per transaction plus database defaults)
+- [x] Do not trust a client-provided timestamp as the canonical creation time. (`photoCapturedAt` is the only client-supplied time in the schema; it is descriptive metadata about the image and never substitutes for `createdAt`)
+- [x] Store timestamps consistently in UTC. (`TIMESTAMP(3)`; Prisma writes UTC instants)
+- [x] Convert/display timestamps according to the user's locale where appropriate. (`en-PH` / `Asia/Manila` — a deliberate fixed zone for a single-municipality system, matching the weather module)
+- [x] Store coordinates using an appropriate numeric precision. (normalised to 6 dp before validation and storage)
+- [x] Validate latitude range: `-90` to `90`.
+- [x] Validate longitude range: `-180` to `180`.
+- [x] Validate that coordinates fall within the allowed reporting area. (unchanged `isWithinCalumpit`, now applied to the rounded value)
+- [x] Capture GPS coordinates when the user grants location permission.
+- [x] Allow map selection when GPS is unavailable.
+- [x] Store GPS accuracy when available. (only for `gps`; rejected if non-positive, non-finite or beyond 100 km, and rounded to 0.1 m)
+- [x] Clearly identify whether a location came from:
+  - [x] GPS
+  - [x] Map selection
+  - [x] Search/geocoding
 
-- [ ] Do not allow users to manipulate authoritative server timestamps.
-- [ ] Ensure existing reports receive appropriate timestamps during migration if necessary.
+  *(a fourth value, `manual`, covers hand-typed coordinates and every pre-migration report)*
+
+- [x] Do not allow users to manipulate authoritative server timestamps. (no request field reaches `createdAt`/`updatedAt`/`lastActivityAt`; an out-of-window `photoCapturedAt` is silently dropped rather than rejected, so a skewed device clock cannot block a submission)
+- [x] Ensure existing reports receive appropriate timestamps during migration if necessary. (timestamps were already present; the new columns backfill to `manual`/null)
 
 #### Display
 
-- [ ] Show report date/time in report details.
-- [ ] Show location coordinates where useful.
-- [ ] Consider displaying approximate location to public users if privacy requirements require it.
-- [ ] Show relative time where useful, e.g. "10 minutes ago."
-- [ ] Preserve the exact underlying timestamp for administrative purposes.
+- [x] Show report date/time in report details. (absolute stamp under both "Reported" and "Last activity")
+- [x] Show location coordinates where useful. (report detail, at 4 dp, now with the provenance and accuracy beside them)
+- [x] Consider displaying approximate location to public users if privacy requirements require it. **Considered and declined**, per the confirmed decision: a flood report marks a flooded street rather than a residence, responders need the precise spot, and the map pin already discloses it. Recorded here rather than silently skipped — revisit if reports ever cover private dwellings.
+- [x] Show relative time where useful, e.g. "10 minutes ago." (unchanged `formatRelativeTime`, now paired with the exact time instead of replaced by it)
+- [x] Preserve the exact underlying timestamp for administrative purposes. (full ISO timestamps continue to reach the client; only the rendering is humanised)
 
 ---
 
@@ -526,8 +550,8 @@ All critical constraints must be enforced on the backend.
 - [ ] Validate admin authorization.
 - [ ] Validate coordinates.
 - [ ] Validate Calumpit boundary.
-- [ ] Validate timestamps.
-- [ ] Validate uploaded files.
+- [x] Validate timestamps. *(closed by Priority 4: the only client-supplied time is clamped to a sane window server-side; all authoritative timestamps are server-generated)*
+- [x] Validate uploaded files. *(extension/MIME cross-check, magic-byte sniffing, and the 5 MB / 5.25 MB caps — predates P4, re-confirmed against canvas-encoded captures)*
 - [ ] Validate report status transitions.
 - [ ] Validate rescue request status transitions.
 - [ ] Validate incident associations.
@@ -571,7 +595,7 @@ At minimum, test the following areas.
 
 - [ ] Create report.
 - [ ] Create report with photo.
-- [ ] Create report using captured image.
+- [x] Create report using captured image. *(closed by Priority 4: `tests/browser/report-camera-capture.spec.ts` covers capture → retake → use → remove, and a live submission with a captured JPEG stored its `photoCapturedAt`)*
 - [ ] Missing required fields.
 - [ ] Invalid coordinates.
 - [ ] Duplicate/same-location report.
@@ -606,8 +630,8 @@ Coding agents should generally execute the work in this order:
 2. ~~**Authentication and user accounts**~~ ✅ Done (2026-08-26)
 3. ~~**Calumpit geographic boundary**~~ ✅ Done (2026-08-26)
 4. ~~**Server-side reporting-area validation**~~ ✅ Done (2026-08-26)
-5. **Report timestamps and location metadata**
-6. **Direct camera/image capture**
+5. ~~**Report timestamps and location metadata**~~ ✅ Done (2026-08-26)
+6. ~~**Direct camera/image capture**~~ ✅ Done (2026-08-26)
 7. **Admin authentication and roles**
 8. **Admin dashboard**
 9. **Report monitoring and management**

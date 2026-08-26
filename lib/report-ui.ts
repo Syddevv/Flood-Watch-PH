@@ -1,5 +1,10 @@
 import {
+  describeReportLocationProvenance,
+  parseReportLocationSource,
+} from "@/lib/report-location-metadata";
+import {
   deriveCommunityStatus,
+  formatAbsoluteTime,
   formatCountLabel,
   formatRelativeTime,
   getReportCategoryLabel,
@@ -144,7 +149,16 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     archivedAt: report.archivedAt,
     resolvedAt: report.resolvedAt,
     reportedAgo: formatRelativeTime(createdAt),
+    reportedAtLabel: formatAbsoluteTime(createdAt),
     lastActivityAgo: formatRelativeTime(lastActivityAt),
+    lastActivityAtLabel: formatAbsoluteTime(lastActivityAt),
+    locationProvenanceLabel: describeReportLocationProvenance(
+      parseReportLocationSource(report.locationSource),
+      report.gpsAccuracyMeters,
+    ),
+    photoCapturedAtLabel: report.photoCapturedAt
+      ? formatAbsoluteTime(report.photoCapturedAt)
+      : undefined,
     confirmations: confirmationCount,
     resolvedConfirmations: resolvedCount,
     lastConfirmedAt: report.lastConfirmedAt ?? null,

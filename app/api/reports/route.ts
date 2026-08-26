@@ -78,7 +78,10 @@ type ReportListRecord = {
   locationName: string;
   latitude: number;
   longitude: number;
+  locationSource: string;
+  gpsAccuracyMeters: number | null;
   imageUrl: string | null;
+  photoCapturedAt: Date | null;
   ownerSessionHash: string | null;
   userId: string | null;
   reportedByName: string | null;
@@ -383,8 +386,11 @@ export async function POST(request: Request) {
       reportedByName,
       latitude,
       longitude,
-      forceNewIncident,
+      locationSource,
+      gpsAccuracyMeters,
+      photoCapturedAt,
     } = parsedReport.data;
+    const { forceNewIncident } = parsedReport;
 
     const now = new Date();
     const { report, incident } = await prisma.$transaction(
@@ -430,7 +436,10 @@ export async function POST(request: Request) {
                 locationName,
                 latitude,
                 longitude,
+                locationSource,
+                gpsAccuracyMeters,
                 imageUrl,
+                photoCapturedAt: imageUrl ? photoCapturedAt : null,
                 userId: authenticatedUser.id,
                 reportedByName,
                 sourceType: "Community",
@@ -479,7 +488,10 @@ export async function POST(request: Request) {
             locationName,
             latitude,
             longitude,
+            locationSource,
+            gpsAccuracyMeters,
             imageUrl,
+            photoCapturedAt: imageUrl ? photoCapturedAt : null,
             userId: authenticatedUser.id,
             reportedByName,
             sourceType: "Community",

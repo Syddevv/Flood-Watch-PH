@@ -29,7 +29,10 @@ type NearbyReportRecord = {
   locationName: string;
   latitude: number;
   longitude: number;
+  locationSource: string;
+  gpsAccuracyMeters: number | null;
   imageUrl: string | null;
+  photoCapturedAt: Date | null;
   ownerSessionHash: string | null;
   userId: string | null;
   reportedByName: string | null;

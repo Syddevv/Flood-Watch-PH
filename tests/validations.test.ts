@@ -18,6 +18,7 @@ import {
   isValidReportSeverity,
   isValidReportSourceType,
   isValidReportStatus,
+  roundCoordinate,
 } from "@/lib/validations";
 
 test("bounded text normalization rejects oversized provider and database inputs", () => {
@@ -96,6 +97,17 @@ test("longitude validation enforces finite geographic bounds", () => {
   assert.equal(isValidLongitude(180.0001), false);
   assert.equal(isValidLongitude(Number.NaN), false);
   assert.equal(isValidLongitude(Number.NEGATIVE_INFINITY), false);
+});
+
+test("report coordinates round to six decimal places without losing valid values", () => {
+  assert.equal(roundCoordinate(14.9161234567), 14.916123);
+  assert.equal(roundCoordinate(120.7659999), 120.766);
+  assert.equal(roundCoordinate(-14.9165), -14.9165);
+  // Already-rounded picker output is unchanged.
+  assert.equal(roundCoordinate(14.916), 14.916);
+  assert.equal(roundCoordinate(0), 0);
+  // Non-finite input is passed through so the range check owns the rejection.
+  assert.equal(Number.isNaN(roundCoordinate(Number.NaN)), true);
 });
 
 test("email validation accepts well-formed addresses and rejects malformed ones", () => {

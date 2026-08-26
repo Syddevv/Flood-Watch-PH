@@ -56,6 +56,29 @@ export function isValidLongitude(value: number): boolean {
   return Number.isFinite(value) && value >= -180 && value <= 180;
 }
 
+/**
+ * Six decimal places is about 0.11 m - finer than any consumer GPS and far
+ * below the incident-matching radius, so rounding here changes no behaviour.
+ * It exists so the three capture paths agree: the map picker already emits
+ * `toFixed(6)` while a GPS fix arrives as a full double.
+ *
+ * Distinct from `roundWeatherCoordinate` in lib/api-utils.ts, which rounds
+ * much coarser on purpose to make weather cache keys collide.
+ */
+export const REPORT_COORDINATE_PRECISION = 6;
+
+export function roundCoordinate(
+  value: number,
+  decimals: number = REPORT_COORDINATE_PRECISION,
+): number {
+  if (!Number.isFinite(value)) {
+    return value;
+  }
+
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
 

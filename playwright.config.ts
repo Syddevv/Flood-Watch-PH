@@ -15,5 +15,19 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Chromium ships a synthetic camera that getUserMedia can open without
+        // a real device or a permission prompt, so the capture flow is
+        // exercisable in CI. This is the media equivalent of the
+        // context.setGeolocation stub used by the picker specs.
+        launchOptions: {
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+        },
+      },
+    },
+  ],
 });
