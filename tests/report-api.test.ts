@@ -100,9 +100,90 @@ test("report details are normalized and parsed into typed values", () => {
       reportedByName: "Juan Dela Cruz",
       latitude: 14.916,
       longitude: 120.766,
-      forceNewIncident: false,
+      locationSource: "manual",
+      gpsAccuracyMeters: null,
+      photoCapturedAt: null,
     },
+    forceNewIncident: false,
   });
+});
+
+test("capture metadata is parsed alongside the report details", () => {
+  const now = new Date("2026-08-26T12:00:00.000Z");
+  const capturedAt = new Date("2026-08-26T11:55:00.000Z");
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising near the bridge.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Poblacion, Calumpit");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
+  formData.set("locationSource", "gps");
+  formData.set("gpsAccuracyMeters", "12.44");
+  formData.set("photoCapturedAt", capturedAt.toISOString());
+
+  const result = parseReportDetailsFormData(formData, now);
+
+  assert.equal(result.data?.locationSource, "gps");
+  assert.equal(result.data?.gpsAccuracyMeters, 12.4);
+  assert.deepEqual(result.data?.photoCapturedAt, capturedAt);
+});
+
+test("a spoofed accuracy on a non-GPS source is discarded, never a 500", () => {
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising near the bridge.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Poblacion, Calumpit");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
+  formData.set("locationSource", "hack-attempt");
+  formData.set("gpsAccuracyMeters", "1");
+
+  const result = parseReportDetailsFormData(formData);
+
+  assert.equal(result.data?.locationSource, "manual");
+  assert.equal(result.data?.gpsAccuracyMeters, null);
+});
+
+test("coordinates are normalized to six decimal places before storage", () => {
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising near the bridge.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Poblacion, Calumpit");
+  // An unrounded GPS double, as navigator.geolocation actually reports it.
+  formData.set("latitude", "14.9161234567891");
+  formData.set("longitude", "120.7659876543211");
+
+  const result = parseReportDetailsFormData(formData);
+
+  assert.equal(result.data?.latitude, 14.916123);
+  assert.equal(result.data?.longitude, 120.765988);
+});
+
+test("parsed report data holds only FloodReport columns so it can be spread into Prisma", () => {
+  // Regression guard: forceNewIncident is a submission flag, not a column.
+  // PATCH /api/reports/[id] spreads this object straight into
+  // prisma.floodReport.update, so a stray key there is a 500 on every edit.
+  const formData = new FormData();
+  formData.set("title", "Flooded street");
+  formData.set("description", "Water is rising near the bridge.");
+  formData.set("category", "Flooding");
+  formData.set("severity", "High");
+  formData.set("locationName", "Poblacion, Calumpit");
+  formData.set("latitude", "14.916");
+  formData.set("longitude", "120.766");
+  formData.set("forceNewIncident", "true");
+
+  const result = parseReportDetailsFormData(formData);
+
+  assert.ok(result.data);
+  assert.equal("forceNewIncident" in result.data, false);
+  assert.equal(result.forceNewIncident, true);
 });
 
 test("forceNewIncident parses the literal string 'true', defaults to false otherwise", () => {
@@ -117,10 +198,10 @@ test("forceNewIncident parses the literal string 'true', defaults to false other
   formData.set("forceNewIncident", "true");
 
   const result = parseReportDetailsFormData(formData);
-  assert.equal(result.data?.forceNewIncident, true);
+  assert.equal(result.forceNewIncident, true);
 
   formData.set("forceNewIncident", "yes");
-  assert.equal(parseReportDetailsFormData(formData).data?.forceNewIncident, false);
+  assert.equal(parseReportDetailsFormData(formData).forceNewIncident, false);
 });
 
 test("report details reject invalid coordinates and enum values", () => {

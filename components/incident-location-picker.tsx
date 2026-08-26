@@ -6,6 +6,7 @@ import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 
 import { searchLocation } from "@/lib/location-client";
 import { resolveReportLocationName } from "@/lib/report-location-client";
+import type { ReportLocationSource } from "@/lib/report-location-metadata";
 import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
@@ -24,16 +25,21 @@ const DynamicIncidentLocationPickerMap = dynamic(
   },
 );
 
+/** The picker itself only ever produces these two of the four sources. */
+type PickedLocationSource = Extract<ReportLocationSource, "map" | "search">;
+
 type PickedLocation = {
   locationName: string;
   latitude: string;
   longitude: string;
+  source: PickedLocationSource;
 };
 
 type SelectionState = {
   latitude: number;
   longitude: number;
   locationName: string;
+  source: PickedLocationSource;
 };
 
 type IncidentLocationPickerProps = {
@@ -78,6 +84,9 @@ export function IncidentLocationPicker({
             initialCoordinates.latitude,
             initialCoordinates.longitude,
           ),
+        // Re-opening the picker on an existing pin: until the user moves it,
+        // treat it as a map pin rather than inventing a richer provenance.
+        source: "map" as const,
       }
     : null;
 
@@ -144,6 +153,7 @@ export function IncidentLocationPicker({
       latitude,
       longitude,
       locationName: fallbackLocationName,
+      source: "map",
     });
 
     try {
@@ -158,6 +168,7 @@ export function IncidentLocationPicker({
         latitude,
         longitude,
         locationName,
+        source: "map",
       });
     } catch {
       if (resolveRequestRef.current !== requestId) {
@@ -171,6 +182,7 @@ export function IncidentLocationPicker({
         latitude,
         longitude,
         locationName: fallbackLocationName,
+        source: "map",
       });
     } finally {
       if (resolveRequestRef.current === requestId) {
@@ -196,6 +208,7 @@ export function IncidentLocationPicker({
         latitude: result.latitude,
         longitude: result.longitude,
         locationName: result.name.trim() || trimmedQuery,
+        source: "search" as const,
       };
 
       setSelection(nextSelection);
@@ -243,6 +256,7 @@ export function IncidentLocationPicker({
       locationName: selection.locationName,
       latitude: selection.latitude.toFixed(6),
       longitude: selection.longitude.toFixed(6),
+      source: selection.source,
     });
   }
 

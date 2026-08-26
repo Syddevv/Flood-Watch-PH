@@ -1,3 +1,4 @@
+import type { ReportLocationSource } from "./report-location-metadata";
 import type { IncidentReportStatus } from "./types";
 
 export type ReportUpdateItem = {
@@ -23,7 +24,10 @@ export type ReportRecord = {
   locationName: string;
   latitude: number;
   longitude: number;
+  locationSource: ReportLocationSource;
+  gpsAccuracyMeters: number | null;
   imageUrl: string | null;
+  photoCapturedAt: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   officialSourceName?: string | null;

@@ -25,7 +25,8 @@ test.describe("report browser flows", () => {
       mimeType: "image/svg+xml",
       buffer: Buffer.from("not an accepted image"),
     });
-    await expect(page.getByText(/JPG, PNG, or WEBP/i)).toBeVisible();
+    // Scoped to the rejection toast - the dropzone copy names the same formats.
+    await expect(page.getByText(/Upload a JPG, PNG, or WEBP image only/i)).toBeVisible();
   });
 
   test("report details expose the ownership management control when available", async ({ page }) => {

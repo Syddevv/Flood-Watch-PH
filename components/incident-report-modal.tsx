@@ -100,10 +100,13 @@ function SummaryMetric({
   icon,
   label,
   value,
+  hint,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  /** Exact timestamp under the relative one, for the incident record. */
+  hint?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] py-2 last:border-b-0 sm:block sm:rounded-[14px] sm:border sm:bg-[var(--color-panel)] sm:px-3.5 sm:py-3">
@@ -111,8 +114,15 @@ function SummaryMetric({
         {icon}
         <span>{label}</span>
       </div>
-      <div className="text-right text-[0.82rem] font-semibold text-[var(--color-foreground)] sm:mt-1.5 sm:text-left sm:text-[0.92rem]">
-        {value}
+      <div className="text-right sm:mt-1.5 sm:text-left">
+        <div className="text-[0.82rem] font-semibold text-[var(--color-foreground)] sm:text-[0.92rem]">
+          {value}
+        </div>
+        {hint ? (
+          <div className="mt-0.5 text-[0.7rem] font-normal tabular-nums text-[var(--color-muted-foreground)] sm:text-[0.74rem]">
+            {hint}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -518,6 +528,15 @@ export function IncidentReportModal({
                 </button>
               </>
             ) : null}
+
+            {report.photoCapturedAtLabel ? (
+              <span
+                data-testid="photo-captured-at"
+                className="absolute bottom-2.5 left-2.5 rounded-full bg-slate-900/70 px-2.5 py-1 text-[0.68rem] font-medium tabular-nums text-white md:bottom-3 md:left-3"
+              >
+                Photo taken {report.photoCapturedAtLabel}
+              </span>
+            ) : null}
             </div>
           ) : null}
 
@@ -582,7 +601,13 @@ export function IncidentReportModal({
                 <div className="min-w-0">
                   <div>{report.location}</div>
                   <div className="mt-0.5 text-[0.72rem] text-[var(--color-muted-foreground)] md:text-[0.78rem]">
-                    {report.coordinatesLabel}
+                    <span className="tabular-nums">{report.coordinatesLabel}</span>
+                    {report.locationProvenanceLabel ? (
+                      <span data-testid="report-location-provenance">
+                        {" · "}
+                        {report.locationProvenanceLabel}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -593,11 +618,13 @@ export function IncidentReportModal({
                 icon={<Clock3 className="h-3.5 w-3.5" />}
                 label="Reported"
                 value={report.reportedAgo}
+                hint={report.reportedAtLabel}
               />
               <SummaryMetric
                 icon={<Waves className="h-3.5 w-3.5" />}
                 label="Last activity"
                 value={activityLabel}
+                hint={report.lastActivityAtLabel}
               />
               <SummaryMetric
                 icon={<ThumbsUp className="h-3.5 w-3.5" />}

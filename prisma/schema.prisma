@@ -21,7 +21,10 @@ model FloodReport {
   locationName      String
   latitude          Float
   longitude         Float
+  locationSource    String               @default("manual")
+  gpsAccuracyMeters Float?
   imageUrl          String?
+  photoCapturedAt   DateTime?
   ownerSessionHash  String?
   reportedByName    String?
   sourceType        String               @default("Community")
@@ -46,6 +49,7 @@ model FloodReport {
   @@index([sourceType, createdAt])
   @@index([lastActivityAt])
   @@index([latitude, longitude])
+  @@index([locationSource])
   @@index([incidentId])
   @@index([userId])
 }

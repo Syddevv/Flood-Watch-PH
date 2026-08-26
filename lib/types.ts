@@ -235,7 +235,11 @@ export type IncidentReport = {
   archivedAt?: string | null;
   resolvedAt?: string | null;
   reportedAgo: string;
+  reportedAtLabel?: string;
   lastActivityAgo?: string;
+  lastActivityAtLabel?: string;
+  locationProvenanceLabel?: string;
+  photoCapturedAtLabel?: string;
   confirmations: number;
   resolvedConfirmations: number;
   lastConfirmedAt?: string | null;

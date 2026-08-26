@@ -136,11 +136,27 @@ export async function PATCH(request: Request, context: RouteContext) {
       imageUrl = uploadResult.imageUrl;
     }
 
+    // Capture metadata describes how the location was originally obtained, so
+    // an edit that never touched the location must not overwrite it. The edit
+    // form omits `locationSource` entirely, and parsing an absent field yields
+    // "manual" - spreading that unconditionally would quietly downgrade every
+    // GPS report the first time somebody fixed a typo in its description.
+    const {
+      locationSource,
+      gpsAccuracyMeters,
+      photoCapturedAt,
+      ...reportColumns
+    } = parsedReport.data;
+    const captureMetadata = formData.has("locationSource")
+      ? { locationSource, gpsAccuracyMeters }
+      : {};
+
     const updatedReport = await prisma.floodReport.update({
       where: { id },
       data: {
-        ...parsedReport.data,
-        ...(imageUrl ? { imageUrl } : {}),
+        ...reportColumns,
+        ...captureMetadata,
+        ...(imageUrl ? { imageUrl, photoCapturedAt } : {}),
         lastActivityAt: new Date(),
       },
       include: reportDetailInclude,

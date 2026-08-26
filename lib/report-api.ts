@@ -5,11 +5,17 @@ import {
   validateReportImageBuffer,
   validateReportImageFile,
 } from "@/lib/report-image-validation";
+import {
+  parseGpsAccuracyMeters,
+  parsePhotoCapturedAt,
+  parseReportLocationSource,
+} from "@/lib/report-location-metadata";
 import { isSupportedReportCategory } from "@/lib/reporting";
 import {
   isValidLatitude,
   isValidLongitude,
   isValidReportSeverity,
+  roundCoordinate,
 } from "@/lib/validations";
 
 export const REPORT_OWNER_FORBIDDEN_MESSAGE =
@@ -46,7 +52,10 @@ export type PublicReportRecord = {
   locationName: string;
   latitude: number;
   longitude: number;
+  locationSource: string;
+  gpsAccuracyMeters: number | null;
   imageUrl: string | null;
+  photoCapturedAt: Date | null;
   ownerSessionHash?: string | null;
   userId?: string | null;
   reportedByName: string | null;
@@ -221,16 +230,22 @@ export async function uploadReportImageFile(imageFile: File) {
   }
 }
 
-export function parseReportDetailsFormData(formData: FormData) {
+export function parseReportDetailsFormData(formData: FormData, now: Date = new Date()) {
   const title = getOptionalText(formData.get("title"));
   const description = getOptionalText(formData.get("description"));
   const category = getOptionalText(formData.get("category"));
   const severity = getOptionalText(formData.get("severity"));
   const locationName = getOptionalText(formData.get("locationName"));
   const reportedByName = getOptionalText(formData.get("reportedByName"));
-  const latitude = Number(formData.get("latitude"));
-  const longitude = Number(formData.get("longitude"));
+  const rawLatitude = Number(formData.get("latitude"));
+  const rawLongitude = Number(formData.get("longitude"));
   const forceNewIncident = formData.get("forceNewIncident") === "true";
+  const locationSource = parseReportLocationSource(formData.get("locationSource"));
+  const gpsAccuracyMeters = parseGpsAccuracyMeters(
+    formData.get("gpsAccuracyMeters"),
+    locationSource,
+  );
+  const photoCapturedAt = parsePhotoCapturedAt(formData.get("photoCapturedAt"), now);
 
   if (!title) {
     return { error: "Title is required." };
@@ -272,13 +287,18 @@ export function parseReportDetailsFormData(formData: FormData) {
     return { error: "Location name must not exceed 160 characters." };
   }
 
-  if (!Number.isFinite(latitude) || !isValidLatitude(latitude)) {
+  if (!Number.isFinite(rawLatitude) || !isValidLatitude(rawLatitude)) {
     return { error: "Invalid latitude value." };
   }
 
-  if (!Number.isFinite(longitude) || !isValidLongitude(longitude)) {
+  if (!Number.isFinite(rawLongitude) || !isValidLongitude(rawLongitude)) {
     return { error: "Invalid longitude value." };
   }
+
+  // Normalize before the boundary test so the value that gets validated is
+  // exactly the value that gets stored.
+  const latitude = roundCoordinate(rawLatitude);
+  const longitude = roundCoordinate(rawLongitude);
 
   if (!isWithinCalumpit(latitude, longitude)) {
     return { error: OUTSIDE_CALUMPIT_ERROR_MESSAGE };
@@ -288,6 +308,9 @@ export function parseReportDetailsFormData(formData: FormData) {
     return { error: "Reported by name must not exceed 80 characters." };
   }
 
+  // `data` holds FloodReport columns only, so callers can spread it straight
+  // into a Prisma create/update. `forceNewIncident` is a submission flag that
+  // steers incident matching, not a column - it stays a sibling key.
   return {
     data: {
       title,
@@ -298,8 +321,11 @@ export function parseReportDetailsFormData(formData: FormData) {
       reportedByName,
       latitude,
       longitude,
-      forceNewIncident,
+      locationSource,
+      gpsAccuracyMeters,
+      photoCapturedAt,
     },
+    forceNewIncident,
   };
 }
 
