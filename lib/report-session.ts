@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
+import { ConfigurationError } from "@/lib/configuration-error";
 import { buildSessionCookie, getCookieValue } from "@/lib/cookies";
 
 export const REPORT_SESSION_COOKIE_NAME = "floodwatch_report_session";
@@ -18,11 +19,11 @@ function getReportSessionSecret() {
       return "floodwatch-local-development-report-session-secret";
     }
 
-    throw new Error("REPORT_SESSION_SECRET must be set in production.");
+    throw new ConfigurationError("REPORT_SESSION_SECRET must be set in production.");
   }
 
   if (secret.length < 32) {
-    throw new Error("REPORT_SESSION_SECRET must be at least 32 characters.");
+    throw new ConfigurationError("REPORT_SESSION_SECRET must be at least 32 characters.");
   }
 
   return secret;

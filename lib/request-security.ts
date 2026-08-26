@@ -3,6 +3,7 @@ import "server-only";
 import { createHmac } from "node:crypto";
 
 import { errorResponse } from "@/lib/api-response";
+import { ConfigurationError } from "@/lib/configuration-error";
 import { prisma } from "@/lib/prisma";
 import { getRateLimitIdentity } from "@/lib/rate-limit-identity";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
@@ -35,13 +36,15 @@ function getProtectionSecret() {
       return "floodwatch-local-development-abuse-protection-secret";
     }
 
-    throw new Error(
+    throw new ConfigurationError(
       "ABUSE_PROTECTION_SECRET or REPORT_SESSION_SECRET must be set in production.",
     );
   }
 
   if (secret.length < 32) {
-    throw new Error("The abuse protection secret must be at least 32 characters.");
+    throw new ConfigurationError(
+      "The abuse protection secret must be at least 32 characters.",
+    );
   }
 
   return secret;
@@ -98,10 +101,9 @@ function isTrustedOrigin(request: Request) {
 }
 
 async function consumeRateLimit(
-  request: Request,
-  { scope, limit, windowMs }: ApiProtectionOptions,
+  key: string,
+  { limit, windowMs }: Pick<ApiProtectionOptions, "limit" | "windowMs">,
 ) {
-  const key = createRateLimitKey(request, scope);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + windowMs);
   const rows = await prisma.$queryRaw<RateLimitRow[]>`
@@ -132,10 +134,6 @@ async function consumeRateLimit(
     allowed: result.count <= limit,
     expiresAt: result.expiresAt,
   };
-}
-
-function createMemoryRateLimitKey(request: Request, scope: string) {
-  return createRateLimitKey(request, `memory:${scope}`);
 }
 
 async function cleanupExpiredRateLimits(now: Date) {
@@ -176,8 +174,30 @@ export async function protectApiRequest(
     return errorResponse("This request origin is not allowed.", 403);
   }
 
+  let key: string;
+
+  // Derived before the try below, for two reasons. Key derivation reads the
+  // protection secret, so it fails for a completely different reason than the
+  // database call does - a deployment fault rather than an outage. And the
+  // memory fallback needs the same key: deriving it inside the catch meant a
+  // missing secret threw a second time, from inside the handler meant to
+  // absorb the first, defeating the fallback and surfacing as an unrelated
+  // "temporarily unavailable" message on every route at once.
   try {
-    const result = await consumeRateLimit(request, options);
+    key = createRateLimitKey(request, options.scope);
+  } catch (error) {
+    console.error(
+      "API abuse protection is misconfigured, so every rate-limited route will fail. " +
+        "Set REPORT_SESSION_SECRET (or ABUSE_PROTECTION_SECRET) to a random value of at " +
+        "least 32 characters in this environment.",
+      error,
+    );
+
+    return errorResponse("Server configuration error.", 500);
+  }
+
+  try {
+    const result = await consumeRateLimit(key, options);
     scheduleExpiredRateLimitCleanup(new Date());
 
     if (result.allowed) {
@@ -202,7 +222,7 @@ export async function protectApiRequest(
 
     if (options.databaseFailureFallback === "memory") {
       const result = consumeInMemoryRateLimit(
-        createMemoryRateLimitKey(request, options.scope),
+        `memory:${key}`,
         options.limit,
         options.windowMs,
       );

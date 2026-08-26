@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "prisma generate",
+    "prebuild": "prisma generate && tsx scripts/check-required-env.ts",
     "build": "next build",
     "pretypecheck": "prisma generate",
     "typecheck": "tsc --noEmit --pretty false",

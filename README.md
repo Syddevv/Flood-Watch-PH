@@ -133,6 +133,22 @@ least 32 characters. It signs the anonymous `HttpOnly` session cookie used for
 report ownership and community actions. Keep the same value across deployments;
 changing it invalidates existing anonymous sessions.
 
+> **This variable is required in every deployed environment, not just locally.**
+> Both secret getters fall back to a development value when `NODE_ENV` is not
+> `"production"`, so a missing secret is invisible in local development and
+> fatal once deployed: it also keys the API rate limiter, so *every*
+> rate-limited route — reports, weather, sign-in — fails at the protection
+> layer before running any of its own logic. Generate one with:
+>
+> ```bash
+> node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+> ```
+>
+> On Vercel, add it under **Settings → Environment Variables** for Production
+> and Preview, then redeploy. `npm run build` refuses to build on Vercel or in
+> CI when it is missing, and the server logs the variable name if it is ever
+> absent at runtime.
+
 `ABUSE_PROTECTION_SECRET` hashes client network identifiers used by the
 database-backed API rate limiter. It may be omitted to reuse
 `REPORT_SESSION_SECRET`. Set `NEXT_PUBLIC_APP_URL` to the deployed application
