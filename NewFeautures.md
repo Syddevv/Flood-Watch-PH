@@ -365,31 +365,20 @@ The dashboard should become the central operational interface for monitoring flo
 
 ### 8.2 Reports Monitoring
 
-- [ ] Create an admin report list/table.
-- [ ] Display:
-  - [ ] Report ID
-  - [ ] Reporter
-  - [ ] Location
-  - [ ] Date/time
-  - [ ] Report status
-  - [ ] Incident association
-  - [ ] Photo availability
-  - [ ] Verification status
+**Status:** Implemented and verified at typecheck, lint, unit-test, and production-build level (2026-08-29). Integration, browser, and real-device verification remain pending.
 
-- [ ] Add search.
-- [ ] Add filtering.
-- [ ] Add sorting.
-- [ ] Filter by status.
-- [ ] Filter by date.
-- [ ] Filter by location/barangay where applicable.
-- [ ] Filter by incident.
-- [ ] Open complete report details.
-- [ ] View submitted photos.
-- [ ] View report location on the map.
-- [ ] Review duplicate/same-location reports.
-- [ ] Mark reports as verified/unverified.
-- [ ] Mark reports as resolved/closed where appropriate.
-- [ ] Preserve an audit trail of administrative changes.
+- [x] Create an admin report list/table. (`/admin/reports`)
+- [x] Display report ID, reporter, location, date/time, public status, incident association, photo availability, and verification status.
+
+- [x] Add search, filtering, sorting, and pagination.
+- [x] Filter by verification status, public lifecycle status, severity, incident, and searchable location/report fields.
+- [x] Open complete report details.
+- [x] View submitted photos.
+- [x] View incident association and related reports.
+- [x] Review duplicate/same-location reports through incident grouping.
+- [x] Mark reports as unreviewed, verified, disputed, or rejected.
+- [ ] Mark reports as resolved/closed where appropriate. *(deferred to 8.4 response/action management)*
+- [x] Preserve an audit trail of verification changes.
 
 ---
 

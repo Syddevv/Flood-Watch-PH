@@ -18,6 +18,7 @@ model FloodReport {
   category          String
   severity          String
   status            String               @default("Needs More Confirmation")
+  verificationStatus String              @default("unreviewed")
   locationName      String
   latitude          Float
   longitude         Float
@@ -44,6 +45,7 @@ model FloodReport {
 
   @@index([ownerSessionHash])
   @@index([status, createdAt])
+  @@index([verificationStatus, createdAt])
   @@index([severity, createdAt])
   @@index([category, createdAt])
   @@index([sourceType, createdAt])
