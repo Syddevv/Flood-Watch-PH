@@ -167,8 +167,25 @@ model User {
   updatedAt    DateTime      @updatedAt
   sessions     Session[]
   reports      FloodReport[]
+  adminAuditLogs AdminAuditLog[]
 
   @@index([role])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  requestId   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
 }
 
 model Session {

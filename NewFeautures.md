@@ -350,14 +350,16 @@ The dashboard should become the central operational interface for monitoring flo
 
 ### 8.1 Admin Authentication & Authorization
 
-- [ ] Create administrator role support.
-- [ ] Restrict admin dashboard access to authorized accounts.
-- [ ] Protect admin routes on the server.
-- [ ] Protect admin API endpoints.
-- [ ] Prevent regular users from accessing administrative functions.
-- [ ] Log important administrative actions.
-- [ ] Provide administrator logout/session handling.
-- [ ] Avoid exposing administrative APIs to unauthorized users.
+**Status:** Implemented and verified at unit/typecheck/build level (2026-08-29). Integration, browser, and real-device verification remain pending.
+
+- [x] Create administrator role support. (existing constrained `user`/`admin` roles plus `admin:promote` CLI)
+- [x] Restrict admin dashboard access to authorized accounts. (`/admin` checks the database-backed session and role)
+- [x] Protect admin routes on the server.
+- [x] Protect admin API endpoints. (`GET /api/admin/session` returns explicit 401/403 responses)
+- [x] Prevent regular users from accessing administrative functions.
+- [x] Log important administrative actions. (role grant, admin login/logout audit events)
+- [x] Provide administrator logout/session handling. (shared session and logout flow)
+- [x] Avoid exposing administrative APIs to unauthorized users.
 
 ---
 

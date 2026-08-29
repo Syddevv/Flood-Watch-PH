@@ -10,6 +10,7 @@ import { AuthInput } from "@/components/auth/auth-input";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { PasswordInput } from "@/components/auth/password-input";
 import { useAuthSession } from "@/components/auth-session-provider";
+import { getSafeLocalRedirect } from "@/lib/safe-redirect";
 
 function LoginForm() {
   const router = useRouter();
@@ -39,7 +40,7 @@ function LoginForm() {
       }
 
       await refresh();
-      router.push(searchParams.get("next") ?? "/incident-reports");
+      router.push(getSafeLocalRedirect(searchParams.get("next"), "/incident-reports"));
     } catch {
       setError("Unable to sign in right now. Please try again.");
     } finally {
