@@ -1,0 +1,5 @@
+import { errorResponse, successResponse } from "@/lib/api-response";
+import { requireAdminApi } from "@/lib/admin-auth";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { prisma } from "@/lib/prisma";
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) { const auth = await requireAdminApi(request); if (auth.response) return auth.response; const { id } = await context.params; const center = await prisma.evacuationCenter.findUnique({ where: { id } }); if (!center) return errorResponse("Evacuation center not found.", 404); const archived = await prisma.evacuationCenter.update({ where: { id }, data: { isArchived: true, archivedAt: new Date(), archivedByUserId: auth.user.id } }); await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_ARCHIVED", targetType: "EvacuationCenter", targetId: id, requestId: request.headers.get("x-request-id") ?? undefined }); return successResponse({ center: archived }, { headers: { "Cache-Control": "no-store" } }); }

@@ -115,8 +115,26 @@ model EvacuationCenter {
   contactNumber String?
   facilities    String[]
   status        String   @default("Unknown")
+  barangay      String?
+  region        String?
+  verificationStatus String @default("needs_verification")
+  sourceType    String   @default("community_reference")
+  sourceName    String?
+  sourceUrl     String?
+  lastVerifiedAt DateTime?
+  notes         String?
+  estimatedCapacity Int?
+  isArchived    Boolean  @default(false)
+  archivedAt    DateTime?
+  archivedByUserId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([verificationStatus])
+  @@index([isArchived])
+  @@index([city, province])
+  @@index([updatedAt])
 }
 
 model SafetyTip {
