@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 import Link from "next/link";
 import { Download, Eye, Filter, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";

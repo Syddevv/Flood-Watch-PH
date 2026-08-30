@@ -154,7 +154,14 @@ export function formatLastVerified(value: string) {
 }
 
 export function formatEvacuationFacilityLabel(facility: EvacuationFacility) {
-  return EVACUATION_FACILITY_META[facility].label;
+  const metadata = EVACUATION_FACILITY_META[facility];
+  if (metadata) {
+    return metadata.label;
+  }
+
+  return String(facility)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function formatEvacuationStatusLabel(status: EvacuationCenterStatus) {
