@@ -651,6 +651,7 @@ type FloodMapClientProps = {
   selectedReportId?: string | null;
   focusedAlertLocation?: FocusedMapLocation;
   onMapInteractionStart?: () => void;
+  showMapControls?: boolean;
 };
 
 export function FloodMapClient({
@@ -670,6 +671,7 @@ export function FloodMapClient({
   selectedReportId = null,
   focusedAlertLocation = null,
   onMapInteractionStart,
+  showMapControls = true,
 }: FloodMapClientProps) {
   const [satelliteMode, setSatelliteMode] = useState(false);
   const [mapInteracting, setMapInteracting] = useState(false);
@@ -1002,10 +1004,12 @@ export function FloodMapClient({
           evacuationCenterMarkers.map(renderCenterMarker)
         )}
 
-        <MapZoomControls
-          satelliteMode={satelliteMode}
-          onToggleSatellite={() => setSatelliteMode((current) => !current)}
-        />
+        {showMapControls ? (
+          <MapZoomControls
+            satelliteMode={satelliteMode}
+            onToggleSatellite={() => setSatelliteMode((current) => !current)}
+          />
+        ) : null}
       </MapContainer>
     </div>
   );
