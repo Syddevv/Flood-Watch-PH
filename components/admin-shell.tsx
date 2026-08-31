@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, ExternalLink, LayoutDashboard, LogOut, Menu, Map, Search, Shield, X, FileText, LifeBuoy, Building2, MapPinned, Users, BarChart3, Download, Radio, ScrollText, Settings } from "lucide-react";
+import { Bell, ChevronDown, ExternalLink, LayoutDashboard, LogOut, Menu, Map, Search, Shield, X, FileText, LifeBuoy, Building2, MapPinned, Users, BarChart3, Radio, ScrollText, Settings } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthSession } from "@/components/auth-session-provider";
@@ -15,7 +15,7 @@ const groups: readonly NavGroup[] = [
   ["COMMAND", [["Overview", "/admin", LayoutDashboard], ["Live Operations Map", "/admin/map", Map]]],
   ["MONITORING", [["Flood Reports", "/admin/reports", FileText], ["Rescue Requests", "/admin/rescue-requests", LifeBuoy]]],
   ["DATA MANAGEMENT", [["Evacuation Centers", "/admin/data", Building2], ["Covered Areas", "/admin/covered-areas", MapPinned], ["Users & Roles", "/admin/users", Users]]],
-  ["INTELLIGENCE", [["Analytics", "/admin/analytics", BarChart3], ["Statistics & Exports", "/admin/exports", Download]]],
+  ["INTELLIGENCE", [["Analytics", "/admin/analytics", BarChart3]]],
   ["SYSTEM", [["Notifications", "/admin/notifications", Radio], ["Audit Logs", "/admin/audit-logs", ScrollText], ["Settings", "/admin/settings", Settings]]],
 ];
 
