@@ -16,6 +16,21 @@ export type AuthenticatedUser = {
   role: string;
 };
 
+export async function getAuthenticatedUserFromToken(token: string | null | undefined) {
+  if (!token) return null;
+  const session = await prisma.session.findUnique({
+    where: { tokenHash: hashSessionToken(token) },
+    include: { user: true },
+  });
+  if (!session || session.expiresAt.getTime() <= Date.now()) return null;
+  return {
+    id: session.user.id,
+    email: session.user.email,
+    displayName: session.user.displayName,
+    role: session.user.role,
+  } satisfies AuthenticatedUser;
+}
+
 export async function createAuthSession(userId: string) {
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
@@ -44,22 +59,7 @@ export async function getAuthenticatedUserFromRequest(
     return null;
   }
 
-  const tokenHash = hashSessionToken(token);
-  const session = await prisma.session.findUnique({
-    where: { tokenHash },
-    include: { user: true },
-  });
-
-  if (!session || session.expiresAt.getTime() <= Date.now()) {
-    return null;
-  }
-
-  return {
-    id: session.user.id,
-    email: session.user.email,
-    displayName: session.user.displayName,
-    role: session.user.role,
-  };
+  return getAuthenticatedUserFromToken(token);
 }
 
 export async function destroySession(request: Request) {
@@ -67,7 +67,11 @@ export async function destroySession(request: Request) {
 
   if (token) {
     const tokenHash = hashSessionToken(token);
-    await prisma.session.deleteMany({ where: { tokenHash } });
+    try {
+      await prisma.session.deleteMany({ where: { tokenHash } });
+    } catch (error) {
+      console.error("Failed to revoke authentication session during logout.", error);
+    }
   }
 
   return {
