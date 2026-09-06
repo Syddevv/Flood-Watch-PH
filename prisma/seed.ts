@@ -62,6 +62,10 @@ async function main() {
       },
     });
 
+    await tx.adminOperationalAction.deleteMany({
+      where: { requestId: "seed:phase0" },
+    });
+
     // Each seed report founds its own singleton incident (createMany can't
     // populate a required relation, and these three reports aren't meant to
     // represent the same physical incident anyway).
@@ -115,7 +119,7 @@ async function main() {
     ];
 
     for (const seedReport of seedReports) {
-      await tx.floodReport.create({
+      const createdReport = await tx.floodReport.create({
         data: {
           ...seedReport,
           incident: {
@@ -131,7 +135,56 @@ async function main() {
           },
         },
       });
+
+      await tx.adminOperationalAction.create({
+        data: {
+          targetType: "FloodReport",
+          targetId: createdReport.id,
+          actionType: "status_change",
+          previousValue: null,
+          nextValue: "pending",
+          visibility: "internal",
+          note: "Seeded report awaiting administrative review.",
+          requestId: "seed:phase0",
+        },
+      });
     }
+
+    for (const setting of [
+      ["operationsCenterName", "Calumpit Municipal Emergency Operations Center"],
+      ["publicAdvisoryFooter", "Follow official PAGASA and Calumpit MDRRMO advisories."],
+      ["notifyCriticalReports", "true"],
+      ["notifyVerificationReminders", "true"],
+      ["notifyCapacityWarnings", "true"],
+    ] as const) {
+      await tx.adminSetting.upsert({
+        where: { key: setting[0] },
+        update: { value: setting[1], updatedByUserId: null },
+        create: { key: setting[0], value: setting[1] },
+      });
+    }
+
+    await tx.adminNotification.deleteMany({
+      where: { dedupeKey: { startsWith: "seed:phase0:" } },
+    });
+    await tx.adminNotification.createMany({
+      data: [
+        {
+          type: "report_verification",
+          title: "Reports awaiting verification",
+          detail: "Seeded reports are ready for administrative review.",
+          priority: "urgent",
+          dedupeKey: "seed:phase0:verification",
+        },
+        {
+          type: "system",
+          title: "Admin backend foundation ready",
+          detail: "Operational history, settings, and notification storage are configured.",
+          priority: "normal",
+          dedupeKey: "seed:phase0:foundation",
+        },
+      ],
+    });
 
     await tx.evacuationCenter.deleteMany({
       where: {

@@ -46,7 +46,7 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [x] Add `updatedByUserId` provenance to evacuation-center changes.
 - [x] Add indexes for operational action targets/actors, notification priority/recipient/target, and existing report/center filters.
 - [x] Add database constraints for supported action visibility/types and notification priorities.
-- [ ] Create deterministic seed fixtures for reports, incidents, centers, rescue requests, action history, and notifications.
+- [x] Create deterministic seed fixtures for reports, incidents, action history, notifications, and settings. Rescue-request fixtures remain deferred with the module.
 - [x] Apply the Phase 0 migration to the configured Supabase PostgreSQL database (`20260906_admin_phase0_foundation`).
 - [ ] Test migration rollback/rehearsal against a staging database before production releases.
 
