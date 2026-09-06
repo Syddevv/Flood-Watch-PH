@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ADMIN_TO_PUBLIC_REPORT_STATUS,
   canTransitionAdminReportStatus,
+  isAdminSettingKey,
   isAdminReportStatus,
   parseAdminPagination,
   parseExpectedUpdatedAt,
@@ -33,6 +35,18 @@ test("admin status transitions follow the operational matrix", () => {
   assert.equal(canTransitionAdminReportStatus("pending", "under_review"), true);
   assert.equal(canTransitionAdminReportStatus("pending", "resolved"), false);
   assert.equal(canTransitionAdminReportStatus("verified", "verified"), true);
+});
+
+test("admin statuses map to the existing public lifecycle vocabulary", () => {
+  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.pending, "Needs More Confirmation");
+  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.responding, "Confirmed by Community");
+  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.resolved, "Resolved");
+  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.closed, "Archived");
+});
+
+test("admin settings accept only approved keys", () => {
+  assert.equal(isAdminSettingKey("operationsCenterName"), true);
+  assert.equal(isAdminSettingKey("databaseUrl"), false);
 });
 
 test("admin responses include a correlation ID and stable envelope", async () => {

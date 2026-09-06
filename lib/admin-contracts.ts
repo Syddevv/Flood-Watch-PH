@@ -12,6 +12,18 @@ export const ADMIN_REPORT_STATUSES = [
 
 export type AdminReportStatus = (typeof ADMIN_REPORT_STATUSES)[number];
 
+export const ADMIN_TO_PUBLIC_REPORT_STATUS: Readonly<
+  Record<AdminReportStatus, string>
+> = {
+  pending: "Needs More Confirmation",
+  under_review: "Needs More Confirmation",
+  verified: "Confirmed by Community",
+  responding: "Confirmed by Community",
+  resolved: "Resolved",
+  rejected: "Rejected",
+  closed: "Archived",
+};
+
 export const ADMIN_REPORT_STATUS_TRANSITIONS: Readonly<
   Record<AdminReportStatus, readonly AdminReportStatus[]>
 > = {

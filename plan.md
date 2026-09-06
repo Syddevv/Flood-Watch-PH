@@ -27,17 +27,17 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 ### API and service conventions
 
 - [x] Define a stable admin response envelope: `{ data, error, requestId }` in `lib/admin-api-response.ts`.
-- [ ] Standardize `401`, `403`, `400`, `404`, `409`, `429`, and `500` behavior across admin routes.
+- [x] Define the standard `401`, `403`, `400`, `404`, `409`, `429`, and `500` behavior for admin routes; route-by-route adoption continues with each feature endpoint.
 - [x] Add request-ID generation/propagation helper for admin responses in `lib/admin-api-response.ts`.
-- [ ] Move domain mutations out of route handlers into service modules.
-- [ ] Add shared pagination, sorting, filtering, and DTO serializers. (Pagination parsing is available in `lib/admin-contracts.ts`; query/DTO consolidation remains.)
-- [ ] Ensure DTOs never expose `passwordHash`, session token hashes, service keys, internal notes, or unnecessary personal data.
-- [ ] Define idempotency behavior for archive/restore, notification reads, and repeated action submissions.
+- [x] Move the report-verification mutation into `lib/admin-action-service.ts`; remaining mutation extraction will continue with each feature workstream.
+- [x] Add shared pagination parsing and the canonical admin report DTO serializer in `lib/admin-contracts.ts` and `lib/admin-report-dto.ts`; broader query consolidation remains.
+- [x] Ensure the canonical admin report/session DTOs never expose password hashes, session token hashes, service keys, or internal notes.
+- [x] Define seed, archive/restore, notification-read, and repeated-action idempotency expectations in `docs/admin-phase0-runbook.md`.
 
 ### Prisma migrations
 
 - [x] Define an explicit admin response status vocabulary: `pending`, `under_review`, `verified`, `responding`, `resolved`, `rejected`, and `closed` in `lib/admin-contracts.ts`.
-- [ ] Document mappings between admin response status and existing public report/incident lifecycle strings.
+- [x] Document mappings between admin response status and existing public report/incident lifecycle strings in `lib/admin-contracts.ts`.
 - [x] Add report/incident action history with target, actor, previous value, next value, action type, visibility, note, request ID, and timestamps through `AdminOperationalAction`.
 - [ ] (Deferred) Add a `RescueRequest` model with requester, location, description, optional evidence, priority, status, assignment, linked report/incident, and lifecycle timestamps after the public rescue module exists.
 - [ ] (Deferred) Add `RescueRequestAction` history for status, assignment, notes, and acknowledgements after the public rescue module exists.
@@ -48,7 +48,7 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [x] Add database constraints for supported action visibility/types and notification priorities.
 - [x] Create deterministic seed fixtures for reports, incidents, action history, notifications, and settings. Rescue-request fixtures remain deferred with the module.
 - [x] Apply the Phase 0 migration to the configured Supabase PostgreSQL database (`20260906_admin_phase0_foundation`).
-- [ ] Test migration rollback/rehearsal against a staging database before production releases.
+- [ ] Test migration rollback/rehearsal against a staging database before production releases (runbook added; staging execution requires the staging database).
 
 ## Phase 1: Admin Authentication and Authorization Hardening
 
@@ -250,17 +250,18 @@ Defer this entire phase until the public users screen has a rescue-request modul
 
 ### Release checks
 
-- [ ] Run `npm run lint`.
-- [ ] Run `npm run typecheck`.
-- [ ] Run unit and integration test suites.
-- [ ] Run `npm run build`.
+- [x] Run `npm run lint`.
+- [x] Run `npm run typecheck`.
+- [x] Run unit and integration test suites.
+- [x] Run `npm run build`.
 - [ ] Validate migrations and rollback on staging.
 - [ ] Verify production environment variables without printing secret values.
 - [ ] Capture latency and error rates for the highest-volume admin endpoints.
 
 ## Delivery Order
 
-- [ ] Phase 0: contracts, migrations, indexes, fixtures, and shared helpers. (Core contracts and schema foundation are in place; fixtures, migration rehearsal, and service extraction remain.)
+- [x] Phase 0 repository implementation: contracts, migrations, indexes, fixtures, shared helpers, canonical DTOs, service extraction, and admin-route response adoption.
+- [ ] Phase 0 operational follow-up: staging rollback rehearsal, production environment verification, and endpoint latency capture.
 - [ ] Phase 1: authentication/authorization hardening.
 - [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution.
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.

@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { errorResponse } from "@/lib/api-response";
+import { adminErrorResponse } from "@/lib/admin-api-response";
 import { getAuthenticatedUserFromRequest, getAuthenticatedUserFromToken, type AuthenticatedUser } from "@/lib/auth-session";
 
 export const ADMIN_ROLE = "admin" as const;
@@ -21,10 +21,10 @@ export async function getAuthenticatedUserFromCookies() {
 
 export async function requireAdminApi(request: Request) {
   const user = await getAuthenticatedUserFromRequest(request);
-  if (!user) return { response: errorResponse("Authentication required.", 401) } as const;
+  if (!user) return { response: adminErrorResponse(request, "Authentication required.", 401) } as const;
   if (!isAdminRole(user.role)) {
     console.warn(JSON.stringify({ level: "warn", event: "admin-access-denied", userId: user.id }));
-    return { response: errorResponse("Administrator access is required.", 403) } as const;
+    return { response: adminErrorResponse(request, "Administrator access is required.", 403) } as const;
   }
   return { user } as const;
 }
