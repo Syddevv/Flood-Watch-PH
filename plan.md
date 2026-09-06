@@ -7,11 +7,10 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 ## Scope Decisions
 
 - [ ] Keep the existing `User`/`Session` authentication flow and `admin:promote` CLI.
-- [ ] Exclude the Users & Roles page and user-management APIs from this release.
-- [ ] Exclude the Audit Logs page and audit-log search/export APIs from this release.
-- [ ] Continue writing `AdminAuditLog` records for sensitive mutations so the future Audit Logs page has data.
+- [x] Defer the Users & Roles page and user-management APIs from this release. Existing registration and the `admin:promote` CLI remain available.
+- [x] Defer the Audit Logs page and audit-log search/export APIs from this release. Existing `AdminAuditLog` writes remain enabled for future use.
 - [ ] Build persisted in-app notifications first; defer email, SMS, and push delivery.
-- [ ] Decide whether "Rescue Needed" remains a report category or also gets a distinct rescue-request intake. The backend plan supports a distinct entity either way.
+- [x] Defer a distinct `RescueRequest` entity and public rescue-request intake until the public users screen supports rescue requests. For this release, keep rescue handling within the existing flood-report workflow.
 
 ## Current-State Baseline
 
@@ -27,28 +26,29 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### API and service conventions
 
-- [ ] Define a stable response envelope: `{ data, error, requestId }`.
+- [x] Define a stable admin response envelope: `{ data, error, requestId }` in `lib/admin-api-response.ts`.
 - [ ] Standardize `401`, `403`, `400`, `404`, `409`, `429`, and `500` behavior across admin routes.
-- [ ] Add request-ID generation/propagation through every admin mutation.
+- [x] Add request-ID generation/propagation helper for admin responses in `lib/admin-api-response.ts`.
 - [ ] Move domain mutations out of route handlers into service modules.
-- [ ] Add shared pagination, sorting, filtering, and DTO serializers.
+- [ ] Add shared pagination, sorting, filtering, and DTO serializers. (Pagination parsing is available in `lib/admin-contracts.ts`; query/DTO consolidation remains.)
 - [ ] Ensure DTOs never expose `passwordHash`, session token hashes, service keys, internal notes, or unnecessary personal data.
 - [ ] Define idempotency behavior for archive/restore, notification reads, and repeated action submissions.
 
 ### Prisma migrations
 
-- [ ] Define an explicit admin response status vocabulary: `pending`, `under_review`, `verified`, `responding`, `resolved`, `rejected`, and `closed`.
+- [x] Define an explicit admin response status vocabulary: `pending`, `under_review`, `verified`, `responding`, `resolved`, `rejected`, and `closed` in `lib/admin-contracts.ts`.
 - [ ] Document mappings between admin response status and existing public report/incident lifecycle strings.
-- [ ] Add report/incident action history with target, actor, previous value, next value, action type, visibility, note, request ID, and timestamps.
-- [ ] Add a `RescueRequest` model with requester, location, description, optional evidence, priority, status, assignment, linked report/incident, and lifecycle timestamps.
-- [ ] Add `RescueRequestAction` history for status, assignment, notes, and acknowledgements.
-- [ ] Add `AdminNotification` with type, safe detail, target, priority, recipient/scope, read state, acknowledgement state, dedupe key, and timestamps.
-- [ ] Add `AdminSetting` as a constrained singleton or key/value model for approved operational settings.
-- [ ] Add `updatedByUserId` or equivalent provenance to evacuation-center changes.
-- [ ] Add indexes for status/priority/date, assignee, requester, target IDs, unread notifications, and common report filters.
-- [ ] Add database constraints for supported status/priority values and non-negative capacity.
+- [x] Add report/incident action history with target, actor, previous value, next value, action type, visibility, note, request ID, and timestamps through `AdminOperationalAction`.
+- [ ] (Deferred) Add a `RescueRequest` model with requester, location, description, optional evidence, priority, status, assignment, linked report/incident, and lifecycle timestamps after the public rescue module exists.
+- [ ] (Deferred) Add `RescueRequestAction` history for status, assignment, notes, and acknowledgements after the public rescue module exists.
+- [x] Add `AdminNotification` with type, safe detail, target, priority, recipient/scope, read state, acknowledgement state, dedupe key, and timestamps.
+- [x] Add `AdminSetting` as a constrained key/value model for approved operational settings.
+- [x] Add `updatedByUserId` provenance to evacuation-center changes.
+- [x] Add indexes for operational action targets/actors, notification priority/recipient/target, and existing report/center filters.
+- [x] Add database constraints for supported action visibility/types and notification priorities.
 - [ ] Create deterministic seed fixtures for reports, incidents, centers, rescue requests, action history, and notifications.
-- [ ] Test migration application and rollback against a staging database.
+- [x] Apply the Phase 0 migration to the configured Supabase PostgreSQL database (`20260906_admin_phase0_foundation`).
+- [ ] Test migration rollback/rehearsal against a staging database before production releases.
 
 ## Phase 1: Admin Authentication and Authorization Hardening
 
@@ -132,11 +132,13 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [ ] Replace placeholder "Add center", "Update status", "Add operational note", and "More actions" controls.
 - [ ] Add loading, validation, conflict, success, and error states for all modal actions.
 
-## Phase 4: Rescue Request Backend and Management Page
+## Phase 4: Rescue Request Backend and Management Page (Deferred)
+
+Defer this entire phase until the public users screen has a rescue-request module. For the current release, "Rescue Needed" continues through the authenticated flood-report workflow.
 
 ### Rescue-request data and intake
 
-- [ ] Decide whether to expose a distinct authenticated `POST /api/rescue-requests` intake or map the existing "Rescue Needed" report flow into `RescueRequest`.
+- [ ] (Deferred) Decide whether to expose a distinct authenticated `POST /api/rescue-requests` intake or migrate the existing "Rescue Needed" report flow into `RescueRequest`.
 - [ ] Require authentication and derive requester identity from the session; never accept a client-supplied user ID.
 - [ ] Capture location, description, request timestamp, urgency, optional photo evidence, affected people/details, and contact context approved by product/privacy review.
 - [ ] Enforce Calumpit coordinates, payload limits, image validation, and per-user/IP rate limits.
@@ -258,11 +260,11 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ## Delivery Order
 
-- [ ] Phase 0: contracts, migrations, indexes, fixtures, and shared helpers.
+- [ ] Phase 0: contracts, migrations, indexes, fixtures, and shared helpers. (Core contracts and schema foundation are in place; fixtures, migration rehearsal, and service extraction remain.)
 - [ ] Phase 1: authentication/authorization hardening.
 - [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution.
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.
-- [ ] Phase 4: rescue-request model, create modal, APIs, and management page.
+- [ ] Phase 4: rescue-request model, create modal, APIs, and management page (after the public rescue-request module exists).
 - [ ] Phase 5: live overview, map, and analytics.
 - [ ] Phase 6: persisted notifications.
 - [ ] Phase 7: persisted settings.
@@ -280,4 +282,4 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [ ] Notifications and settings persist across reloads.
 - [ ] All admin mutations enforce authorization, validation, rate limits where applicable, transactions, and stale-write protection.
 - [ ] Required tests, build checks, migration rehearsal, and release checks pass.
-- [ ] Users & Roles and Audit Logs remain explicitly deferred and are not release blockers for this scope.
+- [x] Users & Roles, Audit Logs, and the standalone rescue-request module remain explicitly deferred and are not release blockers for this scope.
