@@ -350,44 +350,35 @@ The dashboard should become the central operational interface for monitoring flo
 
 ### 8.1 Admin Authentication & Authorization
 
-- [ ] Create administrator role support.
-- [ ] Restrict admin dashboard access to authorized accounts.
-- [ ] Protect admin routes on the server.
-- [ ] Protect admin API endpoints.
-- [ ] Prevent regular users from accessing administrative functions.
-- [ ] Log important administrative actions.
-- [ ] Provide administrator logout/session handling.
-- [ ] Avoid exposing administrative APIs to unauthorized users.
+**Status:** Implemented and verified at unit/typecheck/build level (2026-08-29). Integration, browser, and real-device verification remain pending.
+
+- [x] Create administrator role support. (existing constrained `user`/`admin` roles plus `admin:promote` CLI)
+- [x] Restrict admin dashboard access to authorized accounts. (`/admin` checks the database-backed session and role)
+- [x] Protect admin routes on the server.
+- [x] Protect admin API endpoints. (`GET /api/admin/session` returns explicit 401/403 responses)
+- [x] Prevent regular users from accessing administrative functions.
+- [x] Log important administrative actions. (role grant, admin login/logout audit events)
+- [x] Provide administrator logout/session handling. (shared session and logout flow)
+- [x] Avoid exposing administrative APIs to unauthorized users.
 
 ---
 
 ### 8.2 Reports Monitoring
 
-- [ ] Create an admin report list/table.
-- [ ] Display:
-  - [ ] Report ID
-  - [ ] Reporter
-  - [ ] Location
-  - [ ] Date/time
-  - [ ] Report status
-  - [ ] Incident association
-  - [ ] Photo availability
-  - [ ] Verification status
+**Status:** Implemented and verified at typecheck, lint, unit-test, and production-build level (2026-08-29). Integration, browser, and real-device verification remain pending.
 
-- [ ] Add search.
-- [ ] Add filtering.
-- [ ] Add sorting.
-- [ ] Filter by status.
-- [ ] Filter by date.
-- [ ] Filter by location/barangay where applicable.
-- [ ] Filter by incident.
-- [ ] Open complete report details.
-- [ ] View submitted photos.
-- [ ] View report location on the map.
-- [ ] Review duplicate/same-location reports.
-- [ ] Mark reports as verified/unverified.
-- [ ] Mark reports as resolved/closed where appropriate.
-- [ ] Preserve an audit trail of administrative changes.
+- [x] Create an admin report list/table. (`/admin/reports`)
+- [x] Display report ID, reporter, location, date/time, public status, incident association, photo availability, and verification status.
+
+- [x] Add search, filtering, sorting, and pagination.
+- [x] Filter by verification status, public lifecycle status, severity, incident, and searchable location/report fields.
+- [x] Open complete report details.
+- [x] View submitted photos.
+- [x] View incident association and related reports.
+- [x] Review duplicate/same-location reports through incident grouping.
+- [x] Mark reports as unreviewed, verified, disputed, or rejected.
+- [ ] Mark reports as resolved/closed where appropriate. *(deferred to 8.4 response/action management)*
+- [x] Preserve an audit trail of verification changes.
 
 ---
 

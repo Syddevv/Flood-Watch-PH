@@ -10,6 +10,7 @@ import { AuthInput } from "@/components/auth/auth-input";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { PasswordInput } from "@/components/auth/password-input";
 import { useAuthSession } from "@/components/auth-session-provider";
+import { getSafeLocalRedirect } from "@/lib/safe-redirect";
 
 const MIN_PASSWORD_LENGTH = 10;
 
@@ -46,7 +47,7 @@ function RegisterForm() {
       }
 
       await refresh();
-      router.push(searchParams.get("next") ?? "/incident-reports");
+      router.push(getSafeLocalRedirect(searchParams.get("next"), "/incident-reports"));
     } catch {
       setError("Unable to create your account right now. Please try again.");
     } finally {

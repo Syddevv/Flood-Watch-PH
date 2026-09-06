@@ -1,0 +1,37 @@
+"use client";
+
+import Link from "next/link";
+import { ChevronDown, Layers, MapPin, Search } from "lucide-react";
+import { useMemo } from "react";
+import { FloodMap } from "@/components/flood-map";
+import { getAdminOverviewData, type AdminAttentionItem } from "@/components/admin-overview-data";
+import { FLOOD_LEGEND, FLOOD_POLYGONS } from "@/lib/constants";
+import { NEARBY_EVACUATION_CENTERS } from "@/lib/evacuation-center-scope";
+import type { EvacuationCenterMapMarker } from "@/lib/types";
+import type { ReportActionLoadingState } from "@/lib/report-actions";
+
+const overview = getAdminOverviewData();
+const noop = () => undefined;
+const statusClasses = { critical: "border-red-400/40 bg-red-500/10 text-red-300", urgent: "border-amber-400/40 bg-amber-500/10 text-amber-300", pending: "border-yellow-400/40 bg-yellow-500/10 text-yellow-300", verified: "border-emerald-400/40 bg-emerald-500/10 text-emerald-300" } as const;
+
+function QueueItem({ item }: { item: AdminAttentionItem }) {
+  return <Link href={item.href ?? "#"} className="block rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 transition hover:border-[var(--color-primary)]"><div className="flex items-start justify-between gap-2"><span className="text-[11px] font-semibold text-[var(--color-muted-foreground)]">{item.recordId}</span><span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${statusClasses[item.status]}`}>{item.status[0].toUpperCase() + item.status.slice(1)}</span></div><p className="mt-2 text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{item.location} · {item.relativeTime}</p></Link>;
+}
+
+export function AdminLiveMap() {
+  const actionLoading: ReportActionLoadingState = null;
+  const evacuationCenterMarkers = useMemo<EvacuationCenterMapMarker[]>(
+    () => NEARBY_EVACUATION_CENTERS.map((center) => ({
+      id: `center-marker-${center.id}`,
+      label: "E",
+      category: "center",
+      coordinates: [center.latitude, center.longitude],
+      title: center.name,
+      centerId: center.id,
+      center,
+      status: center.status,
+    })),
+    [],
+  );
+  return <div className="space-y-5"><div><p className="text-xs font-bold tracking-[.18em] text-[var(--color-primary)]">CALUMPIT EMERGENCY OPERATIONS</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Live operations map</h2><p className="mt-2 text-sm text-[var(--color-muted-foreground)]">Spatial command view of reports, incidents, rescues, closures, and evacuation capacity.</p></div><div className="grid min-h-[calc(100vh-260px)] gap-4 lg:grid-cols-[327px_minmax(0,1fr)]"><aside className="space-y-3"><label className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3"><Search className="h-4 w-4 text-[var(--color-muted-foreground)]" /><input aria-label="Search location or record" placeholder="Search location or record" className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none" /></label><div className="flex gap-3"><button type="button" className="flex flex-1 items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium">All types <ChevronDown className="h-4 w-4" /></button><button type="button" className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium"><Layers className="h-4 w-4" />Layers</button></div><div className="space-y-2 overflow-y-auto pr-1">{overview.attentionItems.map((item) => <QueueItem key={item.id} item={item} />)}<QueueItem item={{ id: "inc-205", recordId: "INC-205", title: "Power outage across eastern zone", location: "Brgy. Canioğan", relativeTime: "21 min ago", status: "urgent", href: "/admin/incidents" }} /></div></aside><section className="min-h-[520px] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"><div className="h-full min-h-[520px]"><FloodMap polygons={FLOOD_POLYGONS} legend={FLOOD_LEGEND} showRiskOverlays={true} onToggleRiskOverlays={noop} reportMarkers={[]} evacuationCenterMarkers={evacuationCenterMarkers} showFloodReports={true} showEvacuationCenters={true} onToggleFloodReports={noop} onToggleEvacuationCenters={noop} selectedReportStatus="active" onSelectReportStatus={noop} highSeverityOnly={false} onToggleHighSeverityOnly={noop} loadingReports={false} reportLoadError={null} actionLoading={actionLoading} confirmedReportIds={{}} resolvedReportIds={{}} onSelectReport={noop} onOpenReportDetails={noop} onShareReport={noop} onConfirmReport={noop} onResolveReport={noop} /></div><div className="pointer-events-none absolute bottom-10 left-8 hidden rounded-lg border border-white/30 bg-slate-950/75 px-3 py-2 text-xs text-white lg:block"><MapPin className="mr-1 inline h-3 w-3" />Calumpit, Bulacan</div></section></div></div>;
+}

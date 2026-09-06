@@ -1,0 +1,18 @@
+ALTER TABLE "EvacuationCenter" ADD COLUMN "barangay" TEXT;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "region" TEXT;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "verificationStatus" TEXT NOT NULL DEFAULT 'needs_verification';
+ALTER TABLE "EvacuationCenter" ADD COLUMN "sourceType" TEXT NOT NULL DEFAULT 'community_reference';
+ALTER TABLE "EvacuationCenter" ADD COLUMN "sourceName" TEXT;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "sourceUrl" TEXT;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "lastVerifiedAt" TIMESTAMP(3);
+ALTER TABLE "EvacuationCenter" ADD COLUMN "notes" TEXT;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "estimatedCapacity" INTEGER;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "isArchived" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "EvacuationCenter" ADD COLUMN "archivedAt" TIMESTAMP(3);
+ALTER TABLE "EvacuationCenter" ADD COLUMN "archivedByUserId" TEXT;
+CREATE INDEX "EvacuationCenter_status_idx" ON "EvacuationCenter" ("status");
+CREATE INDEX "EvacuationCenter_verificationStatus_idx" ON "EvacuationCenter" ("verificationStatus");
+CREATE INDEX "EvacuationCenter_isArchived_idx" ON "EvacuationCenter" ("isArchived");
+CREATE INDEX "EvacuationCenter_city_province_idx" ON "EvacuationCenter" ("city", "province");
+CREATE INDEX "EvacuationCenter_updatedAt_idx" ON "EvacuationCenter" ("updatedAt");
+ALTER TABLE "EvacuationCenter" ADD CONSTRAINT "EvacuationCenter_verificationStatus_allowed_chk" CHECK ("verificationStatus" IN ('verified','needs_verification','outdated','disputed')) NOT VALID;

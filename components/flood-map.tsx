@@ -108,6 +108,7 @@ type FloodMapProps = {
   onShareReport: (report: IncidentReport) => void;
   onConfirmReport: (reportId: string) => void;
   onResolveReport: (reportId: string) => void;
+  showMapControls?: boolean;
 };
 
 export function FloodMap({
@@ -141,6 +142,7 @@ export function FloodMap({
   onShareReport,
   onConfirmReport,
   onResolveReport,
+  showMapControls = true,
 }: FloodMapProps) {
   const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
   const [isMapKeyOpen, setIsMapKeyOpen] = useState(false);
@@ -285,9 +287,10 @@ export function FloodMap({
         focusedAlertLocation={focusedAlertLocation}
         selectedReportId={selectedReportId}
         onMapInteractionStart={collapseMobileMapControls}
+        showMapControls={showMapControls}
       />
 
-      <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] hidden max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:block md:max-w-[344px]">
+      {showMapControls ? <div className="pointer-events-auto absolute left-4 top-4 z-[var(--layer-map-overlay)] hidden max-w-[calc(100%-6rem)] rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_62%,transparent)] bg-[color:color-mix(in_srgb,var(--color-sidebar)_94%,transparent)] px-3 py-3 shadow-[var(--shadow-floating)] backdrop-blur-md md:block md:max-w-[344px]">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[0.96rem] font-semibold text-[var(--color-foreground)]">
@@ -469,9 +472,9 @@ export function FloodMap({
             </div>
           </section>
         </div>
-      </div>
+      </div> : null}
 
-      <div className="pointer-events-none absolute inset-x-3 bottom-24 z-[var(--layer-map-overlay)] md:hidden">
+      {showMapControls ? <div className="pointer-events-none absolute inset-x-3 bottom-24 z-[var(--layer-map-overlay)] md:hidden">
         {isLayerPanelCollapsed ? (
           <div className="flex justify-end">
             <button
@@ -678,7 +681,7 @@ export function FloodMap({
             </section>
           </div>
         )}
-      </div>
+      </div> : null}
 
       {selectionNotice ? (
         <div className="pointer-events-none absolute inset-x-4 bottom-24 z-[var(--layer-map-overlay)] flex justify-center md:bottom-6">

@@ -147,6 +147,26 @@ body {
   height: 100%;
 }
 
+/* Admin shell collapse control keeps a compact directional affordance. */
+@media (min-width: 768px) {
+  aside.w-20 > button,
+  aside.w-64 > button {
+    font-size: 0;
+  }
+
+  aside.w-64 > button::after {
+    content: "‹";
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+
+  aside.w-20 > button::after {
+    content: "›";
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-background);

@@ -1,0 +1,8 @@
+import { errorResponse, successResponse } from "@/lib/api-response";
+import { requireAdminApi } from "@/lib/admin-auth";
+import { parseCenterPayload } from "@/lib/admin-evacuation";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(request: Request) { const auth = await requireAdminApi(request); if (auth.response) return auth.response; const p = new URL(request.url).searchParams; const search = p.get("search")?.trim() ?? ""; const archived = p.get("archived") === "true"; const centers = await prisma.evacuationCenter.findMany({ where: { isArchived: archived, ...(search ? { OR: [{ name: { contains: search, mode: "insensitive" } }, { address: { contains: search, mode: "insensitive" } }, { city: { contains: search, mode: "insensitive" } }, { province: { contains: search, mode: "insensitive" } }] } : {}) }, orderBy: { updatedAt: "desc" } }); return successResponse({ centers }, { headers: { "Cache-Control": "no-store" } }); }
+export async function POST(request: Request) { const auth = await requireAdminApi(request); if (auth.response) return auth.response; const parsed = parseCenterPayload(await request.json().catch(() => null)); if (parsed.error || !parsed.data) return errorResponse(parsed.error ?? "Invalid evacuation-center data.", 400); const center = await prisma.evacuationCenter.create({ data: parsed.data }); await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_CREATED", targetType: "EvacuationCenter", targetId: center.id, requestId: request.headers.get("x-request-id") ?? undefined }); return successResponse({ center }, { status: 201, headers: { "Cache-Control": "no-store" } }); }

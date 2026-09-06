@@ -18,6 +18,7 @@ model FloodReport {
   category          String
   severity          String
   status            String               @default("Needs More Confirmation")
+  verificationStatus String              @default("unreviewed")
   locationName      String
   latitude          Float
   longitude         Float
@@ -44,6 +45,7 @@ model FloodReport {
 
   @@index([ownerSessionHash])
   @@index([status, createdAt])
+  @@index([verificationStatus, createdAt])
   @@index([severity, createdAt])
   @@index([category, createdAt])
   @@index([sourceType, createdAt])
@@ -113,8 +115,26 @@ model EvacuationCenter {
   contactNumber String?
   facilities    String[]
   status        String   @default("Unknown")
+  barangay      String?
+  region        String?
+  verificationStatus String @default("needs_verification")
+  sourceType    String   @default("community_reference")
+  sourceName    String?
+  sourceUrl     String?
+  lastVerifiedAt DateTime?
+  notes         String?
+  estimatedCapacity Int?
+  isArchived    Boolean  @default(false)
+  archivedAt    DateTime?
+  archivedByUserId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([verificationStatus])
+  @@index([isArchived])
+  @@index([city, province])
+  @@index([updatedAt])
 }
 
 model SafetyTip {
@@ -167,8 +187,25 @@ model User {
   updatedAt    DateTime      @updatedAt
   sessions     Session[]
   reports      FloodReport[]
+  adminAuditLogs AdminAuditLog[]
 
   @@index([role])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  requestId   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
 }
 
 model Session {

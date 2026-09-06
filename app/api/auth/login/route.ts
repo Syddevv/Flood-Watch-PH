@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { trimText } from "@/lib/report-api";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
+import { recordAdminAudit } from "@/lib/admin-audit";
 
 type LoginPayload = {
   email?: unknown;
@@ -55,6 +56,11 @@ export async function POST(request: Request) {
     }
 
     const session = await createAuthSession(user.id);
+    if (user.role === "admin") {
+      await recordAdminAudit({ actorUserId: user.id, action: "ADMIN_LOGIN", targetType: "User", targetId: user.id, requestId: request.headers.get("x-request-id") ?? undefined }).catch((error) => {
+        console.error("Failed to record administrator login audit event.", error);
+      });
+    }
 
     return successResponse(
       {

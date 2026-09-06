@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "prisma generate",
     "dev": "next dev",
     "prebuild": "prisma generate && tsx scripts/check-required-env.ts",
     "build": "next build",
@@ -17,6 +18,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "admin:promote": "tsx scripts/admin-promote.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {
