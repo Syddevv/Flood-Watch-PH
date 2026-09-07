@@ -1,12 +1,12 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { isAdminVerificationStatus } from "@/lib/admin-reports";
 import { prisma } from "@/lib/prisma";
 import { recordAdminOperationalAction } from "@/lib/admin-action-service";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdminApi(request);
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-report-verification", limit: 30, windowMs: 60_000 });
   if (auth.response) return auth.response;
   const { id } = await context.params;
   const body = (await request.json().catch(() => null)) as { verificationStatus?: unknown } | null;

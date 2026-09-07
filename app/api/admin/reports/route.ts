@@ -1,6 +1,6 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 import { parseAdminPagination } from "@/lib/admin-contracts";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { parseAdminReportFilters } from "@/lib/admin-reports";
 import { toAdminReportDto } from "@/lib/admin-report-dto";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +9,7 @@ const headers = { "Cache-Control": "no-store" };
 const severityRank: Record<string, number> = { Critical: 4, High: 3, Moderate: 2, Low: 1 };
 
 export async function GET(request: Request) {
-  const auth = await requireAdminApi(request);
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-reports-read", limit: 120, windowMs: 60_000 });
   if (auth.response) return auth.response;
   const params = new URL(request.url).searchParams;
   const parsed = parseAdminReportFilters(params);

@@ -52,13 +52,15 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ## Phase 1: Admin Authentication and Authorization Hardening
 
-- [ ] Test `/api/admin/session` for unauthenticated, regular-user, admin, expired-session, and revoked-session cases.
-- [ ] Verify every `/admin/*` page redirects safely to `/login?next=...` when signed out.
-- [ ] Reject non-admin users with `403` on every admin API and redirect them consistently from admin pages.
-- [ ] Validate and constrain `next` redirects to prevent open redirects.
-- [ ] Apply CSRF/`Origin` checks consistently to cookie-authenticated mutations.
-- [ ] Add structured access-denied logging with request IDs and no credentials or sensitive payloads.
-- [ ] Add rate limits to expensive reads and all operational mutations.
+- [ ] Test `/api/admin/session` end-to-end for unauthenticated, regular-user, and admin requests (requires an authenticated test database).
+- [x] Verify admin page redirects use constrained local `next` paths; safe redirect behavior is covered by tests.
+- [x] Reject non-admin users with `403` through the centralized `requireAdminApi` guard.
+- [x] Validate and constrain `next` redirects to prevent open redirects.
+- [x] Apply trusted-origin/`Origin` checks through the reusable protected-admin guard.
+- [x] Add protected-admin rate limits for report reads/detail/verification and evacuation-center list/create routes.
+- [ ] Apply the protected-admin guard to remaining center archive/restore/update routes and future admin mutations.
+- [x] Add pure coverage for missing/revoked and expired session state in `tests/auth-session-state.test.ts`.
+- [ ] Add browser/integration coverage for full signed-out, regular-user, expired-session, and revoked-session admin access against a test database.
 
 ## Phase 2: Flood Report Management and Verification
 
@@ -262,7 +264,7 @@ Defer this entire phase until the public users screen has a rescue-request modul
 
 - [x] Phase 0 repository implementation: contracts, migrations, indexes, fixtures, shared helpers, canonical DTOs, service extraction, and admin-route response adoption.
 - [ ] Phase 0 operational follow-up: staging rollback rehearsal, production environment verification, and endpoint latency capture.
-- [ ] Phase 1: authentication/authorization hardening.
+- [ ] Phase 1: authentication/authorization hardening. (Core guard, origin checks, rate limits, request-ID logging, and session-state tests are implemented; database/browser coverage remains.)
 - [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution.
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.
 - [ ] Phase 4: rescue-request model, create modal, APIs, and management page (after the public rescue-request module exists).

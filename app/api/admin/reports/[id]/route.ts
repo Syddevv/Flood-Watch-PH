@@ -1,10 +1,10 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { deriveReportLifecycleStatus } from "@/lib/report-lifecycle";
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdminApi(request);
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-report-detail", limit: 120, windowMs: 60_000 });
   if (auth.response) return auth.response;
   const { id } = await context.params;
   const report = await prisma.floodReport.findUnique({ where: { id }, include: { user: { select: { id: true, email: true, displayName: true } }, incident: { include: { reports: { select: { id: true, title: true, severity: true, status: true, locationName: true, createdAt: true } } } }, updates: { orderBy: { createdAt: "desc" } }, confirmations: { orderBy: { createdAt: "desc" } } } });

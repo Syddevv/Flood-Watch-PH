@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth-session-token";
 import { buildSessionCookie, getCookieValue } from "@/lib/cookies";
 import { prisma } from "@/lib/prisma";
+import { isAuthSessionCurrent } from "@/lib/auth-session-state";
 
 export { AUTH_SESSION_COOKIE_NAME };
 
@@ -22,7 +23,7 @@ export async function getAuthenticatedUserFromToken(token: string | null | undef
     where: { tokenHash: hashSessionToken(token) },
     include: { user: true },
   });
-  if (!session || session.expiresAt.getTime() <= Date.now()) return null;
+  if (!isAuthSessionCurrent(session)) return null;
   return {
     id: session.user.id,
     email: session.user.email,
