@@ -4,9 +4,7 @@ import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { parseAdminReportFilters } from "@/lib/admin-reports";
 import { toAdminReportDto } from "@/lib/admin-report-dto";
 import { prisma } from "@/lib/prisma";
-
-const headers = { "Cache-Control": "no-store" };
-const severityRank: Record<string, number> = { Critical: 4, High: 3, Moderate: 2, Low: 1 };
+import type { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const auth = await requireProtectedAdminApi(request, { scope: "admin-reports-read", limit: 120, windowMs: 60_000 });
@@ -16,12 +14,19 @@ export async function GET(request: Request) {
   if (parsed.error || !parsed.filters) return adminErrorResponse(request, parsed.error ?? "Invalid report filters.", 400);
   const filters = parsed.filters;
   const { page, limit } = parseAdminPagination(params);
-  const reports = await prisma.floodReport.findMany({ where: { ...(filters.verificationStatus ? { verificationStatus: filters.verificationStatus } : {}), ...(filters.severity ? { severity: filters.severity } : {}), ...(filters.incidentId ? { incidentId: filters.incidentId } : {}), ...(filters.createdFrom || filters.createdTo ? { createdAt: { ...(filters.createdFrom ? { gte: new Date(filters.createdFrom) } : {}), ...(filters.createdTo ? { lte: new Date(filters.createdTo) } : {}) } } : {}), ...(filters.search ? { OR: [{ id: { contains: filters.search, mode: "insensitive" } }, { title: { contains: filters.search, mode: "insensitive" } }, { description: { contains: filters.search, mode: "insensitive" } }, { locationName: { contains: filters.search, mode: "insensitive" } }, { user: { email: { contains: filters.search, mode: "insensitive" } } }] } : {}) }, include: { incident: { select: { reportCount: true } }, user: { select: { id: true, email: true, displayName: true } } }, orderBy: { createdAt: "desc" } });
-  const mapped = reports.map((r) => toAdminReportDto(r));
-  const filtered = filters.publicStatus ? mapped.filter((r) => r.publicStatus === filters.publicStatus) : mapped;
-  filtered.sort((a, b) => { const key = filters.sort; const av = key === "severity" ? severityRank[a.severity] : a[key]; const bv = key === "severity" ? severityRank[b.severity] : b[key]; const result = av < bv ? -1 : av > bv ? 1 : 0; return filters.order === "asc" ? result : -result; });
-  const total = filtered.length;
-  const items = filtered.slice((page - 1) * limit, page * limit);
+  const where = {
+    ...(filters.verificationStatus ? { verificationStatus: filters.verificationStatus } : {}),
+    ...(filters.severity ? { severity: filters.severity } : {}),
+    ...(filters.incidentId ? { incidentId: filters.incidentId } : {}),
+    ...(filters.createdFrom || filters.createdTo ? { createdAt: { ...(filters.createdFrom ? { gte: new Date(filters.createdFrom) } : {}), ...(filters.createdTo ? { lte: new Date(filters.createdTo) } : {}) } } : {}),
+    ...(filters.search ? { OR: [{ id: { contains: filters.search, mode: "insensitive" as const } }, { title: { contains: filters.search, mode: "insensitive" as const } }, { description: { contains: filters.search, mode: "insensitive" as const } }, { locationName: { contains: filters.search, mode: "insensitive" as const } }, { user: { email: { contains: filters.search, mode: "insensitive" as const } } }] } : {}),
+    ...(filters.publicStatus === "archived" ? { archivedAt: { not: null } } : filters.publicStatus === "resolved" ? { status: "Resolved" } : filters.publicStatus === "active" ? { status: { in: ["Needs More Confirmation", "Confirmed by Community"] } } : {}),
+  };
+  const orderBy = (filters.sort === "severity" ? { severity: filters.order } : { [filters.sort]: filters.order }) as Prisma.FloodReportOrderByWithRelationInput;
+  const [reports, total] = await Promise.all([
+    prisma.floodReport.findMany({ where, include: { incident: { select: { reportCount: true } }, user: { select: { id: true, email: true, displayName: true } } }, orderBy: [orderBy, { id: filters.order as Prisma.SortOrder }], skip: (page - 1) * limit, take: limit }),
+    prisma.floodReport.count({ where }),
+  ]);
   const [activeCount, needsReviewCount, highSeverityCount, photoCount, activeIncidentCount] = await Promise.all([
     prisma.floodReport.count({ where: { status: { in: ["Needs More Confirmation", "Confirmed by Community"] } } }),
     prisma.floodReport.count({ where: { verificationStatus: "unreviewed" } }),
@@ -29,5 +34,5 @@ export async function GET(request: Request) {
     prisma.floodReport.count({ where: { imageUrl: { not: null } } }),
     prisma.incident.count({ where: { status: { in: ["Needs More Confirmation", "Confirmed by Community"] } } }),
   ]);
-  return adminSuccessResponse(request, { reports: items, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }, summary: { activeCount, needsReviewCount, highSeverityCount, photoCount, activeIncidentCount } }, { headers });
+  return adminSuccessResponse(request, { reports: reports.map(toAdminReportDto), pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }, summary: { activeCount, needsReviewCount, highSeverityCount, photoCount, activeIncidentCount } });
 }

@@ -66,12 +66,12 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### Report list and table
 
-- [ ] Make `GET /api/admin/reports` use database-backed filtering, sorting, and pagination with a stable tie-breaker.
+- [x] Make `GET /api/admin/reports` use database-backed filtering, sorting, and pagination with a stable ID tie-breaker.
 - [ ] Support filters for verification status, public lifecycle status, severity, incident, date range, location, title, description, and reporter.
-- [ ] Return summary counts from the same query contract without loading the entire result set into application memory.
+- [x] Return paginated report results and summary counts without loading the entire report result set into application memory.
 - [ ] Add loading, empty, invalid-filter, retry, and pagination states to the report list.
-- [ ] Update the flood report table column header from **"Assignee"** to **"Reporter"**.
-- [ ] Ensure the Reporter cell displays the authenticated reporter name/email or a clear legacy-anonymous label.
+- [x] Update the flood report table column header from **"Assignee"** to **"Reporter"**.
+- [x] Ensure the Reporter cell displays the authenticated reporter name/email or a clear legacy-anonymous label.
 - [ ] Display report ID, priority/severity, public status, verification status, location, incident association, photo availability, reporter, created time, and last activity.
 - [ ] Ensure row actions open the complete report detail view.
 
@@ -93,7 +93,7 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [ ] Validate allowed verification transitions: `unreviewed`, `verified`, `disputed`, and `rejected`.
 - [ ] Define how verification changes affect public visibility, incident aggregation, and response status.
 - [ ] Add `PATCH /api/admin/reports/:id/verification` transaction logic for the report update, history record, and notification.
-- [ ] Add `PATCH /api/admin/reports/:id/status` with a documented transition matrix.
+- [x] Add `PATCH /api/admin/reports/:id/status` with the documented transition matrix, optimistic concurrency, transaction history, and audit record.
 - [ ] Add `POST /api/admin/reports/:id/notes` for internal notes and optional public response/action notes.
 - [ ] Add report assignment/unassignment only if an operational assignee is required; keep the list column label as Reporter.
 - [ ] Add resolve/close actions with required resolution context and timestamps.
@@ -232,7 +232,7 @@ Defer this entire phase until the public users screen has a rescue-request modul
 ### Integration tests
 
 - [ ] Test every admin endpoint for `401`, `403`, success, validation failure, missing record, stale update, rate limit, and database failure.
-- [ ] Verify report verification/status/note actions create exactly one history record and expected notifications.
+- [ ] Verify report verification/status/note actions create exactly one history record and expected notifications. (Status/verification history is implemented; integration database coverage remains.)
 - [ ] Verify rescue requester ownership, lifecycle, assignment, and history.
 - [ ] Verify center create/edit/verify/archive/restore and public visibility.
 - [ ] Verify modal create flows for flood reports, rescue requests, and evacuation centers.
@@ -265,7 +265,7 @@ Defer this entire phase until the public users screen has a rescue-request modul
 - [x] Phase 0 repository implementation: contracts, migrations, indexes, fixtures, shared helpers, canonical DTOs, service extraction, and admin-route response adoption.
 - [ ] Phase 0 operational follow-up: staging rollback rehearsal, production environment verification, and endpoint latency capture.
 - [ ] Phase 1: authentication/authorization hardening. (Core guard, origin checks, rate limits, request-ID logging, and session-state tests are implemented; database/browser coverage remains.)
-- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution.
+- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution. (List pagination, Reporter label, verification history, and status endpoint are implemented; creation modal, notes, resolution UI, and integration coverage remain.)
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.
 - [ ] Phase 4: rescue-request model, create modal, APIs, and management page (after the public rescue-request module exists).
 - [ ] Phase 5: live overview, map, and analytics.
