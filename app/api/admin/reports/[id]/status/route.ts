@@ -5,7 +5,8 @@ import { recordAdminAudit } from "@/lib/admin-audit";
 import { recordAdminOperationalAction } from "@/lib/admin-action-service";
 import { prisma } from "@/lib/prisma";
 
-function currentAdminStatus(status: string | null, archivedAt: Date | null, resolvedAt: Date | null) {
+function currentAdminStatus(status: string | null, archivedAt: Date | null, resolvedAt: Date | null, latestActionStatus?: string | null) {
+  if (latestActionStatus && isAdminReportStatus(latestActionStatus)) return latestActionStatus;
   if (archivedAt || status === "Archived") return "closed" as const;
   if (resolvedAt || status === "Resolved") return "resolved" as const;
   if (status === "Confirmed by Community") return "verified" as const;
@@ -21,10 +22,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (!isAdminReportStatus(next)) return adminErrorResponse(request, "Invalid report status.", 400);
   const current = await prisma.floodReport.findUnique({ where: { id }, select: { status: true, archivedAt: true, resolvedAt: true, updatedAt: true } });
   if (!current) return adminErrorResponse(request, "Report not found.", 404);
+  const latestAction = await prisma.adminOperationalAction.findFirst({ where: { targetType: "FloodReport", targetId: id, actionType: { in: ["status_change", "resolution"] } }, orderBy: { createdAt: "desc" }, select: { nextValue: true } });
   const expected = parseExpectedUpdatedAt(typeof body?.expectedUpdatedAt === "string" ? body.expectedUpdatedAt : null);
   if (expected === null) return adminErrorResponse(request, "Invalid expectedUpdatedAt value.", 400);
   if (expected && current.updatedAt.getTime() !== expected.getTime()) return adminErrorResponse(request, "This report changed since it was loaded.", 409);
-  const previous = currentAdminStatus(current.status, current.archivedAt, current.resolvedAt);
+  const previous = currentAdminStatus(current.status, current.archivedAt, current.resolvedAt, latestAction?.nextValue);
   if (!canTransitionAdminReportStatus(previous, next)) return adminErrorResponse(request, `Cannot change report status from ${previous} to ${next}.`, 400);
   const now = new Date();
   const report = await prisma.$transaction(async (tx) => {

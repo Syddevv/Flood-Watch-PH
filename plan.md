@@ -88,17 +88,17 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### Report detail and verification
 
-- [ ] Extend `GET /api/admin/reports/:id` to return safe reporter data, incident context, related reports, verification history, response history, and notes.
-- [ ] Improve the verification workflow with explicit confirmation before destructive/reputational transitions.
+- [x] Extend `GET /api/admin/reports/:id` to return safe reporter data, incident context, related reports, verification history, response history, and notes.
+- [x] Improve the verification workflow with explicit confirmation before destructive/reputational transitions.
 - [ ] Validate allowed verification transitions: `unreviewed`, `verified`, `disputed`, and `rejected`.
 - [ ] Define how verification changes affect public visibility, incident aggregation, and response status.
 - [ ] Add `PATCH /api/admin/reports/:id/verification` transaction logic for the report update, history record, and notification.
 - [x] Add `PATCH /api/admin/reports/:id/status` with the documented transition matrix, optimistic concurrency, transaction history, and audit record.
-- [ ] Add `POST /api/admin/reports/:id/notes` for internal notes and optional public response/action notes.
+- [x] Add `POST /api/admin/reports/:id/notes` for internal notes and optional public response/action notes.
 - [ ] Add report assignment/unassignment only if an operational assignee is required; keep the list column label as Reporter.
-- [ ] Add resolve/close actions with required resolution context and timestamps.
+- [x] Add resolve/close actions with required resolution context and timestamps.
 - [ ] Prevent users from modifying admin-only status, verification, assignment, and internal notes.
-- [ ] Add optimistic concurrency using `updatedAt` or a version field and return `409` on stale writes.
+- [x] Add optimistic concurrency using `updatedAt` or a version field and return `409` on stale writes.
 - [ ] Preserve rejected/closed records and their full history for administrative review.
 - [ ] Update the public map/API serialization only with fields intended for public display.
 
@@ -265,7 +265,7 @@ Defer this entire phase until the public users screen has a rescue-request modul
 - [x] Phase 0 repository implementation: contracts, migrations, indexes, fixtures, shared helpers, canonical DTOs, service extraction, and admin-route response adoption.
 - [ ] Phase 0 operational follow-up: staging rollback rehearsal, production environment verification, and endpoint latency capture.
 - [ ] Phase 1: authentication/authorization hardening. (Core guard, origin checks, rate limits, request-ID logging, and session-state tests are implemented; database/browser coverage remains.)
-- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution. (List pagination, Reporter label, verification history, and status endpoint are implemented; creation modal, notes, resolution UI, and integration coverage remain.)
+- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution. (List pagination, Reporter label, verification history, status endpoint, detail history, notes, and resolution controls are implemented; creation modal and integration coverage remain.)
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.
 - [ ] Phase 4: rescue-request model, create modal, APIs, and management page (after the public rescue-request module exists).
 - [ ] Phase 5: live overview, map, and analytics.
