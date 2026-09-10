@@ -46,10 +46,18 @@ test.describe("Request Rescue page", () => {
   test("the sidebar marks Request Rescue as the active section", async ({ page }) => {
     await page.goto("/rescue-request");
 
-    await expect(page.getByText("Current section")).toBeVisible();
-    await expect(
-      page.locator("aside").getByRole("button", { name: "Request Rescue" }),
-    ).toBeVisible();
+    // The nav button labeled "Request Rescue" is rendered on every dashboard
+    // page regardless of which section is active, so it can't prove routing
+    // worked. The "Current section" panel's label, however, is only ever the
+    // active item's label - target that sibling div specifically, not the
+    // always-present nav button of the same name.
+    const currentSectionLabel = page
+      .locator("aside")
+      .getByText("Current section", { exact: true })
+      .locator("xpath=following-sibling::div[1]");
+
+    await expect(currentSectionLabel).toBeVisible();
+    await expect(currentSectionLabel).toHaveText("Request Rescue");
   });
 
   test("the people stepper clamps at one and counts up", async ({ page }) => {
