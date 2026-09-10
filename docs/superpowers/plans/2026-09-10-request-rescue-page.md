@@ -2105,7 +2105,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `RescueRequestContent` from Task 6.
 - Produces: the `/rescue-request` route rendered inside the shell with the sidebar item active.
 
-- [ ] **Step 1: Add the nav item**
+- [x] **Step 1: Add the nav item**
 
 In `lib/constants.ts`, add `LifeBuoy` to the existing `lucide-react` import, then update `NAV_ITEMS`:
 
@@ -2121,7 +2121,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 ```
 
-- [ ] **Step 2: Register the page mode in the shell**
+- [x] **Step 2: Register the page mode in the shell**
 
 In `components/dashboard-shell.tsx`, make these five edits.
 
@@ -2202,7 +2202,7 @@ Add the render branch in the `<main>` view switch, after `isIncidentReportsView`
               <RescueRequestContent />
 ```
 
-- [ ] **Step 3: Point the route at the shell and delete the stub**
+- [x] **Step 3: Point the route at the shell and delete the stub**
 
 Replace the contents of `app/rescue-request/page.tsx` with:
 
@@ -2220,19 +2220,19 @@ Then remove the superseded stub:
 git rm components/rescue-request-page.tsx
 ```
 
-- [ ] **Step 4: Verify nothing else referenced the stub**
+- [x] **Step 4: Verify nothing else referenced the stub**
 
 Run: `grep -rn "rescue-request-page" app components lib tests`
 
 Expected: no output. If anything is found, update it to `@/components/rescue-request-content`.
 
-- [ ] **Step 5: Verify it typechecks, lints, and builds**
+- [x] **Step 5: Verify it typechecks, lints, and builds**
 
 Run: `npm run lint && npm run typecheck && npm test`
 
 Expected: all three exit 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/constants.ts components/dashboard-shell.tsx app/rescue-request/page.tsx components/rescue-request-page.tsx
