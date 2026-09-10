@@ -40,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "weather-monitoring", label: "Weather Monitoring", icon: CloudRain },
   { id: "evacuation-centers", label: "Evacuation Centers", icon: Building2 },
   { id: "incident-reports", label: "Incident Reports", icon: AlertCircle },
+  { id: "rescue-request", label: "Request Rescue", icon: LifeBuoy },
   { id: "emergency-hotlines", label: "Emergency Hotlines", icon: PhoneCall },
   { id: "about", label: "About / How It Works", icon: Info },
 ];
