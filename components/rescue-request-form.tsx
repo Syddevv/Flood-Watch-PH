@@ -264,6 +264,12 @@ export function RescueRequestForm({
       if (accepted) {
         resetForm();
       }
+    } catch (cause) {
+      setErrorMessage(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Unable to send your rescue request. Try again in a moment.",
+      );
     } finally {
       setSubmitting(false);
     }
