@@ -2256,7 +2256,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: the `data-testid` attributes added in Tasks 5 and 6 — `rescue-request-form`, `rescue-use-current-location`, `rescue-choose-on-map`, `rescue-location-name`, `rescue-people-decrement`, `rescue-people-increment`, `rescue-people-count`, `rescue-assistance-<tagId>`, `rescue-situation`, `rescue-contact`, `rescue-photo-upload`, `rescue-form-error`, `rescue-signin-notice`, `rescue-submit`, `rescue-request-count`, `rescue-success`.
 - Produces: nothing consumed by later tasks.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/browser/rescue-request.spec.ts`:
 
@@ -2391,7 +2391,7 @@ test.describe("Request Rescue page", () => {
 });
 ```
 
-- [ ] **Step 2: Run the browser spec**
+- [x] **Step 2: Run the browser spec**
 
 Run: `npx playwright test tests/browser/rescue-request.spec.ts`
 
@@ -2401,13 +2401,13 @@ If a test fails, fix the component — not the test — unless the test's expect
 - The sidebar button name assertion fails → confirm the `NAV_ITEMS` label is exactly `"Request Rescue"`.
 - The overflow assertion fails → find the element wider than its container (usually a fixed-width grid child) and give it `min-w-0`.
 
-- [ ] **Step 3: Run the full verification suite**
+- [x] **Step 3: Run the full verification suite**
 
 Run: `npm run lint && npm run typecheck && npm test && npm run build`
 
 Expected: all four exit 0. Report the actual output; do not claim success without it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/browser/rescue-request.spec.ts
