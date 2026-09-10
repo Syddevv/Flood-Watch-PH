@@ -1824,7 +1824,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `RescueRequestForm` (Task 5), `RescueRequestCard` (Task 4), `RescueRequestAside` (Task 3); `SAMPLE_RESCUE_REQUESTS`, `buildPendingTimeline`, `RescueRequestRecord` (Task 1); `buildRescueRequestDescription`, `RESCUE_REPORT_CATEGORY`, `RESCUE_REPORT_SEVERITY`, `RESCUE_REPORT_TITLE`, `RescueRequestSubmission` (Task 2); `useAuthSession` from `@/components/auth-session-provider`.
 - Produces: `function RescueRequestContent(): JSX.Element` — no props. Consumed by `DashboardShell` in Task 7.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 Create `components/rescue-request-content.tsx`:
 
@@ -2038,7 +2038,7 @@ export function RescueRequestContent() {
 
 **Important:** `handleSubmit` throws on failure, but `RescueRequestForm` awaits it inside a `try/finally` that does not catch. Fix this in Step 2 — the form must show the API error rather than producing an unhandled rejection.
 
-- [ ] **Step 2: Make the form surface thrown submit errors**
+- [x] **Step 2: Make the form surface thrown submit errors**
 
 Edit `components/rescue-request-form.tsx`. Replace the `try { ... } finally { ... }` block inside `handleSubmit` with:
 
@@ -2072,13 +2072,13 @@ Edit `components/rescue-request-form.tsx`. Replace the `try { ... } finally { ..
     }
 ```
 
-- [ ] **Step 3: Verify it typechecks and lints**
+- [x] **Step 3: Verify it typechecks and lints**
 
 Run: `npm run typecheck && npm run lint`
 
 Expected: both exit 0.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add components/rescue-request-content.tsx components/rescue-request-form.tsx
