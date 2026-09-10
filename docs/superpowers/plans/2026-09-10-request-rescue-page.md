@@ -1164,7 +1164,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - `ReportCameraCapture`'s `onUploadInstead` prop is the escape hatch when the camera fails — close the modal and open the file input.
 - `data-testid` attributes are required by the Playwright spec in Task 8. Do not rename them.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 Create `components/rescue-request-form.tsx`:
 
@@ -1793,13 +1793,13 @@ export function RescueRequestForm({
 }
 ```
 
-- [ ] **Step 2: Verify it typechecks and lints**
+- [x] **Step 2: Verify it typechecks and lints**
 
 Run: `npm run typecheck && npm run lint`
 
 Expected: both exit 0. If `Map` collides with the `Map` global in a lint rule, note that it is imported as `Map as MapIcon` and used only as `MapIcon`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/rescue-request-form.tsx
