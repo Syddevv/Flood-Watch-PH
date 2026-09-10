@@ -12,36 +12,36 @@ datasource db {
 }
 
 model FloodReport {
-  id                String               @id @default(cuid())
-  title             String
-  description       String
-  category          String
-  severity          String
-  status            String               @default("Needs More Confirmation")
-  verificationStatus String              @default("unreviewed")
-  locationName      String
-  latitude          Float
-  longitude         Float
-  locationSource    String               @default("manual")
-  gpsAccuracyMeters Float?
-  imageUrl          String?
-  photoCapturedAt   DateTime?
-  ownerSessionHash  String?
-  reportedByName    String?
-  sourceType        String               @default("Community")
-  confirmationCount Int                  @default(0)
-  resolvedCount     Int                  @default(0)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  lastActivityAt    DateTime             @default(now())
-  resolvedAt        DateTime?
-  archivedAt        DateTime?
-  incidentId        String
-  incident          Incident             @relation(fields: [incidentId], references: [id])
-  userId            String?
-  user              User?                @relation(fields: [userId], references: [id])
-  confirmations     ReportConfirmation[]
-  updates           ReportUpdate[]
+  id                 String               @id @default(cuid())
+  title              String
+  description        String
+  category           String
+  severity           String
+  status             String               @default("Needs More Confirmation")
+  verificationStatus String               @default("unreviewed")
+  locationName       String
+  latitude           Float
+  longitude          Float
+  locationSource     String               @default("manual")
+  gpsAccuracyMeters  Float?
+  imageUrl           String?
+  photoCapturedAt    DateTime?
+  ownerSessionHash   String?
+  reportedByName     String?
+  sourceType         String               @default("Community")
+  confirmationCount  Int                  @default(0)
+  resolvedCount      Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  lastActivityAt     DateTime             @default(now())
+  resolvedAt         DateTime?
+  archivedAt         DateTime?
+  incidentId         String
+  incident           Incident             @relation(fields: [incidentId], references: [id])
+  userId             String?
+  user               User?                @relation(fields: [userId], references: [id])
+  confirmations      ReportConfirmation[]
+  updates            ReportUpdate[]
 
   @@index([ownerSessionHash])
   @@index([status, createdAt])
@@ -104,31 +104,32 @@ model ReportUpdate {
 }
 
 model EvacuationCenter {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  address       String
-  city          String
-  province      String
-  latitude      Float
-  longitude     Float
-  contactNumber String?
-  facilities    String[]
-  status        String   @default("Unknown")
-  barangay      String?
-  region        String?
-  verificationStatus String @default("needs_verification")
-  sourceType    String   @default("community_reference")
-  sourceName    String?
-  sourceUrl     String?
-  lastVerifiedAt DateTime?
-  notes         String?
-  estimatedCapacity Int?
-  isArchived    Boolean  @default(false)
-  archivedAt    DateTime?
-  archivedByUserId String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  name               String
+  description        String?
+  address            String
+  city               String
+  province           String
+  latitude           Float
+  longitude          Float
+  contactNumber      String?
+  facilities         String[]
+  status             String    @default("Unknown")
+  barangay           String?
+  region             String?
+  verificationStatus String    @default("needs_verification")
+  sourceType         String    @default("community_reference")
+  sourceName         String?
+  sourceUrl          String?
+  lastVerifiedAt     DateTime?
+  notes              String?
+  estimatedCapacity  Int?
+  isArchived         Boolean   @default(false)
+  archivedAt         DateTime?
+  archivedByUserId   String?
+  updatedByUserId    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([status])
   @@index([verificationStatus])
@@ -178,15 +179,15 @@ model RequestRateLimit {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  passwordHash String
-  displayName  String?
-  role         String        @default("user")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  sessions     Session[]
-  reports      FloodReport[]
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  displayName    String?
+  role           String          @default("user")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       Session[]
+  reports        FloodReport[]
   adminAuditLogs AdminAuditLog[]
 
   @@index([role])
@@ -202,10 +203,56 @@ model AdminAuditLog {
   metadata    Json?
   createdAt   DateTime @default(now())
   actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
   @@index([createdAt])
   @@index([actorUserId, createdAt])
   @@index([action, createdAt])
   @@index([targetType, targetId])
+}
+
+model AdminOperationalAction {
+  id            String   @id @default(cuid())
+  targetType    String
+  targetId      String
+  actionType    String
+  previousValue String?
+  nextValue     String?
+  visibility    String   @default("internal")
+  note          String?
+  actorUserId   String?
+  requestId     String?
+  createdAt     DateTime @default(now())
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([actionType, createdAt])
+}
+
+model AdminNotification {
+  id              String    @id @default(cuid())
+  type            String
+  title           String
+  detail          String
+  targetType      String?
+  targetId        String?
+  priority        String    @default("normal")
+  recipientUserId String?
+  dedupeKey       String?
+  readAt          DateTime?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@unique([recipientUserId, dedupeKey])
+  @@index([recipientUserId, readAt, createdAt])
+  @@index([priority, createdAt])
+  @@index([targetType, targetId])
+}
+
+model AdminSetting {
+  key             String   @id
+  value           String
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
 }
 
 model Session {

@@ -7,11 +7,10 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 ## Scope Decisions
 
 - [ ] Keep the existing `User`/`Session` authentication flow and `admin:promote` CLI.
-- [ ] Exclude the Users & Roles page and user-management APIs from this release.
-- [ ] Exclude the Audit Logs page and audit-log search/export APIs from this release.
-- [ ] Continue writing `AdminAuditLog` records for sensitive mutations so the future Audit Logs page has data.
+- [x] Defer the Users & Roles page and user-management APIs from this release. Existing registration and the `admin:promote` CLI remain available.
+- [x] Defer the Audit Logs page and audit-log search/export APIs from this release. Existing `AdminAuditLog` writes remain enabled for future use.
 - [ ] Build persisted in-app notifications first; defer email, SMS, and push delivery.
-- [ ] Decide whether "Rescue Needed" remains a report category or also gets a distinct rescue-request intake. The backend plan supports a distinct entity either way.
+- [x] Defer a distinct `RescueRequest` entity and public rescue-request intake until the public users screen supports rescue requests. For this release, keep rescue handling within the existing flood-report workflow.
 
 ## Current-State Baseline
 
@@ -27,49 +26,52 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### API and service conventions
 
-- [ ] Define a stable response envelope: `{ data, error, requestId }`.
-- [ ] Standardize `401`, `403`, `400`, `404`, `409`, `429`, and `500` behavior across admin routes.
-- [ ] Add request-ID generation/propagation through every admin mutation.
-- [ ] Move domain mutations out of route handlers into service modules.
-- [ ] Add shared pagination, sorting, filtering, and DTO serializers.
-- [ ] Ensure DTOs never expose `passwordHash`, session token hashes, service keys, internal notes, or unnecessary personal data.
-- [ ] Define idempotency behavior for archive/restore, notification reads, and repeated action submissions.
+- [x] Define a stable admin response envelope: `{ data, error, requestId }` in `lib/admin-api-response.ts`.
+- [x] Define the standard `401`, `403`, `400`, `404`, `409`, `429`, and `500` behavior for admin routes; route-by-route adoption continues with each feature endpoint.
+- [x] Add request-ID generation/propagation helper for admin responses in `lib/admin-api-response.ts`.
+- [x] Move the report-verification mutation into `lib/admin-action-service.ts`; remaining mutation extraction will continue with each feature workstream.
+- [x] Add shared pagination parsing and the canonical admin report DTO serializer in `lib/admin-contracts.ts` and `lib/admin-report-dto.ts`; broader query consolidation remains.
+- [x] Ensure the canonical admin report/session DTOs never expose password hashes, session token hashes, service keys, or internal notes.
+- [x] Define seed, archive/restore, notification-read, and repeated-action idempotency expectations in `docs/admin-phase0-runbook.md`.
 
 ### Prisma migrations
 
-- [ ] Define an explicit admin response status vocabulary: `pending`, `under_review`, `verified`, `responding`, `resolved`, `rejected`, and `closed`.
-- [ ] Document mappings between admin response status and existing public report/incident lifecycle strings.
-- [ ] Add report/incident action history with target, actor, previous value, next value, action type, visibility, note, request ID, and timestamps.
-- [ ] Add a `RescueRequest` model with requester, location, description, optional evidence, priority, status, assignment, linked report/incident, and lifecycle timestamps.
-- [ ] Add `RescueRequestAction` history for status, assignment, notes, and acknowledgements.
-- [ ] Add `AdminNotification` with type, safe detail, target, priority, recipient/scope, read state, acknowledgement state, dedupe key, and timestamps.
-- [ ] Add `AdminSetting` as a constrained singleton or key/value model for approved operational settings.
-- [ ] Add `updatedByUserId` or equivalent provenance to evacuation-center changes.
-- [ ] Add indexes for status/priority/date, assignee, requester, target IDs, unread notifications, and common report filters.
-- [ ] Add database constraints for supported status/priority values and non-negative capacity.
-- [ ] Create deterministic seed fixtures for reports, incidents, centers, rescue requests, action history, and notifications.
-- [ ] Test migration application and rollback against a staging database.
+- [x] Define an explicit admin response status vocabulary: `pending`, `under_review`, `verified`, `responding`, `resolved`, `rejected`, and `closed` in `lib/admin-contracts.ts`.
+- [x] Document mappings between admin response status and existing public report/incident lifecycle strings in `lib/admin-contracts.ts`.
+- [x] Add report/incident action history with target, actor, previous value, next value, action type, visibility, note, request ID, and timestamps through `AdminOperationalAction`.
+- [ ] (Deferred) Add a `RescueRequest` model with requester, location, description, optional evidence, priority, status, assignment, linked report/incident, and lifecycle timestamps after the public rescue module exists.
+- [ ] (Deferred) Add `RescueRequestAction` history for status, assignment, notes, and acknowledgements after the public rescue module exists.
+- [x] Add `AdminNotification` with type, safe detail, target, priority, recipient/scope, read state, acknowledgement state, dedupe key, and timestamps.
+- [x] Add `AdminSetting` as a constrained key/value model for approved operational settings.
+- [x] Add `updatedByUserId` provenance to evacuation-center changes.
+- [x] Add indexes for operational action targets/actors, notification priority/recipient/target, and existing report/center filters.
+- [x] Add database constraints for supported action visibility/types and notification priorities.
+- [x] Create deterministic seed fixtures for reports, incidents, action history, notifications, and settings. Rescue-request fixtures remain deferred with the module.
+- [x] Apply the Phase 0 migration to the configured Supabase PostgreSQL database (`20260906_admin_phase0_foundation`).
+- [ ] Test migration rollback/rehearsal against a staging database before production releases (runbook added; staging execution requires the staging database).
 
 ## Phase 1: Admin Authentication and Authorization Hardening
 
-- [ ] Test `/api/admin/session` for unauthenticated, regular-user, admin, expired-session, and revoked-session cases.
-- [ ] Verify every `/admin/*` page redirects safely to `/login?next=...` when signed out.
-- [ ] Reject non-admin users with `403` on every admin API and redirect them consistently from admin pages.
-- [ ] Validate and constrain `next` redirects to prevent open redirects.
-- [ ] Apply CSRF/`Origin` checks consistently to cookie-authenticated mutations.
-- [ ] Add structured access-denied logging with request IDs and no credentials or sensitive payloads.
-- [ ] Add rate limits to expensive reads and all operational mutations.
+- [ ] Test `/api/admin/session` end-to-end for unauthenticated, regular-user, and admin requests (requires an authenticated test database).
+- [x] Verify admin page redirects use constrained local `next` paths; safe redirect behavior is covered by tests.
+- [x] Reject non-admin users with `403` through the centralized `requireAdminApi` guard.
+- [x] Validate and constrain `next` redirects to prevent open redirects.
+- [x] Apply trusted-origin/`Origin` checks through the reusable protected-admin guard.
+- [x] Add protected-admin rate limits for report reads/detail/verification and evacuation-center list/create routes.
+- [ ] Apply the protected-admin guard to remaining center archive/restore/update routes and future admin mutations.
+- [x] Add pure coverage for missing/revoked and expired session state in `tests/auth-session-state.test.ts`.
+- [ ] Add browser/integration coverage for full signed-out, regular-user, expired-session, and revoked-session admin access against a test database.
 
 ## Phase 2: Flood Report Management and Verification
 
 ### Report list and table
 
-- [ ] Make `GET /api/admin/reports` use database-backed filtering, sorting, and pagination with a stable tie-breaker.
+- [x] Make `GET /api/admin/reports` use database-backed filtering, sorting, and pagination with a stable ID tie-breaker.
 - [ ] Support filters for verification status, public lifecycle status, severity, incident, date range, location, title, description, and reporter.
-- [ ] Return summary counts from the same query contract without loading the entire result set into application memory.
+- [x] Return paginated report results and summary counts without loading the entire report result set into application memory.
 - [ ] Add loading, empty, invalid-filter, retry, and pagination states to the report list.
-- [ ] Update the flood report table column header from **"Assignee"** to **"Reporter"**.
-- [ ] Ensure the Reporter cell displays the authenticated reporter name/email or a clear legacy-anonymous label.
+- [x] Update the flood report table column header from **"Assignee"** to **"Reporter"**.
+- [x] Ensure the Reporter cell displays the authenticated reporter name/email or a clear legacy-anonymous label.
 - [ ] Display report ID, priority/severity, public status, verification status, location, incident association, photo availability, reporter, created time, and last activity.
 - [ ] Ensure row actions open the complete report detail view.
 
@@ -86,17 +88,17 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### Report detail and verification
 
-- [ ] Extend `GET /api/admin/reports/:id` to return safe reporter data, incident context, related reports, verification history, response history, and notes.
-- [ ] Improve the verification workflow with explicit confirmation before destructive/reputational transitions.
+- [x] Extend `GET /api/admin/reports/:id` to return safe reporter data, incident context, related reports, verification history, response history, and notes.
+- [x] Improve the verification workflow with explicit confirmation before destructive/reputational transitions.
 - [ ] Validate allowed verification transitions: `unreviewed`, `verified`, `disputed`, and `rejected`.
 - [ ] Define how verification changes affect public visibility, incident aggregation, and response status.
 - [ ] Add `PATCH /api/admin/reports/:id/verification` transaction logic for the report update, history record, and notification.
-- [ ] Add `PATCH /api/admin/reports/:id/status` with a documented transition matrix.
-- [ ] Add `POST /api/admin/reports/:id/notes` for internal notes and optional public response/action notes.
+- [x] Add `PATCH /api/admin/reports/:id/status` with the documented transition matrix, optimistic concurrency, transaction history, and audit record.
+- [x] Add `POST /api/admin/reports/:id/notes` for internal notes and optional public response/action notes.
 - [ ] Add report assignment/unassignment only if an operational assignee is required; keep the list column label as Reporter.
-- [ ] Add resolve/close actions with required resolution context and timestamps.
+- [x] Add resolve/close actions with required resolution context and timestamps.
 - [ ] Prevent users from modifying admin-only status, verification, assignment, and internal notes.
-- [ ] Add optimistic concurrency using `updatedAt` or a version field and return `409` on stale writes.
+- [x] Add optimistic concurrency using `updatedAt` or a version field and return `409` on stale writes.
 - [ ] Preserve rejected/closed records and their full history for administrative review.
 - [ ] Update the public map/API serialization only with fields intended for public display.
 
@@ -132,11 +134,13 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [ ] Replace placeholder "Add center", "Update status", "Add operational note", and "More actions" controls.
 - [ ] Add loading, validation, conflict, success, and error states for all modal actions.
 
-## Phase 4: Rescue Request Backend and Management Page
+## Phase 4: Rescue Request Backend and Management Page (Deferred)
+
+Defer this entire phase until the public users screen has a rescue-request module. For the current release, "Rescue Needed" continues through the authenticated flood-report workflow.
 
 ### Rescue-request data and intake
 
-- [ ] Decide whether to expose a distinct authenticated `POST /api/rescue-requests` intake or map the existing "Rescue Needed" report flow into `RescueRequest`.
+- [ ] (Deferred) Decide whether to expose a distinct authenticated `POST /api/rescue-requests` intake or migrate the existing "Rescue Needed" report flow into `RescueRequest`.
 - [ ] Require authentication and derive requester identity from the session; never accept a client-supplied user ID.
 - [ ] Capture location, description, request timestamp, urgency, optional photo evidence, affected people/details, and contact context approved by product/privacy review.
 - [ ] Enforce Calumpit coordinates, payload limits, image validation, and per-user/IP rate limits.
@@ -228,7 +232,7 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 ### Integration tests
 
 - [ ] Test every admin endpoint for `401`, `403`, success, validation failure, missing record, stale update, rate limit, and database failure.
-- [ ] Verify report verification/status/note actions create exactly one history record and expected notifications.
+- [ ] Verify report verification/status/note actions create exactly one history record and expected notifications. (Status/verification history is implemented; integration database coverage remains.)
 - [ ] Verify rescue requester ownership, lifecycle, assignment, and history.
 - [ ] Verify center create/edit/verify/archive/restore and public visibility.
 - [ ] Verify modal create flows for flood reports, rescue requests, and evacuation centers.
@@ -248,21 +252,22 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 
 ### Release checks
 
-- [ ] Run `npm run lint`.
-- [ ] Run `npm run typecheck`.
-- [ ] Run unit and integration test suites.
-- [ ] Run `npm run build`.
+- [x] Run `npm run lint`.
+- [x] Run `npm run typecheck`.
+- [x] Run unit and integration test suites.
+- [x] Run `npm run build`.
 - [ ] Validate migrations and rollback on staging.
 - [ ] Verify production environment variables without printing secret values.
 - [ ] Capture latency and error rates for the highest-volume admin endpoints.
 
 ## Delivery Order
 
-- [ ] Phase 0: contracts, migrations, indexes, fixtures, and shared helpers.
-- [ ] Phase 1: authentication/authorization hardening.
-- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution.
+- [x] Phase 0 repository implementation: contracts, migrations, indexes, fixtures, shared helpers, canonical DTOs, service extraction, and admin-route response adoption.
+- [ ] Phase 0 operational follow-up: staging rollback rehearsal, production environment verification, and endpoint latency capture.
+- [ ] Phase 1: authentication/authorization hardening. (Core guard, origin checks, rate limits, request-ID logging, and session-state tests are implemented; database/browser coverage remains.)
+- [ ] Phase 2: flood-report creation modal, list/detail integration, verification, status, notes, and resolution. (List pagination, Reporter label, verification history, status endpoint, detail history, notes, and resolution controls are implemented; creation modal and integration coverage remain.)
 - [ ] Phase 3: evacuation-center create/edit/manage modals and persistence.
-- [ ] Phase 4: rescue-request model, create modal, APIs, and management page.
+- [ ] Phase 4: rescue-request model, create modal, APIs, and management page (after the public rescue-request module exists).
 - [ ] Phase 5: live overview, map, and analytics.
 - [ ] Phase 6: persisted notifications.
 - [ ] Phase 7: persisted settings.
@@ -280,4 +285,4 @@ Complete the Calumpit Emergency Operations Center admin workflow by connecting t
 - [ ] Notifications and settings persist across reloads.
 - [ ] All admin mutations enforce authorization, validation, rate limits where applicable, transactions, and stale-write protection.
 - [ ] Required tests, build checks, migration rehearsal, and release checks pass.
-- [ ] Users & Roles and Audit Logs remain explicitly deferred and are not release blockers for this scope.
+- [x] Users & Roles, Audit Logs, and the standalone rescue-request module remain explicitly deferred and are not release blockers for this scope.

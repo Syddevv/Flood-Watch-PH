@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw, Search } from "lucide-react";
+import { AdminCreateReportModal } from "@/components/admin-create-report-modal";
 
 type Report = { id: string; title: string; locationName: string; severity: string; publicStatus: string; verificationStatus: string; incidentId: string; incidentReportCount: number; hasPhoto: boolean; reporter: { email: string; displayName: string | null } | null; createdAt: string; lastActivityAt: string };
 type Payload = { reports: Report[]; pagination: { page: number; limit: number; total: number; totalPages: number }; summary: { activeCount: number; needsReviewCount: number; highSeverityCount: number; photoCount: number; activeIncidentCount: number } };
