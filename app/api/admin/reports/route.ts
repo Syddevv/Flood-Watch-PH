@@ -5,6 +5,10 @@ import { parseAdminReportFilters } from "@/lib/admin-reports";
 import { toAdminReportDto } from "@/lib/admin-report-dto";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { isValidReportCategory, isValidReportSeverity } from "@/lib/validations";
+import { isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { recordAdminAudit } from "@/lib/admin-audit";
+import { recordAdminOperationalAction } from "@/lib/admin-action-service";
 
 export async function GET(request: Request) {
   const auth = await requireProtectedAdminApi(request, { scope: "admin-reports-read", limit: 120, windowMs: 60_000 });
@@ -35,4 +39,23 @@ export async function GET(request: Request) {
     prisma.incident.count({ where: { status: { in: ["Needs More Confirmation", "Confirmed by Community"] } } }),
   ]);
   return adminSuccessResponse(request, { reports: reports.map(toAdminReportDto), pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) }, summary: { activeCount, needsReviewCount, highSeverityCount, photoCount, activeIncidentCount } });
+}
+
+export async function POST(request: Request) {
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-report-create", limit: 20, windowMs: 60_000 });
+  if (auth.response) return auth.response;
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  const text = (key: string, max: number) => typeof body?.[key] === "string" ? String(body[key]).trim().slice(0, max) : "";
+  const title = text("title", 160), description = text("description", 5000), category = text("category", 80), severity = text("severity", 40), locationName = text("locationName", 240), reporterName = text("reporterName", 160);
+  const latitude = Number(body?.latitude), longitude = Number(body?.longitude);
+  if (!title || !description || !locationName || !isValidReportCategory(category) || !isValidReportSeverity(severity) || !Number.isFinite(latitude) || !Number.isFinite(longitude) || !isWithinCalumpit(latitude, longitude)) return adminErrorResponse(request, "Invalid report details or coordinates outside Calumpit.", 400);
+  const now = new Date();
+  const result = await prisma.$transaction(async (tx) => {
+    const incident = await tx.incident.create({ data: { status: "Needs More Confirmation", representativeLatitude: latitude, representativeLongitude: longitude, locationName, severity, reportCount: 1, firstReportAt: now, lastActivityAt: now } });
+    const report = await tx.floodReport.create({ data: { title, description, category, severity, locationName, latitude, longitude, locationSource: "admin", reportedByName: reporterName || null, sourceType: "Official", lastActivityAt: now, incidentId: incident.id } });
+    await recordAdminOperationalAction(tx, { targetType: "FloodReport", targetId: report.id, actionType: "status_change", actorUserId: auth.user.id, previousValue: null, nextValue: "pending", note: "Created by administrator", requestId: request.headers.get("x-request-id") });
+    return report;
+  });
+  await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_REPORT_CREATED", targetType: "FloodReport", targetId: result.id, requestId: request.headers.get("x-request-id") ?? undefined });
+  return adminSuccessResponse(request, { id: result.id, incidentId: result.incidentId }, { status: 201 });
 }
