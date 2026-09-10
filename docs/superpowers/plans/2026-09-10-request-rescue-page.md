@@ -839,7 +839,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `RESCUE_DISCLAIMER`, `RESCUE_HOTLINES`, `RESCUE_HOTLINE_NOTICE`, `RESCUE_WAIT_TIPS` from `@/lib/rescue-request-data` (Task 1).
 - Produces: `function RescueRequestAside(): JSX.Element` — takes no props.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 Create `components/rescue-request-aside.tsx`:
 
@@ -918,13 +918,13 @@ export function RescueRequestAside() {
 }
 ```
 
-- [ ] **Step 2: Verify it typechecks and lints**
+- [x] **Step 2: Verify it typechecks and lints**
 
 Run: `npm run typecheck && npm run lint`
 
 Expected: both exit 0 with no errors for `components/rescue-request-aside.tsx`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/rescue-request-aside.tsx
