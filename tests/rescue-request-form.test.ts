@@ -4,6 +4,7 @@ import test from "node:test";
 import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
 import {
   RESCUE_MAX_PEOPLE,
+  RESCUE_MAX_SITUATION_LENGTH,
   RESCUE_MIN_PEOPLE,
   buildRescueRequestDescription,
   clampRescuePeopleCount,
@@ -159,6 +160,24 @@ test("a too-short situation is rejected", () => {
     error,
     "Describe your situation in at least 10 characters so responders know what to prepare.",
   );
+});
+
+test("a situation at exactly the maximum length is accepted", () => {
+  const maxLengthSituation = "x".repeat(RESCUE_MAX_SITUATION_LENGTH);
+  const error = validateRescueRequestForm({
+    ...VALID_INPUT,
+    situation: maxLengthSituation,
+  });
+  assert.equal(error, null);
+});
+
+test("an over-long situation is rejected", () => {
+  const overLongSituation = "x".repeat(RESCUE_MAX_SITUATION_LENGTH + 1);
+  const error = validateRescueRequestForm({
+    ...VALID_INPUT,
+    situation: overLongSituation,
+  });
+  assert.equal(error, `Situation must not exceed ${RESCUE_MAX_SITUATION_LENGTH} characters.`);
 });
 
 test("an over-long location name is rejected before the API sees it", () => {

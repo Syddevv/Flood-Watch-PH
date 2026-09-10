@@ -151,5 +151,9 @@ export function validateRescueRequestForm({
     return `Describe your situation in at least ${RESCUE_MIN_SITUATION_LENGTH} characters so responders know what to prepare.`;
   }
 
+  if (situation.trim().length > RESCUE_MAX_SITUATION_LENGTH) {
+    return `Situation must not exceed ${RESCUE_MAX_SITUATION_LENGTH} characters.`;
+  }
+
   return null;
 }
