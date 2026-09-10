@@ -71,7 +71,7 @@
   - `const RESCUE_DISCLAIMER: string`
   - `function buildPendingTimeline(receivedTime: string): RescueTimelineEntry[]`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/rescue-request-data.test.ts`:
 
@@ -180,13 +180,13 @@ test("wait tips are non-empty guidance strings", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx tsx --test tests/rescue-request-data.test.ts`
 
 Expected: FAIL — the module does not exist, so the import throws `Cannot find module '@/lib/rescue-request-data'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `lib/rescue-request-data.ts`:
 
@@ -413,13 +413,13 @@ export const RESCUE_DISCLAIMER =
   "This is a community-assist tool. Requests are prioritized by responders based on severity and available units. Always follow official advisories from PAGASA, NDRRMC, and your LGU.";
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx tsx --test tests/rescue-request-data.test.ts`
 
 Expected: PASS — 8 tests pass, 0 fail.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/rescue-request-data.ts tests/rescue-request-data.test.ts
