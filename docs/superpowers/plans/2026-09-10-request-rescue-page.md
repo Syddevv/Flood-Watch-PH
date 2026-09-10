@@ -454,7 +454,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
   - `function validateRescueRequestForm(input: RescueValidationInput): string | null`
   - `type RescueRequestSubmission`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/rescue-request-form.test.ts`:
 
@@ -631,13 +631,13 @@ test("an over-long location name is rejected before the API sees it", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx tsx --test tests/rescue-request-form.test.ts`
 
 Expected: FAIL — `Cannot find module '@/lib/rescue-request-form'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `lib/rescue-request-form.ts`:
 
@@ -799,19 +799,19 @@ export function validateRescueRequestForm({
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx tsx --test tests/rescue-request-form.test.ts`
 
 Expected: PASS — 15 tests pass, 0 fail.
 
-- [ ] **Step 5: Run the whole unit suite to confirm nothing regressed**
+- [x] **Step 5: Run the whole unit suite to confirm nothing regressed**
 
 Run: `npm test`
 
 Expected: all existing suites still pass, plus the two new files.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/rescue-request-form.ts tests/rescue-request-form.test.ts
@@ -823,6 +823,10 @@ the Calumpit boundary check the report API also enforces.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 ```
+
+---
+
+> **Deviation from plan (approved during execution):** `validateRescueRequestForm` also rejects a situation longer than `RESCUE_MAX_SITUATION_LENGTH`, so the 1000-character description guarantee does not rest on the textarea `maxLength` attribute alone. Covered by two boundary tests.
 
 ---
 
