@@ -947,7 +947,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Consumes: `RESCUE_ASSISTANCE_TAGS`, `RescueRequestRecord` from `@/lib/rescue-request-data` (Task 1); `formatRescuePeopleLabel` from `@/lib/rescue-request-form` (Task 2); `cn` from `@/lib/utils`.
 - Produces: `function RescueRequestCard({ request }: { request: RescueRequestRecord }): JSX.Element`
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 Create `components/rescue-request-card.tsx`:
 
@@ -1121,13 +1121,13 @@ export function RescueRequestCard({ request }: RescueRequestCardProps) {
 }
 ```
 
-- [ ] **Step 2: Verify it typechecks and lints**
+- [x] **Step 2: Verify it typechecks and lints**
 
 Run: `npm run typecheck && npm run lint`
 
 Expected: both exit 0.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/rescue-request-card.tsx
