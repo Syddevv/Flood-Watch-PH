@@ -1,5 +1,19 @@
 # Admin Phase 0 Database Runbook
 
+## Reset an administrator password
+
+From an interactive terminal at the project root, with `DATABASE_URL` (or
+`DIRECT_URL`) pointing to the intended database, run:
+
+```powershell
+npm run admin:reset-password -- admin@example.com
+```
+
+Enter and confirm a new password when prompted. The password is not shown or
+passed as a command-line argument. The command requires an existing admin
+account, uses the application's password hash, records an audit event, and
+revokes that account's existing sessions. Sign in again after it succeeds.
+
 ## Apply a migration
 
 1. Confirm the target environment and take a database backup.

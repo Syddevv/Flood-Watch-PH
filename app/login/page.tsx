@@ -32,7 +32,10 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        data?: { user?: { role?: string } };
+      };
 
       if (!response.ok) {
         setError(payload.error ?? "Unable to sign in.");
@@ -40,7 +43,8 @@ function LoginForm() {
       }
 
       await refresh();
-      router.push(getSafeLocalRedirect(searchParams.get("next"), "/incident-reports"));
+      const defaultDestination = payload.data?.user?.role === "admin" ? "/admin" : "/incident-reports";
+      router.replace(getSafeLocalRedirect(searchParams.get("next"), defaultDestination));
     } catch {
       setError("Unable to sign in right now. Please try again.");
     } finally {
