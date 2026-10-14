@@ -55,6 +55,11 @@ function getSeverityTone(riskLevel: FloodRiskLevel): AlertSeverity {
 export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
   return (
     <section className="grid grid-cols-1 gap-2">
+      {weather.unavailableLocations?.length ? (
+        <p className="text-[0.72rem] text-[var(--color-muted-foreground)]">
+          Unavailable: {weather.unavailableLocations.join(", ")}. Last successful fetch: {weather.fetchedAt || "none"}.
+        </p>
+      ) : null}
       {weather.locations.map((location) => (
         <article
           key={location.name}
@@ -121,7 +126,7 @@ export function WeatherOverview({ weather }: { weather: WeatherOverviewData }) {
             Source: {location.source.name}
           </div>
           <div className="mt-0.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
-            Official reference: {location.officialReference.name}
+            Official advisories: check {location.officialReference.name} separately
           </div>
         </article>
       ))}

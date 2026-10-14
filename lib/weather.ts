@@ -1,4 +1,5 @@
 import { isWithinBulacan } from "@/lib/bulacan-scope";
+import { MONITORED_WEATHER_POINTS } from "@/data/bulacan-weather-points";
 import type {
   AlertSeverity,
   FloodAlert,
@@ -26,16 +27,6 @@ const WEATHER_TIME_ZONE = "Asia/Manila";
 const REQUEST_TIMEOUT_MS = 15000;
 const PHILIPPINES_COUNTRY_CODE = "PH";
 const SIDEBAR_LOCATION_LIMIT = 5;
-
-const MONITORED_LOCATIONS = [
-  { name: "Metro Manila", latitude: 14.6091, longitude: 121.0223 },
-  { name: "Marikina", latitude: 14.6507, longitude: 121.1029 },
-  { name: "Quezon City", latitude: 14.676, longitude: 121.0437 },
-  { name: "Manila", latitude: 14.5995, longitude: 120.9842 },
-  { name: "Pasig", latitude: 14.5764, longitude: 121.0851 },
-  { name: "Cainta", latitude: 14.5786, longitude: 121.1222 },
-  { name: "Bulacan", latitude: 14.8441, longitude: 120.8107 },
-] as const;
 
 type OpenMeteoResponse = {
   current?: {
@@ -105,7 +96,14 @@ type ReverseGeocodedPhilippineAddress = {
 type WeatherDebugLevel = "info" | "warn";
 
 const LOCATION_NOT_FOUND_MESSAGE =
-  "Location not found. Try another city, municipality, or province.";
+  "Location not found in Bulacan. Try another Bulacan city or municipality.";
+export const OUTSIDE_WEATHER_SCOPE_MESSAGE =
+  "This location is outside Bulacan. Weather monitoring covers Bulacan only.";
+export class WeatherScopeError extends Error {
+  constructor() {
+    super(OUTSIDE_WEATHER_SCOPE_MESSAGE);
+  }
+}
 const GENERIC_LOCATION_ERROR_MESSAGE =
   "Unable to load weather for this location. Please try again.";
 const WEATHER_UNAVAILABLE_MESSAGE =
@@ -203,7 +201,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isUsableOpenMeteoPayload(payload: unknown): payload is OpenMeteoResponse {
-  return isRecord(payload) && isRecord(payload.current) && isRecord(payload.hourly);
+  if (!isRecord(payload) || !isRecord(payload.current) || !isRecord(payload.hourly)) {
+    return false;
+  }
+  const weather = payload as OpenMeteoResponse;
+  const precipitation = pickPrecipitationValue(weather);
+  return typeof weather.current?.time === "string" &&
+    weather.current.time.length > 0 &&
+    typeof precipitation === "number" && Number.isFinite(precipitation);
 }
 
 function getErrorDetails(error: unknown) {
@@ -352,10 +357,6 @@ function formatWeatherTimestamp(dateString: string | undefined) {
     minute: "2-digit",
     hour12: true,
   }).format(date);
-}
-
-function isWithinPhilippines(latitude: number, longitude: number) {
-  return latitude >= 4 && latitude <= 22.5 && longitude >= 116 && longitude <= 127.5;
 }
 
 function buildDisplayLocationName(result: GeocodingResult) {
@@ -686,6 +687,14 @@ function buildAlertDescription(location: string, riskLevel: FloodRiskLevel) {
 }
 
 function buildOpenMeteoWeatherUrl(locations: WeatherLookupLocation[]) {
+  if (locations.length === 0 || locations.length > MONITORED_WEATHER_POINTS.length) {
+    throw new Error("Invalid weather provider batch size.");
+  }
+  for (const location of locations) {
+    if (!isWithinBulacan(location.latitude, location.longitude)) {
+      throw new WeatherScopeError();
+    }
+  }
   const searchParams = new URLSearchParams({
     latitude: locations.map((location) => String(location.latitude)).join(","),
     longitude: locations.map((location) => String(location.longitude)).join(","),
@@ -807,6 +816,8 @@ async function fetchOpenMeteoWeatherForOverview(locations: readonly WeatherLooku
       receivedLocations: payloads.length,
       reason: "Batched forecast response length did not match monitored locations.",
     });
+    // Positional mapping is no longer trustworthy. Retry each point by name.
+    return [];
   }
 
   return locations.flatMap((location, index) => {
@@ -825,14 +836,14 @@ async function fetchOpenMeteoWeatherForOverview(locations: readonly WeatherLooku
     try {
       return [buildWeatherLocation(location, locationPayload)];
     } catch (error) {
-    logWeatherDebug("warn", "monitored-location-failed", {
-      provider: "Open-Meteo forecast",
-      location: location.name,
-      ...getErrorDetails(error),
-    });
+      logWeatherDebug("warn", "monitored-location-failed", {
+        provider: "Open-Meteo forecast",
+        location: location.name,
+        ...getErrorDetails(error),
+      });
 
-    return [];
-  }
+      return [];
+    }
   });
 }
 
@@ -877,8 +888,10 @@ async function fetchWeatherForLocation(location: WeatherLookupLocation): Promise
 async function fetchWeatherForOverviewLocationsIndividually(
   locations: readonly WeatherLookupLocation[],
 ) {
-  const results = await Promise.all(
-    locations.map(async (location) => {
+  const results: WeatherLocation[] = [];
+  // One retry per missing point, at most three concurrent provider calls.
+  for (let offset = 0; offset < locations.length; offset += 3) {
+    const chunk = await Promise.all(locations.slice(offset, offset + 3).map(async (location) => {
       try {
         return await fetchWeatherForLocation(location);
       } catch (error) {
@@ -890,14 +903,16 @@ async function fetchWeatherForOverviewLocationsIndividually(
 
         return null;
       }
-    }),
-  );
+    }));
+    results.push(...chunk.filter((result): result is WeatherLocation => result !== null));
+  }
 
-  return results.filter((result): result is WeatherLocation => result !== null);
+  return results;
 }
 
 async function geocodePhilippineLocation(query: string) {
   const searchAttempts = buildLocationSearchAttempts(query);
+  let foundOutsideBulacan = false;
 
   if (searchAttempts.length === 0) {
     throw new Error(LOCATION_NOT_FOUND_MESSAGE);
@@ -909,6 +924,7 @@ async function geocodePhilippineLocation(query: string) {
     if (philippineResults.length === 0) {
       continue;
     }
+    foundOutsideBulacan = true;
 
     philippineResults.sort(
       (left, right) => scorePhilippineResult(right, attempt) - scorePhilippineResult(left, attempt),
@@ -920,6 +936,9 @@ async function geocodePhilippineLocation(query: string) {
     if (nearbyResult) return nearbyResult;
   }
 
+  if (foundOutsideBulacan) {
+    throw new WeatherScopeError();
+  }
   throw new Error(LOCATION_NOT_FOUND_MESSAGE);
 }
 
@@ -980,18 +999,20 @@ function buildSystemAlerts(locations: WeatherLocation[]): FloodAlert[] {
     }));
 }
 
-function createOverviewResponse(locations: WeatherLocation[]): WeatherOverviewData {
+function createOverviewResponse(locations: WeatherLocation[], unavailableLocations: string[]): WeatherOverviewData {
   return {
     locations,
     alerts: buildSystemAlerts(locations),
     fetchedAt: formatWeatherTimestamp(new Date().toISOString()),
     advisoryMessage: WEATHER_RISK_DISCLAIMER,
+    monitoredLocationCount: MONITORED_WEATHER_POINTS.length,
+    unavailableLocations,
   };
 }
 
-export function getWeatherCacheHeaders() {
+export function getWeatherCacheHeaders(ttlSeconds = WEATHER_SOURCE_CACHE_SECONDS) {
   return {
-    "Cache-Control": `public, s-maxage=${WEATHER_SOURCE_CACHE_SECONDS}, stale-while-revalidate=${WEATHER_SOURCE_CACHE_SECONDS / 2}`,
+    "Cache-Control": `public, s-maxage=${ttlSeconds}, stale-while-revalidate=${Math.floor(ttlSeconds / 2)}`,
   };
 }
 
@@ -1007,6 +1028,8 @@ export function createUnavailableWeatherOverview(
     alerts: [],
     fetchedAt: "",
     advisoryMessage: message,
+    monitoredLocationCount: MONITORED_WEATHER_POINTS.length,
+    unavailableLocations: MONITORED_WEATHER_POINTS.map((point) => point.name),
   };
 }
 
@@ -1014,7 +1037,7 @@ export async function getWeatherOverview(): Promise<WeatherOverviewData> {
   let locations: WeatherLocation[] = [];
 
   try {
-    locations = sortLocationsByRisk(await fetchOpenMeteoWeatherForOverview(MONITORED_LOCATIONS));
+    locations = await fetchOpenMeteoWeatherForOverview(MONITORED_WEATHER_POINTS);
   } catch (error) {
     logWeatherDebug("warn", "overview-provider-failed", {
       provider: "Open-Meteo forecast",
@@ -1023,28 +1046,33 @@ export async function getWeatherOverview(): Promise<WeatherOverviewData> {
     });
   }
 
-  if (locations.length === 0) {
+  const foundNames = new Set(locations.map((location) => location.name));
+  const missingPoints = MONITORED_WEATHER_POINTS.filter((point) => !foundNames.has(point.name));
+  if (missingPoints.length > 0) {
     logWeatherDebug("warn", "overview-provider-retry", {
       provider: "Open-Meteo forecast",
       operation: "individual-locations",
-      reason: "Batched overview returned no usable monitored locations.",
+      reason: "Batched overview missed monitored locations.",
+      missingLocations: missingPoints.map((point) => point.name),
     });
 
-    locations = sortLocationsByRisk(
-      await fetchWeatherForOverviewLocationsIndividually(MONITORED_LOCATIONS),
-    );
+    locations = locations.concat(await fetchWeatherForOverviewLocationsIndividually(missingPoints));
   }
 
   if (locations.length === 0) {
     logWeatherDebug("warn", "overview-fallback", {
       reason: "No monitored locations returned usable weather data.",
-      monitoredLocations: MONITORED_LOCATIONS.map((location) => location.name),
+      monitoredLocations: MONITORED_WEATHER_POINTS.map((location) => location.name),
     });
 
     throw new Error(WEATHER_UNAVAILABLE_MESSAGE);
   }
 
-  return createOverviewResponse(locations);
+  const available = new Set(locations.map((location) => location.name));
+  return createOverviewResponse(
+    sortLocationsByRisk(locations),
+    MONITORED_WEATHER_POINTS.filter((point) => !available.has(point.name)).map((point) => point.name),
+  );
 }
 
 export function getSidebarWeatherOverview(overview: WeatherOverviewData): WeatherOverviewData {
@@ -1083,19 +1111,18 @@ export async function getWeatherByCoordinates(
     throw new Error(GENERIC_LOCATION_ERROR_MESSAGE);
   }
 
-  if (!isWithinPhilippines(latitude, longitude)) {
-    throw new Error(LOCATION_NOT_FOUND_MESSAGE);
+  if (!isWithinBulacan(latitude, longitude)) {
+    throw new WeatherScopeError();
   }
 
-  const fallbackName = name?.trim();
-  const reverseGeocodedAddress = !fallbackName
+  const reverseGeocodedAddress = !name?.trim()
     ? await reverseGeocodePhilippineAddress(latitude, longitude)
     : null;
-  const resolvedLocationName = !fallbackName
+  const resolvedLocationName = !name?.trim()
     ? reverseGeocodedAddress?.locationName ??
       reverseGeocodedAddress?.formattedAddress ??
       buildCoordinateFallbackLabel(latitude, longitude)
-    : fallbackName;
+    : buildCoordinateFallbackLabel(latitude, longitude);
 
   const location = await fetchWeatherForLocation({
     name: resolvedLocationName,

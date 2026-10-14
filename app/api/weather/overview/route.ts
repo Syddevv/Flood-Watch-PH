@@ -8,10 +8,11 @@ import {
   getWeatherUnavailableMessage,
 } from "@/lib/weather";
 import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { WEATHER_POINT_SET_VERSION } from "@/data/bulacan-weather-points";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
-const getCachedWeatherOverview = unstable_cache(getWeatherOverview, ["weather-overview"], {
+const getCachedWeatherOverview = unstable_cache(getWeatherOverview, ["weather-overview", WEATHER_POINT_SET_VERSION], {
   revalidate: WEATHER_SOURCE_CACHE_SECONDS,
 });
 

@@ -4,7 +4,9 @@
 
 Make **Flood Watch** a Bulacan-wide public service on the existing Next.js 16/React 19/TypeScript, Prisma/PostgreSQL, Leaflet, Open-Meteo, custom-session, and Cloudinary stack. This plan covers province-wide map/report/weather/resource views, evidence-aware flood reporting, verified registration, and a durable user rescue journey. It is a proposal; no phase below is implemented by this document. The admin plan is `docs/admin-side-plan.md`. Preserve historical Calumpit records and technical identifiers that are embedded in cookies, database tables, deployed URLs, or external integrations until separately migrated.
 
-## Current implementation and gaps
+## Baseline implementation and gaps (before U0)
+
+The table below records the original planning snapshot. The U0 and U1 implementation reviews below describe the current scope and weather code.
 
 | State | Verified repository evidence |
 | --- | --- |
@@ -55,11 +57,13 @@ The sequence is interleaved: **U5 must follow A0**, and the user rescue journey 
 
 **Goal.** Restrict all weather surfaces and fallbacks to Bulacan while showing which locality each condition represents.
 
+**Implementation review (14 October 2026, branch `feat/u1-bulacan-weather`):** All four U1 tasks are implemented against U0's indicative polygon. Ten dated locality points, polygon-gated weather routes, versioned caches, bounded point retries, partial-data labels, and distinct model/official copy are documented in [Bulacan weather](bulacan-weather.md). Unit, live development API, production build, and focused production-server browser checks passed. U0's authoritative-boundary prerequisite remains open before release.
+
 **Tasks**
-- [ ] Replace `MONITORED_LOCATIONS` with a justified, distributed set of Bulacan municipality/city points from U0; label each forecast by locality and never label a single point as province-wide conditions.
-- [ ] Validate weather coordinates server-side against the polygon before provider calls; filter geocoding results by polygon, not name strings. Audit overview, coordinates, location, sources, search, selected/current location, alerts, sidebar, and degraded responses.
-- [ ] Version cache keys by boundary/monitored-point set and use appropriate TTL/freshness labels; preserve partial valid localities when an Open-Meteo batch or individual point fails, with bounded retries/provider limits.
-- [ ] Keep model-derived risk visually and textually separate from dated, attributed official advisories; avoid a national/Metro Manila fallback when Bulacan data is absent.
+- [x] Replace `MONITORED_LOCATIONS` with a justified, distributed set of Bulacan municipality/city points from U0; label each forecast by locality and never label a single point as province-wide conditions.
+- [x] Validate weather coordinates server-side against the polygon before provider calls; filter geocoding results by polygon, not name strings. Audit overview, coordinates, location, sources, search, selected/current location, alerts, sidebar, and degraded responses.
+- [x] Version cache keys by boundary/monitored-point set and use appropriate TTL/freshness labels; preserve partial valid localities when an Open-Meteo batch or individual point fails, with bounded retries/provider limits.
+- [x] Keep model-derived risk visually and textually separate from dated, attributed official advisories; avoid a national/Metro Manila fallback when Bulacan data is absent.
 
 **Files.** Existing: `lib/weather.ts`, `lib/weather-client.ts`, `lib/weather-api.ts`, `lib/source-metadata.ts`, `app/api/weather/overview/route.ts`, `app/api/weather/coordinates/route.ts`, `app/api/weather/location/route.ts`, `app/api/weather/sources/route.ts`, `app/api/location/search/route.ts`, `components/weather-monitoring-content.tsx`, `components/weather-overview.tsx`, `components/weather-alert-viewer.tsx`. Proposed: `data/bulacan-weather-points.ts`. No schema/migration expected; API validation/caching and UI labels change.
 

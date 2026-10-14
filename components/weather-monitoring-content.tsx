@@ -171,7 +171,7 @@ function SelectedLocationWeatherCard({
               <span className="font-medium text-[var(--color-foreground)]">{location.source.name}</span>
             </div>
             <div className="mt-1">
-              Official reference:{" "}
+              Official advisories: check separately at{" "}
               <span className="font-medium text-[var(--color-foreground)]">
                 {location.officialReference.label ?? location.officialReference.name}
               </span>
@@ -235,7 +235,7 @@ function MonitoredLocationCard({ location }: { location: WeatherLocation }) {
         Source: {location.source.name}
       </div>
       <div className="mt-0.5 text-[0.7rem] text-[var(--color-muted-foreground)]">
-        Official reference: {location.officialReference.name}
+        Official advisories: check {location.officialReference.name} separately
       </div>
     </article>
   );
@@ -253,10 +253,10 @@ function OfficialAdvisoriesSection({
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <h2 className="text-[1.02rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-            Official advisories
+            Official advisory sources
           </h2>
           <p className="mt-1 text-[0.84rem] text-[var(--color-muted-foreground)]">
-            {weatherSources?.advisoryMessage ?? advisoryMessage}
+            No live official bulletin is loaded. {weatherSources?.advisoryMessage ?? advisoryMessage}
           </p>
         </div>
         <div className="rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-[0.72rem] text-[var(--color-muted-foreground)]">
@@ -356,7 +356,6 @@ export function WeatherMonitoringContent({
         return;
       }
 
-      console.error("Failed to load selected weather location.", error);
       setLocationActionMessage(
         error instanceof Error && error.message ? error.message : failureMessage,
       );
@@ -369,7 +368,7 @@ export function WeatherMonitoringContent({
     const trimmedQuery = searchQuery.trim();
 
     if (!trimmedQuery) {
-      setLocationActionMessage("Location not found. Try another city, municipality, or province.");
+      setLocationActionMessage("Location not found in Bulacan. Try another Bulacan city or municipality.");
       return;
     }
 
@@ -440,7 +439,7 @@ export function WeatherMonitoringContent({
             Weather Monitoring
           </h1>
           <p className="mt-1.5 text-[0.95rem] text-[var(--color-muted-foreground)]">
-            Search weather for places in Bulacan or use your current location, while keeping monitored flood-prone areas in view.
+            Search weather for places in Bulacan or use your location while viewing representative locality forecasts.
           </p>
         </section>
 
@@ -455,7 +454,7 @@ export function WeatherMonitoringContent({
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search a city, municipality, province, or barangay"
+                placeholder="Search a Bulacan city, municipality, or barangay"
                 className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
               />
             </label>
@@ -519,7 +518,7 @@ export function WeatherMonitoringContent({
               <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5 shadow-[var(--shadow-soft)]">
                 <div>
                   <h2 className="text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-                    Official and system flood alerts
+                    Weather-based risk alerts
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
                     Weather-based system alerts are estimated and do not replace official advisories.
@@ -528,7 +527,7 @@ export function WeatherMonitoringContent({
 
                 {weather.alerts.length === 0 ? (
                   <div className="mt-5 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
-                    No major weather-based flood alerts right now.
+                    No elevated model risk at available points. Check official advisories separately.
                   </div>
                 ) : (
                   <div className="mt-5 space-y-3">
@@ -551,14 +550,14 @@ export function WeatherMonitoringContent({
                       <span className="font-semibold">Monitored locations</span>
                     </div>
                     <p className="mt-2">
-                      Metro Manila, Marikina, Quezon City, Manila, Pasig, Cainta, and Bulacan.
+                      {weather.monitoredLocationCount ?? weather.locations.length} representative Bulacan locality points. Each forecast applies to its named point.
                     </p>
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2 text-[var(--color-foreground)]">
                       <TriangleAlert className="h-4 w-4 text-[var(--color-primary)]" />
-                      <span className="font-semibold">Advisory</span>
+                      <span className="font-semibold">Model limitation</span>
                     </div>
                     <p className="mt-2">{weather.advisoryMessage}</p>
                   </div>
@@ -570,16 +569,22 @@ export function WeatherMonitoringContent({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)]">
-                    Monitored Philippine locations
+                    Monitored Bulacan localities
                   </h2>
                   <p className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                    Default monitored areas remain visible for quick weather-based flood risk monitoring.
+                    Point forecasts are not province-wide conditions. Check your locality and official advisories.
                   </p>
                 </div>
                 <div className="text-[0.76rem] text-[var(--color-muted-foreground)]">
-                  Updated <span className="font-mono tabular-nums">{weather.fetchedAt}</span>
+                  Last successful fetch <span className="font-mono tabular-nums">{weather.fetchedAt}</span>
                 </div>
               </div>
+
+              {weather.unavailableLocations?.length ? (
+                <p role="status" className="mt-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-[0.8rem] text-[var(--color-muted-foreground)]">
+                  Forecast unavailable for {weather.unavailableLocations.join(", ")}. Other locality forecasts were last fetched {weather.fetchedAt}.
+                </p>
+              ) : null}
 
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {weather.locations.map((location) => (

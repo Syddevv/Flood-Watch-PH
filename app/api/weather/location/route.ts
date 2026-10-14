@@ -8,17 +8,19 @@ import {
 import {
   getWeatherByQuery,
   getWeatherCacheHeaders,
+  WeatherScopeError,
 } from "@/lib/weather";
 import { weatherProviderErrorResponse } from "@/lib/weather-api";
-import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { WEATHER_LOCATION_CACHE_SECONDS } from "@/lib/source-metadata";
+import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
 const getCachedWeatherByQuery = unstable_cache(
   async (query: string) => getWeatherByQuery(query),
-  ["weather-location-query"],
+  ["weather-location-query", BULACAN_SCOPE_VERSION],
   {
-    revalidate: WEATHER_SOURCE_CACHE_SECONDS,
+    revalidate: WEATHER_LOCATION_CACHE_SECONDS,
   },
 );
 
@@ -49,12 +51,15 @@ export async function GET(request: Request) {
     if (query) {
       const result = await getCachedWeatherByQuery(query);
       return successResponse(result, {
-        headers: getWeatherCacheHeaders(),
+        headers: getWeatherCacheHeaders(WEATHER_LOCATION_CACHE_SECONDS),
       });
     }
 
-    return errorResponse("Location not found. Try another city, municipality, or province.", 400);
+    return errorResponse("Location not found in Bulacan. Try another Bulacan city or municipality.", 400);
   } catch (error) {
+    if (error instanceof WeatherScopeError) {
+      return errorResponse(error.message, 400);
+    }
     logApiError("weather-location-failed", request, error);
     return weatherProviderErrorResponse();
   }
