@@ -11,7 +11,7 @@ import { logApiError } from "@/lib/structured-logger";
 
 const getCachedLocationSearch = unstable_cache(
   async (query: string) => searchPhilippineLocation(query),
-  ["location-search-v1"],
+  ["location-search-bulacan-osm-1504656-2026-10-14"],
   { revalidate: 24 * 60 * 60 },
 );
 

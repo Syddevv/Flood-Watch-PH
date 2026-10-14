@@ -396,7 +396,7 @@ export function RightInfoPanel({
         </PanelSection>
 
         <PanelSection
-          title="Nearby evacuation centers"
+          title="Bulacan evacuation centers"
           description="Static shelter references only. Confirm availability with your LGU or barangay."
         >
           <div className="space-y-2">

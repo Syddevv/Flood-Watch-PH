@@ -5,7 +5,7 @@ import {
   parseReportFilters,
 } from "@/lib/api-utils";
 import { getAuthenticatedUserFromRequest } from "@/lib/auth-session";
-import { CALUMPIT_BOUNDS, isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { BULACAN_BOUNDS, isWithinBulacan } from "@/lib/bulacan-scope";
 import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { findNearestMatchingReport } from "@/lib/incident-matching";
 import { createBoundingBox } from "@/lib/report-geo";
@@ -127,7 +127,7 @@ function buildReportWhereClause(filters: {
   // Public listings only ever show reports inside the supported reporting
   // area. The bounding box is a cheap index-backed pre-filter; the exact
   // polygon check happens in JS below (Prisma can't do point-in-polygon).
-  const [[minLatitude, minLongitude], [maxLatitude, maxLongitude]] = CALUMPIT_BOUNDS;
+  const [[minLatitude, minLongitude], [maxLatitude, maxLongitude]] = BULACAN_BOUNDS;
 
   return {
     latitude: { gte: minLatitude, lte: maxLatitude },
@@ -242,7 +242,7 @@ export async function GET(request: Request) {
     const reconciledReports = reportsWithConfirmations.map(reconcileReportLifecycle);
 
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
-      if (!isWithinCalumpit(report.latitude, report.longitude)) {
+      if (!isWithinBulacan(report.latitude, report.longitude)) {
         return false;
       }
 

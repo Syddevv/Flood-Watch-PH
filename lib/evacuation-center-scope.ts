@@ -1,18 +1,13 @@
 import { EVACUATION_CENTERS } from "@/data/evacuation-centers";
-import { CALUMPIT_CENTER, isWithinCalumpitMapBounds } from "@/lib/calumpit-boundary";
+import { BULACAN_CENTER, isWithinBulacan } from "@/lib/bulacan-scope";
 import { calculateDistanceKm } from "@/lib/emergency-resources";
 import { parseClampedPositiveNumber } from "@/lib/incident-config";
 import type { EvacuationCenterResource } from "@/lib/types";
 
 /**
- * Evacuation-center visibility scope.
- *
- * Principle: reports are restricted to Calumpit; evacuation centers are not.
- * Flood reports must fall inside the municipal polygon (`isWithinCalumpit`).
- * Evacuation centers instead use a configurable radius around the Calumpit
- * centre, clipped to the pannable map box so that anything the list shows can
- * also be reached on the map. Neighbouring-town centres therefore stay
- * visible; centres tens of kilometres away in Metro Manila / Rizal do not.
+ * Temporary static-reference scope until A2/U4 provide canonical center data.
+ * Public references must be within the same Bulacan polygon as reports.
+ * Distance is used for ordering; an explicit radius may narrow a nearby search.
  *
  * Plain TypeScript with no server-only or Prisma imports: this runs in client
  * components (map, list page) and in the /api/map/all route alike.
@@ -33,20 +28,19 @@ export function resolveEvacuationCenterNearbyRadiusKm(raw: string | undefined) {
   );
 }
 
-// NEXT_PUBLIC_ so the same value is inlined for the browser bundle and the
-// server; the nearby set is computed client-side from the static dataset.
+// Retained for callers that request an explicit nearby-search radius.
 export const EVACUATION_CENTER_NEARBY_RADIUS_KM = resolveEvacuationCenterNearbyRadiusKm(
   process.env.NEXT_PUBLIC_EVACUATION_CENTER_NEARBY_RADIUS_KM,
 );
 
-export const EVACUATION_CENTER_COVERAGE_LABEL = `within ${EVACUATION_CENTER_NEARBY_RADIUS_KM} km of Calumpit, Bulacan`;
+export const EVACUATION_CENTER_COVERAGE_LABEL = "within Bulacan (reference locations; verification pending)";
 
 type CenterPoint = Pick<EvacuationCenterResource, "latitude" | "longitude">;
 
-const CALUMPIT_ORIGIN = { latitude: CALUMPIT_CENTER[0], longitude: CALUMPIT_CENTER[1] };
+const BULACAN_ORIGIN = { latitude: BULACAN_CENTER[0], longitude: BULACAN_CENTER[1] };
 
 export function getEvacuationCenterDistanceKm(center: CenterPoint) {
-  return calculateDistanceKm(CALUMPIT_ORIGIN, {
+  return calculateDistanceKm(BULACAN_ORIGIN, {
     latitude: center.latitude,
     longitude: center.longitude,
   });
@@ -54,11 +48,11 @@ export function getEvacuationCenterDistanceKm(center: CenterPoint) {
 
 export function isNearbyEvacuationCenter(
   center: CenterPoint,
-  radiusKm: number = EVACUATION_CENTER_NEARBY_RADIUS_KM,
+  radiusKm: number = Number.POSITIVE_INFINITY,
 ) {
   return (
     getEvacuationCenterDistanceKm(center) <= radiusKm &&
-    isWithinCalumpitMapBounds(center.latitude, center.longitude)
+    isWithinBulacan(center.latitude, center.longitude)
   );
 }
 
@@ -72,7 +66,7 @@ export function sortEvacuationCentersByDistanceFromCalumpit<T extends CenterPoin
 
 export function selectNearbyEvacuationCenters<T extends CenterPoint>(
   centers: readonly T[],
-  radiusKm: number = EVACUATION_CENTER_NEARBY_RADIUS_KM,
+  radiusKm: number = Number.POSITIVE_INFINITY,
 ): T[] {
   return sortEvacuationCentersByDistanceFromCalumpit(
     centers.filter((center) => isNearbyEvacuationCenter(center, radiusKm)),
@@ -86,6 +80,6 @@ export const NEARBY_EVACUATION_CENTER_IDS: ReadonlySet<string> = new Set(
   NEARBY_EVACUATION_CENTERS.map((center) => center.id),
 );
 
-/** The four centres nearest to Calumpit; replaces the old hard-coded featured list. */
+/** The four in-province references nearest to the map center. */
 export const NEARBY_EVACUATION_FEATURED_CENTERS: EvacuationCenterResource[] =
   NEARBY_EVACUATION_CENTERS.slice(0, 4);

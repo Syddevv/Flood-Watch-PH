@@ -3,7 +3,7 @@ import type { EvacuationCenter, EvacuationFacility } from "@/lib/types";
 const APPROXIMATE_REFERENCE_NOTE =
   "Approximate location reference. Confirm exact evacuation site with the LGU or barangay.";
 
-const COMMUNITY_REFERENCE_SOURCE = "FloodWatch PH reference dataset";
+const COMMUNITY_REFERENCE_SOURCE = "Flood Watch reference dataset";
 
 // Future manually verified records can be imported here from LGU/DSWD/OpenStreetMap
 // reference sources without changing UI logic. Phase 13 remains static-only.

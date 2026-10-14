@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     <main className="min-h-screen bg-[var(--color-background)] px-5 py-10 text-[var(--color-foreground)] md:px-8">
       <article className="mx-auto max-w-3xl">
         <Link href="/" className="text-sm text-[var(--color-primary)] hover:underline">
-          Back to FloodWatch PH
+          Back to Flood Watch
         </Link>
         <h1 className="mt-6 text-3xl font-semibold">Privacy Notice</h1>
         <p className="mt-3 leading-7 text-[var(--color-muted-foreground)]">
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             <h2 className="font-semibold text-[var(--color-foreground)]">Your choices</h2>
             <p>
               You may leave reporter details blank and submit anonymously. For deletion or
-              privacy questions, contact the FloodWatch PH project operator through the
+              privacy questions, contact the Flood Watch project operator through the
               deployment’s published support channel.
             </p>
           </div>

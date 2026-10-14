@@ -12,6 +12,10 @@ declare module "react-leaflet" {
       zoom: number,
       options?: Record<string, unknown>,
     ) => void;
+    fitBounds: (
+      bounds: [[number, number], [number, number]],
+      options?: Record<string, unknown>,
+    ) => void;
     zoomIn: () => void;
     zoomOut: () => void;
   };

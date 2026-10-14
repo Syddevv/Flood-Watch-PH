@@ -63,17 +63,18 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  CALUMPIT_BOUNDARY_PATH_OPTIONS,
-  CALUMPIT_BOUNDS,
-  CALUMPIT_CENTER,
-  CALUMPIT_MAP_MAX_BOUNDS,
-  CALUMPIT_MASK_PATH_OPTIONS,
-  CALUMPIT_OUTSIDE_MASK,
-  CALUMPIT_POLYGON,
-} from "@/lib/calumpit-boundary";
+  BULACAN_BOUNDARY_PATH_OPTIONS,
+  BULACAN_BOUNDS,
+  BULACAN_CENTER,
+  BULACAN_HOLE_MASKS,
+  BULACAN_MAP_MAX_BOUNDS,
+  BULACAN_MASK_PATH_OPTIONS,
+  BULACAN_OUTSIDE_MASK,
+  BULACAN_POLYGONS,
+} from "@/lib/bulacan-scope";
 
-const DEFAULT_CENTER: [number, number] = CALUMPIT_CENTER;
-const DEFAULT_ZOOM = 13;
+const DEFAULT_CENTER: [number, number] = BULACAN_CENTER;
+const DEFAULT_ZOOM = 10;
 const MOBILE_SELECTED_REPORT_ZOOM = 15;
 const MOBILE_SELECTED_REPORT_DOWN_OFFSET = 56;
 const STREET_TILES = {
@@ -282,7 +283,7 @@ function MapZoomControls({
       <button
         type="button"
         aria-label="Locate map center"
-        onClick={() => map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 1.2 })}
+        onClick={() => map.fitBounds(BULACAN_BOUNDS, { padding: [24, 24], animate: true })}
       >
         <LocateFixed className="h-4.5 w-4.5" />
       </button>
@@ -889,11 +890,11 @@ export function FloodMapClient({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
-        bounds={CALUMPIT_BOUNDS}
+        bounds={BULACAN_BOUNDS}
         boundsOptions={{ padding: [24, 24] }}
-        minZoom={11}
+        minZoom={8}
         maxZoom={19}
-        maxBounds={CALUMPIT_MAP_MAX_BOUNDS}
+        maxBounds={BULACAN_MAP_MAX_BOUNDS}
         maxBoundsViscosity={1}
         zoomControl={false}
         attributionControl
@@ -918,14 +919,17 @@ export function FloodMapClient({
         <FocusMapLocation location={focusedAlertLocation} />
 
         <Polygon
-          positions={CALUMPIT_OUTSIDE_MASK as [number, number][][]}
+          positions={BULACAN_OUTSIDE_MASK as [number, number][][]}
           interactive={false}
-          pathOptions={CALUMPIT_MASK_PATH_OPTIONS}
+          pathOptions={BULACAN_MASK_PATH_OPTIONS}
         />
+        {BULACAN_HOLE_MASKS.map((ring, index) => (
+          <Polygon key={`bulacan-hole-${index}`} positions={ring} interactive={false} pathOptions={BULACAN_MASK_PATH_OPTIONS} />
+        ))}
         <Polygon
-          positions={CALUMPIT_POLYGON as [number, number][]}
+          positions={BULACAN_POLYGONS as [number, number][][][]}
           interactive={false}
-          pathOptions={CALUMPIT_BOUNDARY_PATH_OPTIONS}
+          pathOptions={BULACAN_BOUNDARY_PATH_OPTIONS}
         />
 
         {polygons.map((polygon) => (

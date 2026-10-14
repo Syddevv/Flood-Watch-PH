@@ -5,8 +5,8 @@ import { ReportSessionProvider } from "@/components/report-session-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FloodWatch PH",
-  description: "Public flood monitoring dashboard for the Philippines.",
+  title: "Flood Watch",
+  description: "Community flood reports, weather, and emergency resources for Bulacan, Philippines.",
 };
 
 export default function RootLayout({

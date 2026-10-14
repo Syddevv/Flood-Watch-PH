@@ -12,7 +12,7 @@ export function getAdminOverviewData(): AdminOverviewData {
   const centers = NEARBY_EVACUATION_FEATURED_CENTERS;
   return {
     dataMode: "preview",
-    alert: { severity: "warning", title: "Orange rainfall warning remains active across Calumpit", description: "Three critical rescue requests are open. River levels continue to rise in Meysulao and Gatbuca.", updated: "Updated 2 min ago" },
+    alert: { severity: "warning", title: "Sample rainfall alert for Calumpit", description: "Three critical rescue requests are open. River levels continue to rise in Meysulao and Gatbuca.", updated: "Updated 2 min ago" },
     stats: [
       { label: "Critical rescues", value: "3", detail: "+1 in 10 min", tone: "critical" },
       { label: "Active incidents", value: "12", detail: "4 severe", tone: "warning" },

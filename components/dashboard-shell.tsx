@@ -330,7 +330,7 @@ export function DashboardShell({
         setUserLocationStatus(error.code === error.PERMISSION_DENIED ? "denied" : "error");
         setUserLocationError(
           error.code === error.PERMISSION_DENIED
-            ? "Location permission is blocked for FloodWatch PH."
+            ? "Location permission is blocked for Flood Watch."
             : "We could not read your current location. Please try again.",
         );
       },

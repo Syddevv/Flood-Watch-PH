@@ -151,8 +151,8 @@ async function main() {
     }
 
     for (const setting of [
-      ["operationsCenterName", "Calumpit Municipal Emergency Operations Center"],
-      ["publicAdvisoryFooter", "Follow official PAGASA and Calumpit MDRRMO advisories."],
+      ["operationsCenterName", "Flood Watch operations"],
+      ["publicAdvisoryFooter", "Follow official PAGASA and local DRRMO advisories."],
       ["notifyCriticalReports", "true"],
       ["notifyVerificationReminders", "true"],
       ["notifyCapacityWarnings", "true"],
@@ -349,7 +349,7 @@ async function main() {
         sectionKey: "mission",
         title: "Our Mission",
         content:
-          "FloodWatch PH helps communities stay informed about flood risks using timely public-facing updates and location-based awareness tools.",
+          "Flood Watch helps communities stay informed about flood risks using timely public-facing updates and location-based awareness tools.",
       },
       {
         sectionKey: "how_it_works",
@@ -367,13 +367,13 @@ async function main() {
         sectionKey: "data_sources",
         title: "Data Sources",
         content:
-          "FloodWatch PH is designed to work alongside official weather agencies, local disaster offices, and community-submitted updates.",
+          "Flood Watch is designed to work alongside official weather agencies, local disaster offices, and community-submitted updates.",
       },
       {
         sectionKey: "disclaimer",
         title: "Disclaimer",
         content:
-          "FloodWatch PH provides community-based flood monitoring information. Reports may come from public users and should be verified with official local authorities during emergencies.",
+          "Flood Watch provides community-based flood monitoring information. Reports may come from public users and should be verified with official local authorities during emergencies.",
       },
       {
         sectionKey: "contact",

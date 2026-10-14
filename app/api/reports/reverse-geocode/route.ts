@@ -1,5 +1,6 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { reverseGeocodeReportLocation } from "@/lib/report-location";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
@@ -28,6 +29,10 @@ export async function GET(request: Request) {
       !isValidLongitude(longitude)
     ) {
       return errorResponse("Latitude and longitude are required.", 400);
+    }
+
+    if (!isWithinBulacan(latitude, longitude)) {
+      return errorResponse(OUTSIDE_BULACAN_ERROR_MESSAGE, 400);
     }
 
     const result = await reverseGeocodeReportLocation(latitude, longitude);

@@ -1,4 +1,4 @@
-import { isWithinCalumpitMapBounds } from "@/lib/calumpit-boundary";
+import { isWithinBulacan } from "@/lib/bulacan-scope";
 import type {
   AlertSeverity,
   FloodAlert,
@@ -914,14 +914,10 @@ async function geocodePhilippineLocation(query: string) {
       (left, right) => scorePhilippineResult(right, attempt) - scorePhilippineResult(left, attempt),
     );
 
-    // Bias, don't restrict: "Poblacion" should resolve to Calumpit's, not
-    // Manila's, but an out-of-area result is still returned so the picker can
-    // show the user where their query landed instead of a bare "not found".
     const nearbyResult = philippineResults.find((result) =>
-      isWithinCalumpitMapBounds(result.latitude, result.longitude),
+      isWithinBulacan(result.latitude, result.longitude),
     );
-
-    return nearbyResult ?? philippineResults[0];
+    if (nearbyResult) return nearbyResult;
   }
 
   throw new Error(LOCATION_NOT_FOUND_MESSAGE);
@@ -976,7 +972,7 @@ function buildSystemAlerts(locations: WeatherLocation[]): FloodAlert[] {
       source: {
         category: "system",
         label: SOURCE_LABELS.system,
-        name: "FloodWatch PH",
+        name: "Flood Watch",
         note: "Weather-based system alert derived from Open-Meteo conditions.",
       },
       officialReference: location.officialReference,

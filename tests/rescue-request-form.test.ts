@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE } from "@/lib/bulacan-scope";
 import {
   RESCUE_MAX_PEOPLE,
   RESCUE_MAX_SITUATION_LENGTH,
@@ -16,8 +16,8 @@ import {
 
 // Poblacion, Calumpit - well inside the municipal polygon.
 const CALUMPIT = { latitude: "14.916", longitude: "120.766" };
-// Malolos City - outside Calumpit, same as the picker specs use.
-const MALOLOS = { latitude: "14.8515", longitude: "120.8162" };
+// Marikina City lies outside Bulacan.
+const OUTSIDE_BULACAN = { latitude: "14.6507", longitude: "121.1029" };
 
 const VALID_INPUT = {
   locationName: "Brgy. Meysulao, Calumpit",
@@ -145,13 +145,13 @@ test("an unpinned location is rejected", () => {
   );
 });
 
-test("coordinates outside Calumpit are rejected with the shared message", () => {
+test("coordinates outside Bulacan are rejected with the shared message", () => {
   const error = validateRescueRequestForm({
     ...VALID_INPUT,
-    latitude: MALOLOS.latitude,
-    longitude: MALOLOS.longitude,
+    latitude: OUTSIDE_BULACAN.latitude,
+    longitude: OUTSIDE_BULACAN.longitude,
   });
-  assert.equal(error, OUTSIDE_CALUMPIT_ERROR_MESSAGE);
+  assert.equal(error, OUTSIDE_BULACAN_ERROR_MESSAGE);
 });
 
 test("a too-short situation is rejected", () => {

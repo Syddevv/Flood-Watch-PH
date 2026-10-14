@@ -7,7 +7,7 @@ import { LoaderCircle, MapPin, Search, X } from "lucide-react";
 import { searchLocation } from "@/lib/location-client";
 import { resolveReportLocationName } from "@/lib/report-location-client";
 import type { ReportLocationSource } from "@/lib/report-location-metadata";
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 
 const DynamicIncidentLocationPickerMap = dynamic(
@@ -68,7 +68,7 @@ export function IncidentLocationPicker({
   const initialCoordinates =
     Number.isFinite(parsedLatitude) &&
     Number.isFinite(parsedLongitude) &&
-    isWithinCalumpit(parsedLatitude, parsedLongitude)
+    isWithinBulacan(parsedLatitude, parsedLongitude)
       ? {
           latitude: parsedLatitude,
           longitude: parsedLongitude,
@@ -134,7 +134,7 @@ export function IncidentLocationPicker({
   // Derived rather than stored so it can never lag behind an in-flight
   // reverse-geocode (resolveSelection updates selection asynchronously).
   const selectionOutsideArea = selection
-    ? !isWithinCalumpit(selection.latitude, selection.longitude)
+    ? !isWithinBulacan(selection.latitude, selection.longitude)
     : false;
 
   if (!open) {
@@ -248,7 +248,7 @@ export function IncidentLocationPicker({
     }
 
     if (selectionOutsideArea) {
-      setInlineError(OUTSIDE_CALUMPIT_ERROR_MESSAGE);
+      setInlineError(OUTSIDE_BULACAN_ERROR_MESSAGE);
       return;
     }
 
@@ -318,7 +318,7 @@ export function IncidentLocationPicker({
                           void handleSearch();
                         }
                       }}
-                      placeholder="Search a barangay, street, or landmark in Calumpit"
+                      placeholder="Search a barangay, street, or landmark in Bulacan"
                       className="h-full min-w-0 flex-1 truncate bg-transparent text-base leading-none text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] md:text-[0.9rem]"
                     />
                   </label>
@@ -399,7 +399,7 @@ export function IncidentLocationPicker({
                         role="alert"
                         className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-danger-text)]"
                       >
-                        {OUTSIDE_CALUMPIT_ERROR_MESSAGE} Move the pin inside the dashed boundary.
+                        {OUTSIDE_BULACAN_ERROR_MESSAGE} Move the pin inside the dashed boundary.
                       </div>
                     ) : null}
                   </div>
@@ -415,7 +415,7 @@ export function IncidentLocationPicker({
                   How to use
                 </div>
                 <ol className="mt-3 space-y-2 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
-                  <li>1. Reports must be inside Calumpit, Bulacan (the dashed outline).</li>
+                  <li>1. Reports must be inside Bulacan (the dashed outline).</li>
                   <li>2. Search for the area or move around the map manually.</li>
                   <li>3. Tap the exact flood location to place the marker.</li>
                   <li>4. Drag the marker if you need a more precise spot.</li>
@@ -449,7 +449,7 @@ export function IncidentLocationPicker({
                     : searching
                       ? "Please wait..."
                       : selectionOutsideArea
-                        ? "Outside Calumpit"
+                        ? "Outside Bulacan"
                         : "Use this location"}
                 </button>
               </div>
@@ -463,7 +463,7 @@ export function IncidentLocationPicker({
                 role="alert"
                 className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.78rem] leading-5 text-[var(--color-danger-text)]"
               >
-                {selectionOutsideArea ? OUTSIDE_CALUMPIT_ERROR_MESSAGE : inlineError}
+                {selectionOutsideArea ? OUTSIDE_BULACAN_ERROR_MESSAGE : inlineError}
               </div>
             ) : null}
             <div className="flex items-center gap-3">
@@ -486,7 +486,7 @@ export function IncidentLocationPicker({
                 : searching
                   ? "Please wait..."
                   : selectionOutsideArea
-                    ? "Outside Calumpit"
+                    ? "Outside Bulacan"
                     : "Use this location"}
             </button>
             </div>

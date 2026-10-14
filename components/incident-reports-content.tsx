@@ -45,7 +45,7 @@ import { ReportCameraCapture } from "@/components/report-camera-capture";
 import { downscaleImageFile } from "@/lib/report-image-browser";
 import { isCameraCaptureSupported } from "@/lib/report-image-capture";
 import { useAuthSession } from "@/components/auth-session-provider";
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import type {
   ReportDetailResponse,
@@ -603,7 +603,7 @@ export function IncidentReportsContent() {
     Number.isFinite(Number(formState.latitude)) && Number.isFinite(Number(formState.longitude));
   const coordinatesOutsideArea =
     hasValidCoordinates &&
-    !isWithinCalumpit(Number(formState.latitude), Number(formState.longitude));
+    !isWithinBulacan(Number(formState.latitude), Number(formState.longitude));
   const canSubmitReport =
     formState.locationName.trim().length > 0 &&
     formState.description.trim().length > 0 &&
@@ -1268,14 +1268,14 @@ export function IncidentReportsContent() {
           ? ` (accuracy about ${Math.round(accuracy)} m)`
           : "";
 
-        // Same rule as the server: the reported point must be inside Calumpit.
+        // Same rule as the server: the reported point must be inside Bulacan.
         // No tolerance buffer - the server has no accuracy value, so a client
         // that accepted a borderline point would only be rejected later.
-        if (!isWithinCalumpit(position.coords.latitude, position.coords.longitude)) {
+        if (!isWithinBulacan(position.coords.latitude, position.coords.longitude)) {
           setLoadingCurrentLocation(false);
           setToast({
             tone: "error",
-            message: `Your current location${accuracyLabel} appears to be outside Calumpit, Bulacan. If you are near the boundary, pick the exact spot on the map instead.`,
+            message: `Your current location${accuracyLabel} appears to be outside Bulacan. If you are near the boundary, pick the exact spot on the map instead.`,
           });
           setLocationPickerOpen(true);
           return;
@@ -1662,7 +1662,7 @@ export function IncidentReportsContent() {
               Submit flood, weather-related, and community hazard reports to help improve public awareness and situational monitoring.
             </p>
             <p className="mt-1 text-[0.88rem] font-medium text-[var(--color-primary)]">
-              Reporting is currently available for Calumpit, Bulacan only.
+              Reporting is currently available for Bulacan only.
             </p>
           </section>
 
@@ -1799,7 +1799,7 @@ export function IncidentReportsContent() {
                       role="alert"
                       className="rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.8rem] leading-5 text-[var(--color-danger-text)]"
                     >
-                      {OUTSIDE_CALUMPIT_ERROR_MESSAGE}
+                      {OUTSIDE_BULACAN_ERROR_MESSAGE}
                     </p>
                   ) : null}
                 </div>
@@ -2100,7 +2100,7 @@ export function IncidentReportsContent() {
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
                     {coordinatesOutsideArea
-                      ? "Location must be within Calumpit, Bulacan."
+                      ? "Location must be within Bulacan."
                       : !canSubmitReport
                         ? "Location name, coordinates, and incident description are required before submission."
                         : "Form ready. Submit the report to publish it to the community incident feed."}

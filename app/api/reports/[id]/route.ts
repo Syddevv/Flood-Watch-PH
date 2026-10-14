@@ -1,4 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { isWithinBulacan } from "@/lib/bulacan-scope";
 import {
   getLifecyclePersistencePatch,
   type ReportLifecycleStatus,
@@ -63,6 +64,10 @@ export async function GET(request: Request, context: RouteContext) {
       (reconciledReport.status as ReportLifecycleStatus) === "Archived" &&
       !canAccessArchivedReport(reconciledReport, identity, includeArchived)
     ) {
+      return errorResponse("Flood report not found.", 404);
+    }
+
+    if (!isWithinBulacan(reconciledReport.latitude, reconciledReport.longitude) && !isReportOwner(reconciledReport, identity)) {
       return errorResponse("Flood report not found.", 404);
     }
 
