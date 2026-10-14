@@ -5,13 +5,14 @@ import {
   MAX_WEATHER_QUERY_LENGTH,
   normalizeBoundedText,
 } from "@/lib/api-utils";
-import { searchPhilippineLocation } from "@/lib/weather";
+import { searchPhilippineLocation, WeatherScopeError } from "@/lib/weather";
+import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
 const getCachedLocationSearch = unstable_cache(
   async (query: string) => searchPhilippineLocation(query),
-  ["location-search-bulacan-osm-1504656-2026-10-14"],
+  ["location-search", BULACAN_SCOPE_VERSION],
   { revalidate: 24 * 60 * 60 },
 );
 
@@ -49,6 +50,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof WeatherScopeError) {
+      return errorResponse(error.message, 400);
+    }
     logApiError("location-search-failed", request, error);
     return errorResponse(
       error instanceof Error &&

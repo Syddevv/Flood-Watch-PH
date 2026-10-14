@@ -23,13 +23,14 @@ test("the weather-coordinates route only uses the long-TTL cache when a name is 
     "expected the no-name branch to call getWeatherByCoordinates(latitude, longitude) directly, uncached",
   );
 
-  // The named branch must still go through the rounded-coordinate, long-TTL
-  // cache wrapper.
+  // The named branch must still use the long-TTL cache. Raw coordinates are
+  // retained near the edge when rounding would move an inside point outside.
   assert.match(
     source,
-    /\?\s*await getCachedWeatherByCoordinates\(\s*roundWeatherCoordinate\(latitude\),\s*roundWeatherCoordinate\(longitude\),\s*name,?\s*\)/,
-    "expected the name branch to call getCachedWeatherByCoordinates(roundWeatherCoordinate(latitude), roundWeatherCoordinate(longitude), name)",
+    /\?\s*await getCachedWeatherByCoordinates\(cacheLatitude, cacheLongitude, name\)/,
+    "expected the name branch to call the scoped cache coordinates",
   );
+  assert.match(source, /const roundedInScope = isWithinBulacan\(roundedLatitude, roundedLongitude\)/);
 
   // The ternary must be keyed on `name` for both the data fetch and the
   // response headers, and the no-name branch must be uncached at the CDN
@@ -41,7 +42,7 @@ test("the weather-coordinates route only uses the long-TTL cache when a name is 
   );
   assert.match(
     source,
-    /headers: name \? getWeatherCacheHeaders\(\) : \{ "Cache-Control": "no-store" \}/,
+    /headers: name \? getWeatherCacheHeaders\(WEATHER_LOCATION_CACHE_SECONDS\) : \{ "Cache-Control": "no-store" \}/,
     'expected the no-name branch to respond with "Cache-Control": "no-store" instead of the long-TTL cache headers',
   );
 });

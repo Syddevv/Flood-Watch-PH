@@ -105,8 +105,8 @@ export function AlertCard({ alert }: { alert: FloodAlert }) {
             <span>{alert.source.label ?? alert.source.name}</span>
           </div>
           <div>
-            <span className="font-medium text-[var(--color-foreground)]">Official reference:</span>{" "}
-            <span>{alert.officialReference.label ?? alert.officialReference.name}</span>
+            <span className="font-medium text-[var(--color-foreground)]">Official advisory source:</span>{" "}
+            <span>{alert.officialReference.name} (check separately)</span>
           </div>
           <div>{alert.disclaimer}</div>
         </div>

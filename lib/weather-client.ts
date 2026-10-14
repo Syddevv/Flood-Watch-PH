@@ -86,6 +86,11 @@ function normalizeWeatherOverviewData(value: unknown): WeatherOverviewData | nul
     locations: Array.isArray(value.locations) ? value.locations : [],
     alerts: Array.isArray(value.alerts) ? value.alerts : [],
     fetchedAt: typeof value.fetchedAt === "string" ? value.fetchedAt : "",
+    monitoredLocationCount:
+      typeof value.monitoredLocationCount === "number" ? value.monitoredLocationCount : undefined,
+    unavailableLocations: Array.isArray(value.unavailableLocations)
+      ? value.unavailableLocations.filter((name): name is string => typeof name === "string")
+      : [],
     advisoryMessage:
       typeof value.advisoryMessage === "string" && value.advisoryMessage.trim() !== ""
         ? value.advisoryMessage

@@ -89,6 +89,8 @@ export type WeatherOverviewData = {
   alerts: FloodAlert[];
   fetchedAt: string;
   advisoryMessage: string;
+  monitoredLocationCount?: number;
+  unavailableLocations?: string[];
 };
 
 export type WeatherLocationResult = {

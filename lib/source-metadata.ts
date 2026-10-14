@@ -6,7 +6,9 @@ import type {
 } from "@/lib/types";
 
 export const WEATHER_DATA_SOURCE_NAME = "Open-Meteo";
-export const WEATHER_SOURCE_CACHE_SECONDS = 600;
+export const WEATHER_SOURCE_CACHE_SECONDS = 120;
+export const WEATHER_LOCATION_CACHE_SECONDS = 600;
+export const WEATHER_REFERENCE_CACHE_SECONDS = 24 * 60 * 60;
 
 export const SOURCE_LABELS: Record<
   "pagasa" | "lgu" | "ndrrmc" | "community" | "system",
@@ -20,7 +22,7 @@ export const SOURCE_LABELS: Record<
 };
 
 export const WEATHER_RISK_DISCLAIMER =
-  "Official reference available from PAGASA. Weather risk shown in Flood Watch is estimated and not an official flood warning.";
+  "Flood Watch estimates weather-based risk from Open-Meteo. No official warning is loaded here; check dated PAGASA and local LGU advisories separately.";
 
 export const WEATHER_RISK_DISCLAIMER_SHORT =
   "Estimated weather-based risk. Follow PAGASA/LGU advisories.";

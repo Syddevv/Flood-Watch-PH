@@ -8,20 +8,22 @@ import {
 } from "@/lib/api-utils";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
-import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { WEATHER_LOCATION_CACHE_SECONDS } from "@/lib/source-metadata";
+import { BULACAN_SCOPE_VERSION, isWithinBulacan } from "@/lib/bulacan-scope";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 import {
   getWeatherByCoordinates,
   getWeatherCacheHeaders,
+  OUTSIDE_WEATHER_SCOPE_MESSAGE,
 } from "@/lib/weather";
 import { weatherProviderErrorResponse } from "@/lib/weather-api";
 
 const getCachedWeatherByCoordinates = unstable_cache(
   async (latitude: number, longitude: number, name?: string) =>
     getWeatherByCoordinates(latitude, longitude, name),
-  ["weather-location-coordinates"],
+  ["weather-location-coordinates", BULACAN_SCOPE_VERSION],
   {
-    revalidate: WEATHER_SOURCE_CACHE_SECONDS,
+    revalidate: WEATHER_LOCATION_CACHE_SECONDS,
   },
 );
 
@@ -65,6 +67,10 @@ export async function GET(request: Request) {
       );
     }
 
+    if (!isWithinBulacan(latitude, longitude)) {
+      return errorResponse(OUTSIDE_WEATHER_SCOPE_MESSAGE, 400);
+    }
+
     // Only cache (with a long TTL, and a cacheable CDN response) the
     // deterministic case where `name` is provided by the caller - there is
     // no reverse-geocode ambiguity/failure risk there. When `name` is
@@ -76,16 +82,17 @@ export async function GET(request: Request) {
     // do the same for every visitor. This is a personal, per-user "my
     // location" ping, not a shared page load, so fetch it directly and
     // uncached, and tell the CDN not to cache it either.
+    const roundedLatitude = roundWeatherCoordinate(latitude);
+    const roundedLongitude = roundWeatherCoordinate(longitude);
+    const roundedInScope = isWithinBulacan(roundedLatitude, roundedLongitude);
+    const cacheLatitude = roundedInScope ? roundedLatitude : latitude;
+    const cacheLongitude = roundedInScope ? roundedLongitude : longitude;
     const result = name
-      ? await getCachedWeatherByCoordinates(
-          roundWeatherCoordinate(latitude),
-          roundWeatherCoordinate(longitude),
-          name,
-        )
+      ? await getCachedWeatherByCoordinates(cacheLatitude, cacheLongitude, name)
       : await getWeatherByCoordinates(latitude, longitude);
 
     return successResponse(result, {
-      headers: name ? getWeatherCacheHeaders() : { "Cache-Control": "no-store" },
+      headers: name ? getWeatherCacheHeaders(WEATHER_LOCATION_CACHE_SECONDS) : { "Cache-Control": "no-store" },
     });
   } catch (error) {
     logApiError("weather-coordinates-failed", request, error);

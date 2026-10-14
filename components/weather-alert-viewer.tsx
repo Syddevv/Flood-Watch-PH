@@ -31,6 +31,9 @@ type WeatherAlertViewerProps = {
 };
 
 function getIssuingAgency(alert: FloodAlert) {
+  if (alert.source.category === "system") {
+    return "Flood Watch model (Open-Meteo data)";
+  }
   return (
     alert.officialSourceName ||
     alert.officialReference.officialSourceName ||
@@ -219,13 +222,13 @@ export function WeatherAlertViewer({
             <div className="grid gap-2 sm:grid-cols-2">
               <AlertMetaRow label="Severity" value={activeAlert.riskLevel} />
               <AlertMetaRow label="Affected area" value={activeAlert.location} />
-              <AlertMetaRow label="Issued" value={getIssuedTime(activeAlert)} />
-              <AlertMetaRow label="Issuing agency" value={getIssuingAgency(activeAlert)} />
+              <AlertMetaRow label={activeAlert.source.category === "system" ? "Model updated" : "Issued"} value={getIssuedTime(activeAlert)} />
+              <AlertMetaRow label={activeAlert.source.category === "system" ? "Assessment source" : "Issuing agency"} value={getIssuingAgency(activeAlert)} />
             </div>
 
             <section className="mt-4 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_68%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_76%,transparent)] px-3.5 py-3">
               <div className="text-[0.76rem] font-semibold text-[var(--color-muted-foreground)]">
-                Full advisory
+                {activeAlert.source.category === "system" ? "Model risk assessment" : "Full advisory"}
               </div>
               <p className="mt-2 whitespace-pre-line text-[0.86rem] leading-6 text-[var(--color-foreground)]">
                 {getAlertSummary(activeAlert)}

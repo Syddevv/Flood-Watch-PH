@@ -6,12 +6,13 @@ import {
   getWeatherSources,
 } from "@/lib/weather";
 import { weatherProviderErrorResponse } from "@/lib/weather-api";
-import { WEATHER_SOURCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { WEATHER_REFERENCE_CACHE_SECONDS } from "@/lib/source-metadata";
+import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
-const getCachedWeatherSources = unstable_cache(getWeatherSources, ["weather-sources"], {
-  revalidate: WEATHER_SOURCE_CACHE_SECONDS,
+const getCachedWeatherSources = unstable_cache(getWeatherSources, ["weather-sources", BULACAN_SCOPE_VERSION], {
+  revalidate: WEATHER_REFERENCE_CACHE_SECONDS,
 });
 
 export async function GET(request: Request) {
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
     const sources = await getCachedWeatherSources();
     return successResponse(sources, {
-      headers: getWeatherCacheHeaders(),
+      headers: getWeatherCacheHeaders(WEATHER_REFERENCE_CACHE_SECONDS),
     });
   } catch (error) {
     logApiError("weather-sources-failed", request, error);
