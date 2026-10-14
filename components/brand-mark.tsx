@@ -12,7 +12,7 @@ export function BrandMark({ className }: { className?: string }) {
     >
       <Image
         src="/FloodWatchPH Logo.png"
-        alt="FloodWatch PH logo"
+        alt="Flood Watch logo"
         fill
         sizes="34px"
         className="object-cover"

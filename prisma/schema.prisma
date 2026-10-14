@@ -22,6 +22,7 @@ model FloodReport {
   locationName       String
   latitude           Float
   longitude          Float
+  scopeVersion       String               @default("osm-1504656-2026-10-14")
   locationSource     String               @default("manual")
   gpsAccuracyMeters  Float?
   imageUrl           String?
@@ -112,6 +113,7 @@ model EvacuationCenter {
   province           String
   latitude           Float
   longitude          Float
+  scopeVersion       String    @default("osm-1504656-2026-10-14")
   contactNumber      String?
   facilities         String[]
   status             String    @default("Unknown")

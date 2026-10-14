@@ -1,7 +1,7 @@
 import {
-  OUTSIDE_CALUMPIT_ERROR_MESSAGE,
-  isWithinCalumpit,
-} from "@/lib/calumpit-boundary";
+  OUTSIDE_BULACAN_ERROR_MESSAGE,
+  isWithinBulacan,
+} from "@/lib/bulacan-scope";
 import type { ReportLocationSource } from "@/lib/report-location-metadata";
 import {
   RESCUE_ASSISTANCE_TAGS,
@@ -143,8 +143,8 @@ export function validateRescueRequestForm({
 
   // Same rule the server enforces, checked here so the user is not told to
   // wait on a request that was never going to be accepted.
-  if (!isWithinCalumpit(parsedLatitude, parsedLongitude)) {
-    return OUTSIDE_CALUMPIT_ERROR_MESSAGE;
+  if (!isWithinBulacan(parsedLatitude, parsedLongitude)) {
+    return OUTSIDE_BULACAN_ERROR_MESSAGE;
   }
 
   if (situation.trim().length < RESCUE_MIN_SITUATION_LENGTH) {

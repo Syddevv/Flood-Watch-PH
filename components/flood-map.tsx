@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { EVACUATION_CENTER_NEARBY_RADIUS_KM } from "@/lib/evacuation-center-scope";
 import { Building2, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -252,10 +251,10 @@ export function FloodMap({
     },
     {
       id: "coverage-area",
-      label: "Reporting area: Calumpit, Bulacan",
+      label: "Reporting area: Bulacan",
       markerClassName:
         "border-2 border-dashed border-[var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_8%,transparent)] text-[var(--color-primary)]",
-      glyph: "C",
+      glyph: "B",
     },
   ] as const;
 
@@ -265,7 +264,7 @@ export function FloodMap({
         data-testid="coverage-chip"
         className="pointer-events-none absolute left-3 top-3 z-[var(--layer-map-overlay)] rounded-full md:bottom-3 md:top-auto border border-[color:color-mix(in_srgb,var(--color-primary)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3 py-1 text-[0.72rem] font-semibold text-[var(--color-primary)] shadow-[var(--shadow-soft)] backdrop-blur-sm"
       >
-        Reports: Calumpit only &middot; Shelters: within {EVACUATION_CENTER_NEARBY_RADIUS_KM} km
+        Reports: Bulacan &middot; Shelters: Bulacan references
       </div>
       <DynamicFloodMap
         reportMarkers={showFloodReports ? reportMarkers : []}

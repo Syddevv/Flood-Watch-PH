@@ -23,7 +23,6 @@ import {
 
 import {
   EMERGENCY_RESOURCE_CONTACTS,
-  EVACUATION_CENTERS,
   EVACUATION_CENTER_DATA_STATUS_NOTE,
   EVACUATION_CENTER_FACILITIES,
   FLOOD_SAFETY_CHECKLIST,
@@ -45,11 +44,9 @@ import {
 } from "@/lib/emergency-resources";
 import {
   EVACUATION_CENTER_COVERAGE_LABEL,
-  EVACUATION_CENTER_NEARBY_RADIUS_KM,
   NEARBY_EVACUATION_CENTERS,
   NEARBY_EVACUATION_CENTER_IDS,
   getEvacuationCenterDistanceKm,
-  sortEvacuationCentersByDistanceFromCalumpit,
 } from "@/lib/evacuation-center-scope";
 import type {
   EvacuationCenterResource,
@@ -133,7 +130,7 @@ function EvacuationCenterCard({
           </div>
           <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
             {buildEvacuationCenterLocationLabel(center)}
-            <span className="tabular-nums"> &middot; ~{distanceFromCalumpitKm.toFixed(distanceFromCalumpitKm < 10 ? 1 : 0)} km from Calumpit</span>
+            <span className="tabular-nums"> &middot; ~{distanceFromCalumpitKm.toFixed(distanceFromCalumpitKm < 10 ? 1 : 0)} km from Bulacan map center</span>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -348,7 +345,6 @@ export function EvacuationCentersContent() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | EvacuationCenterStatus>("All");
   const [facilityFilter, setFacilityFilter] = useState<"All" | EvacuationFacility>("All");
-  const [showAllCenters, setShowAllCenters] = useState(false);
   const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
   const [highlightedCenterId, setHighlightedCenterId] = useState<string | null>(null);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
@@ -362,10 +358,7 @@ export function EvacuationCentersContent() {
     longitude: number;
   } | null>(null);
   const [fromReportContext, setFromReportContext] = useState(false);
-  const outsideCoverageCount = EVACUATION_CENTERS.length - NEARBY_EVACUATION_CENTERS.length;
-  const coverageSummary = showAllCenters
-    ? `Showing all ${EVACUATION_CENTERS.length} reference centers, including ${outsideCoverageCount} outside the ${EVACUATION_CENTER_NEARBY_RADIUS_KM} km coverage area.`
-    : `Showing ${NEARBY_EVACUATION_CENTERS.length} evacuation centers ${EVACUATION_CENTER_COVERAGE_LABEL}.`;
+  const coverageSummary = `Showing ${NEARBY_EVACUATION_CENTERS.length} evacuation centers ${EVACUATION_CENTER_COVERAGE_LABEL}.`;
 
   useEffect(() => {
     const centerId = searchParams.get("center");
@@ -373,7 +366,7 @@ export function EvacuationCentersContent() {
     const longitude = Number(searchParams.get("lng"));
     const fromReport = searchParams.get("fromReport");
     const hasMatch = centerId
-      ? EVACUATION_CENTERS.some((center) => center.id === centerId)
+      ? NEARBY_EVACUATION_CENTERS.some((center) => center.id === centerId)
       : false;
 
     const frameId = window.requestAnimationFrame(() => {
@@ -419,17 +412,11 @@ export function EvacuationCentersContent() {
   }, [selectedCenterId]);
 
   const selectedCenter = useMemo(
-    () => EVACUATION_CENTERS.find((center) => center.id === selectedCenterId) ?? null,
+    () => NEARBY_EVACUATION_CENTERS.find((center) => center.id === selectedCenterId) ?? null,
     [selectedCenterId],
   );
 
-  const activeCenters = useMemo(
-    () =>
-      showAllCenters
-        ? sortEvacuationCentersByDistanceFromCalumpit(EVACUATION_CENTERS)
-        : NEARBY_EVACUATION_CENTERS,
-    [showAllCenters],
-  );
+  const activeCenters = NEARBY_EVACUATION_CENTERS;
 
   const filteredCenters = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -621,23 +608,6 @@ export function EvacuationCentersContent() {
                 <p className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
                   {coverageSummary}
                 </p>
-
-                <button
-                  type="button"
-                  data-testid="show-all-centers"
-                  aria-pressed={showAllCenters}
-                  onClick={() => setShowAllCenters((current) => !current)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-2 text-[0.78rem] font-semibold transition",
-                    showAllCenters
-                      ? "border-[rgba(37,99,235,0.3)] bg-[rgba(37,99,235,0.1)] text-[var(--color-primary)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
-                  )}
-                >
-                  {showAllCenters
-                    ? "Show nearby only"
-                    : `Show all ${EVACUATION_CENTERS.length} reference centers (outside coverage)`}
-                </button>
 
                 <div className="flex flex-wrap gap-2">
                   {STATUS_FILTERS.map((status) => (

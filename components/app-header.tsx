@@ -62,7 +62,7 @@ export function AppHeader({
             <BrandMark className="h-9 w-9 shrink-0" />
             <div className="min-w-0">
               <div className="truncate text-[0.95rem] font-semibold tracking-[-0.03em] text-[var(--color-foreground)] md:text-[1.04rem]">
-                FloodWatch PH
+                Flood Watch
               </div>
               <div className="hidden text-[0.7rem] leading-none text-[var(--color-muted-foreground)] sm:block">
                 {HEADER_SUBTITLE}

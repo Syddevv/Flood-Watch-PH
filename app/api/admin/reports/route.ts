@@ -6,7 +6,7 @@ import { toAdminReportDto } from "@/lib/admin-report-dto";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { isValidReportCategory, isValidReportSeverity } from "@/lib/validations";
-import { isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { recordAdminOperationalAction } from "@/lib/admin-action-service";
 
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
   const text = (key: string, max: number) => typeof body?.[key] === "string" ? String(body[key]).trim().slice(0, max) : "";
   const title = text("title", 160), description = text("description", 5000), category = text("category", 80), severity = text("severity", 40), locationName = text("locationName", 240), reporterName = text("reporterName", 160);
   const latitude = Number(body?.latitude), longitude = Number(body?.longitude);
-  if (!title || !description || !locationName || !isValidReportCategory(category) || !isValidReportSeverity(severity) || !Number.isFinite(latitude) || !Number.isFinite(longitude) || !isWithinCalumpit(latitude, longitude)) return adminErrorResponse(request, "Invalid report details or coordinates outside Calumpit.", 400);
+  if (!title || !description || !locationName || !isValidReportCategory(category) || !isValidReportSeverity(severity) || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return adminErrorResponse(request, "Invalid report details or coordinates.", 400);
+  if (!isWithinBulacan(latitude, longitude)) return adminErrorResponse(request, OUTSIDE_BULACAN_ERROR_MESSAGE, 400);
   const now = new Date();
   const result = await prisma.$transaction(async (tx) => {
     const incident = await tx.incident.create({ data: { status: "Needs More Confirmation", representativeLatitude: latitude, representativeLongitude: longitude, locationName, severity, reportCount: 1, firstReportAt: now, lastActivityAt: now } });

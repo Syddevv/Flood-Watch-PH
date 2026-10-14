@@ -20,7 +20,7 @@ export const SOURCE_LABELS: Record<
 };
 
 export const WEATHER_RISK_DISCLAIMER =
-  "Official reference available from PAGASA. Weather risk shown in FloodWatch PH is estimated and not an official flood warning.";
+  "Official reference available from PAGASA. Weather risk shown in Flood Watch is estimated and not an official flood warning.";
 
 export const WEATHER_RISK_DISCLAIMER_SHORT =
   "Estimated weather-based risk. Follow PAGASA/LGU advisories.";

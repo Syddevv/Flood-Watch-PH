@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE } from "@/lib/bulacan-scope";
 import {
   canAccessArchivedReport,
   parseReportDetailsFormData,
@@ -248,7 +248,7 @@ test("text normalization safely handles non-string input", () => {
   assert.equal(trimText(null), "");
 });
 
-test("report details outside Calumpit are rejected with the shared boundary message", () => {
+test("report details outside Bulacan are rejected with the shared boundary message", () => {
   const formData = new FormData();
   formData.set("title", "Flooded street");
   formData.set("description", "Water is rising.");
@@ -259,6 +259,6 @@ test("report details outside Calumpit are rejected with the shared boundary mess
   formData.set("longitude", "121.1029");
 
   assert.deepEqual(parseReportDetailsFormData(formData), {
-    error: OUTSIDE_CALUMPIT_ERROR_MESSAGE,
+    error: OUTSIDE_BULACAN_ERROR_MESSAGE,
   });
 });

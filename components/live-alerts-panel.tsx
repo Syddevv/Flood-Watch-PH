@@ -187,7 +187,7 @@ export function LiveAlertsPanel({
       : nearbyLocationStatus === "available"
         ? `No active flood reports found within ${nearbyRadiusLabel} of your current location.`
         : nearbyLocationStatus === "denied"
-          ? (nearbyLocationError ?? "Location permission is blocked for FloodWatch PH.")
+          ? (nearbyLocationError ?? "Location permission is blocked for Flood Watch.")
           : nearbyLocationStatus === "unavailable"
             ? (nearbyLocationError ?? "Location is not available in this browser.")
             : nearbyLocationStatus === "error"

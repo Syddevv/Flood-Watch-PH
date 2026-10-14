@@ -1,4 +1,5 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { createBoundingBox, calculateDistanceMeters } from "@/lib/report-geo";
 import {
@@ -139,6 +140,10 @@ export async function GET(request: Request) {
       return errorResponse("Latitude and longitude are required.", 400);
     }
 
+    if (!isWithinBulacan(latitude, longitude)) {
+      return errorResponse(OUTSIDE_BULACAN_ERROR_MESSAGE, 400);
+    }
+
     const bounds = createBoundingBox(latitude, longitude, radiusMeters);
     const reports = (await prisma.floodReport.findMany({
       where: {
@@ -159,7 +164,8 @@ export async function GET(request: Request) {
 
     const nearbyReports = reconciledReports
       .filter((report: NearbyReportRecord) =>
-        isActiveLifecycleStatus(report.status as ReportLifecycleStatus),
+        isActiveLifecycleStatus(report.status as ReportLifecycleStatus) &&
+        isWithinBulacan(report.latitude, report.longitude),
       )
       .map((report: NearbyReportRecord): NearbyReportDistanceEntry => {
         const distanceMeters = calculateDistanceMeters(

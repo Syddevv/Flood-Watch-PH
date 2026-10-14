@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE } from "@/lib/bulacan-scope";
 
 import {
   createAnonymousSession as createSession,
@@ -191,7 +191,7 @@ integrationTest(
       });
       const outsideCalumpitPayload = (await outsideCalumpitResponse.json()) as { error?: string };
       assert.equal(outsideCalumpitResponse.status, 400);
-      assert.equal(outsideCalumpitPayload.error, OUTSIDE_CALUMPIT_ERROR_MESSAGE);
+      assert.equal(outsideCalumpitPayload.error, OUTSIDE_BULACAN_ERROR_MESSAGE);
 
       const confirmRequest = () =>
         fetch(`${baseUrl}/api/reports/${reportId}/confirm`, {

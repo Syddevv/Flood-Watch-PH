@@ -1,3 +1,5 @@
+> Historical implementation log. Current Bulacan scope and Flood Watch branding are documented in [docs/bulacan-scope.md](docs/bulacan-scope.md).
+
 # FloodWatch PH — Additional Features TODO
 
 > **Purpose:** This document serves as the implementation roadmap for coding agents working on the next phase of FloodWatch PH.

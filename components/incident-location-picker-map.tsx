@@ -7,17 +7,18 @@ import L from "leaflet";
 import { MapContainer, Marker, Polygon, TileLayer, useMap } from "react-leaflet";
 
 import {
-  CALUMPIT_BOUNDARY_PATH_OPTIONS,
-  CALUMPIT_BOUNDS,
-  CALUMPIT_CENTER,
-  CALUMPIT_MAP_MAX_BOUNDS,
-  CALUMPIT_MASK_PATH_OPTIONS,
-  CALUMPIT_OUTSIDE_MASK,
-  CALUMPIT_POLYGON,
-} from "@/lib/calumpit-boundary";
+  BULACAN_BOUNDARY_PATH_OPTIONS,
+  BULACAN_BOUNDS,
+  BULACAN_CENTER,
+  BULACAN_HOLE_MASKS,
+  BULACAN_MAP_MAX_BOUNDS,
+  BULACAN_MASK_PATH_OPTIONS,
+  BULACAN_OUTSIDE_MASK,
+  BULACAN_POLYGONS,
+} from "@/lib/bulacan-scope";
 
-const DEFAULT_CENTER: [number, number] = CALUMPIT_CENTER;
-const DEFAULT_ZOOM = 13;
+const DEFAULT_CENTER: [number, number] = BULACAN_CENTER;
+const DEFAULT_ZOOM = 10;
 
 const pickerMarkerIcon = L.divIcon({
   className: "floodwatch-marker-shell",
@@ -118,9 +119,9 @@ export function IncidentLocationPickerMap({
     <MapContainer
       center={center}
       zoom={selectedCoordinates ? 14 : DEFAULT_ZOOM}
-      bounds={selectedCoordinates ? undefined : CALUMPIT_BOUNDS}
-      minZoom={11}
-      maxBounds={CALUMPIT_MAP_MAX_BOUNDS}
+      bounds={selectedCoordinates ? undefined : BULACAN_BOUNDS}
+      minZoom={8}
+      maxBounds={BULACAN_MAP_MAX_BOUNDS}
       maxBoundsViscosity={1}
       zoomControl
       attributionControl
@@ -132,14 +133,17 @@ export function IncidentLocationPickerMap({
       />
 
       <Polygon
-        positions={CALUMPIT_OUTSIDE_MASK as [number, number][][]}
+        positions={BULACAN_OUTSIDE_MASK as [number, number][][]}
         interactive={false}
-        pathOptions={CALUMPIT_MASK_PATH_OPTIONS}
+        pathOptions={BULACAN_MASK_PATH_OPTIONS}
       />
+      {BULACAN_HOLE_MASKS.map((ring, index) => (
+        <Polygon key={`bulacan-hole-${index}`} positions={ring} interactive={false} pathOptions={BULACAN_MASK_PATH_OPTIONS} />
+      ))}
       <Polygon
-        positions={CALUMPIT_POLYGON as [number, number][]}
+        positions={BULACAN_POLYGONS as [number, number][][][]}
         interactive={false}
-        pathOptions={CALUMPIT_BOUNDARY_PATH_OPTIONS}
+        pathOptions={BULACAN_BOUNDARY_PATH_OPTIONS}
       />
 
       <PickerMapEvents

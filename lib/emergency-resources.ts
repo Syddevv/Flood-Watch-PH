@@ -96,7 +96,7 @@ export const EVACUATION_SOURCE_META: Record<
     label: "Community Reference",
   },
   sample_demo: {
-    label: "FloodWatch PH Reference Dataset",
+    label: "Flood Watch Reference Dataset",
   },
 };
 

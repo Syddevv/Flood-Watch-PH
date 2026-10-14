@@ -440,7 +440,7 @@ export function WeatherMonitoringContent({
             Weather Monitoring
           </h1>
           <p className="mt-1.5 text-[0.95rem] text-[var(--color-muted-foreground)]">
-            Search weather for places in the Philippines or use your current location, while keeping monitored flood-prone areas in view.
+            Search weather for places in Bulacan or use your current location, while keeping monitored flood-prone areas in view.
           </p>
         </section>
 

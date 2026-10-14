@@ -43,7 +43,7 @@ function AuthBrandPanel() {
         <BrandMark className="h-9 w-9 shrink-0" />
         <div>
           <div className="text-[0.95rem] font-semibold tracking-[-0.02em] text-white">
-            FloodWatch PH
+            Flood Watch
           </div>
           <div className="text-[0.7rem] leading-none text-slate-400">{HEADER_SUBTITLE}</div>
         </div>
@@ -56,7 +56,7 @@ function AuthBrandPanel() {
           Stay prepared.
         </h2>
         <p className="mt-4 text-[0.95rem] leading-7 text-slate-300">
-          FloodWatch PH brings community flood reports, evacuation centers, and weather updates
+          Flood Watch brings community flood reports, evacuation centers, and weather updates
           together in one interactive map.
         </p>
 
@@ -73,7 +73,7 @@ function AuthBrandPanel() {
       </div>
 
       <p className="relative text-[0.72rem] text-slate-500">
-        &copy; {new Date().getFullYear()} FloodWatch PH. Community flood monitoring.
+        &copy; {new Date().getFullYear()} Flood Watch. Community flood monitoring.
       </p>
     </div>
   );
@@ -90,7 +90,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2">
               <BrandMark className="h-8 w-8" />
               <span className="text-[0.9rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)]">
-                FloodWatch PH
+                Flood Watch
               </span>
             </div>
           </div>
@@ -100,7 +100,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             className="inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-primary)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to FloodWatch PH
+            Back to Flood Watch
           </Link>
 
           <div className="floodwatch-auth-card-in mt-5 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-8 shadow-[var(--shadow-soft)] sm:px-9 sm:py-10">

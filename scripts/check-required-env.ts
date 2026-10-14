@@ -21,7 +21,7 @@ const warnings = issues.filter((issue) => issue.severity === "warning");
 
 if (warnings.length > 0) {
   console.warn(
-    `\nFloodWatch PH: optional configuration not set\n${formatRequiredEnvIssues(warnings)}\n`,
+    `\nFlood Watch: optional configuration not set\n${formatRequiredEnvIssues(warnings)}\n`,
   );
 }
 
@@ -29,7 +29,7 @@ if (errors.length === 0) {
   process.exit(0);
 }
 
-const report = `\nFloodWatch PH: required configuration missing\n${formatRequiredEnvIssues(errors)}\n`;
+const report = `\nFlood Watch: required configuration missing\n${formatRequiredEnvIssues(errors)}\n`;
 
 if (shouldFailOnEnvIssues(process.env)) {
   console.error(

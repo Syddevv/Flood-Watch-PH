@@ -1,15 +1,15 @@
-# 🌊 FloodWatch PH
+# 🌊 Flood Watch
 
-A community-powered flood monitoring and reporting platform for the Philippines.
+A community-powered flood monitoring and reporting platform for Bulacan, Philippines.
 
-FloodWatch PH enables the public to report flood incidents, verify existing reports, monitor flood conditions through an interactive map, locate nearby evacuation centers, and stay informed with weather updates—all through a mobile-friendly web application.
+Flood Watch enables the public to report flood incidents, verify existing reports, monitor flood conditions through an interactive map, locate nearby evacuation centers, and stay informed with weather updates—all through a mobile-friendly web application.
 
 ---
 
 ## Features
 
 ### 🗺️ Interactive Flood Map
-- View community-reported flood incidents across the Philippines
+- View community-reported flood incidents across Bulacan
 - Filter reports by severity, status, and recency
 - Marker clustering for improved map performance
 - Built with Leaflet and OpenStreetMap
@@ -113,8 +113,7 @@ REPORT_SESSION_SECRET=
 ABUSE_PROTECTION_SECRET=
 NEXT_PUBLIC_APP_URL=
 TRUSTED_PROXY_CLIENT_IP_HEADER=
-# Optional: evacuation centers shown within this many km of Calumpit (default 25).
-NEXT_PUBLIC_EVACUATION_CENTER_NEARBY_RADIUS_KM=
+# Province scope is versioned in data/bulacan-boundary.geojson; see docs/bulacan-scope.md.
 
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -256,4 +255,4 @@ https://github.com/Syddevv
 
 ---
 
-> FloodWatch PH is an academic and community-oriented project designed to improve public awareness of flood conditions by combining community reporting, mapping, weather information, and evacuation resources into a single accessible platform.
+> Flood Watch is an academic and community-oriented project designed to improve public awareness of flood conditions by combining community reporting, mapping, weather information, and evacuation resources into a single accessible platform.

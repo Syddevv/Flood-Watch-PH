@@ -43,8 +43,8 @@ function SaveButton({ saved, onClick }: { saved: boolean; onClick: () => void })
 
 export function AdminSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [operationsCenter, setOperationsCenter] = useState("Calumpit Municipal Emergency Operations Center");
-  const [advisoryFooter, setAdvisoryFooter] = useState("Follow official PAGASA and Calumpit MDRRMO advisories.");
+  const [operationsCenter, setOperationsCenter] = useState("Flood Watch operations");
+  const [advisoryFooter, setAdvisoryFooter] = useState("Follow official PAGASA and local DRRMO advisories.");
   const [notificationSettings, setNotificationSettings] = useState<Record<NotificationSetting, boolean>>({
     criticalRescue: true,
     verificationReminders: true,
@@ -64,7 +64,7 @@ export function AdminSettings() {
   return (
     <div className="min-h-[calc(100vh-8rem)]">
       <header className="border-b border-[var(--color-border)] pb-5">
-        <p className="text-xs font-bold tracking-[.14em] text-[var(--color-primary)]">CALUMPIT EMERGENCY OPERATIONS</p>
+        <p className="text-xs font-bold tracking-[.14em] text-[var(--color-primary)]">BULACAN OPERATIONS</p>
         <h2 className="mt-1 text-3xl font-bold">Administration settings</h2>
         <p className="mt-1 text-sm text-blue-300">Controlled prototype settings for operations identity and alert routing.</p>
       </header>

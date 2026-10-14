@@ -138,7 +138,7 @@ export function AboutContent() {
       <div className="mx-auto flex min-h-full w-full max-w-[1140px] flex-col gap-10 px-4 py-6 md:px-8 md:py-8 xl:px-10">
         <section className="border-b border-[var(--color-border)] pb-6">
           <h1 className="text-[2.15rem] font-semibold tracking-[-0.04em] text-[var(--color-foreground)]">
-            About FloodWatch PH
+            About Flood Watch
           </h1>
           <p className="mt-2 max-w-[940px] text-[1rem] leading-7 text-[var(--color-muted-foreground)]">
             A free, public flood-monitoring platform that helps everyone in the
@@ -163,7 +163,7 @@ export function AboutContent() {
                 Our Mission
               </h2>
               <p className="mt-2 text-[1rem] leading-8 text-[var(--color-muted-foreground)]">
-                Floods affect millions of Filipinos every year. FloodWatch PH brings
+                Floods affect millions of Filipinos every year. Flood Watch brings
                 together official advisories and community reports so the public can
                 make fast, informed decisions — no account, login, or subscription
                 required.
@@ -257,7 +257,7 @@ export function AboutContent() {
             </h2>
           </div>
           <p className="mt-4 text-[1rem] leading-8 text-[var(--color-muted-foreground)]">
-            FloodWatch PH references public weather and emergency guidance together
+            Flood Watch references public weather and emergency guidance together
             with community reports. Some public pages use representative sample data
             and should still be verified with official local sources.
           </p>

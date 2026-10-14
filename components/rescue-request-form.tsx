@@ -25,7 +25,7 @@ import {
 
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
 import { ReportCameraCapture } from "@/components/report-camera-capture";
-import { isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
 import {
   getReportImageAcceptValue,
@@ -178,10 +178,10 @@ export function RescueRequestForm({
 
         // Same rule as the server: no tolerance buffer, because a borderline
         // point accepted here would only be rejected on submit.
-        if (!isWithinCalumpit(latitude, longitude)) {
+        if (!isWithinBulacan(latitude, longitude)) {
           setLocatingUser(false);
           setErrorMessage(
-            "Your current location appears to be outside Calumpit, Bulacan. If you are near the boundary, pick the exact spot on the map instead.",
+            "Your current location appears to be outside Bulacan. If you are near the boundary, pick the exact spot on the map instead.",
           );
           setLocationPickerOpen(true);
           return;

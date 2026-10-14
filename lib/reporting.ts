@@ -123,7 +123,7 @@ export function formatRelativeTime(dateInput: Date | string) {
 }
 
 /**
- * FloodWatch PH covers one municipality, so report times are always read in
+ * Flood Watch covers Bulacan, so report times are always read in
  * Philippine time regardless of where the browser happens to be. Same choice
  * as the weather module's WEATHER_TIME_ZONE.
  */

@@ -1,4 +1,4 @@
-import { OUTSIDE_CALUMPIT_ERROR_MESSAGE, isWithinCalumpit } from "@/lib/calumpit-boundary";
+import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import {
   REPORT_MULTIPART_MAX_BYTES,
@@ -300,8 +300,8 @@ export function parseReportDetailsFormData(formData: FormData, now: Date = new D
   const latitude = roundCoordinate(rawLatitude);
   const longitude = roundCoordinate(rawLongitude);
 
-  if (!isWithinCalumpit(latitude, longitude)) {
-    return { error: OUTSIDE_CALUMPIT_ERROR_MESSAGE };
+  if (!isWithinBulacan(latitude, longitude)) {
+    return { error: OUTSIDE_BULACAN_ERROR_MESSAGE };
   }
 
   if (reportedByName && reportedByName.length > 80) {
