@@ -20,6 +20,12 @@ function completeEnv(overrides: Record<string, string | undefined> = {}) {
     CLOUDINARY_CLOUD_NAME: "demo",
     CLOUDINARY_API_KEY: "key",
     CLOUDINARY_API_SECRET: "secret",
+    EMAIL_PROVIDER: "resend",
+    RESEND_API_KEY: "re_test",
+    EMAIL_FROM_ADDRESS: "Flood Watch <verify@example.com>",
+    EMAIL_VERIFICATION_HMAC_KEY: VALID_SECRET,
+    RESEND_WEBHOOK_SECRET: "whsec_dGVzdC13ZWJob29rLXNlY3JldA==",
+    LEGACY_EMAIL_GRACE_DEADLINE: "2099-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -78,6 +84,36 @@ test("missing Cloudinary credentials only warn, since other features still work"
 
   assert.ok(cloudinaryIssue);
   assert.equal(cloudinaryIssue.severity, "warning");
+});
+
+test("email verification secrets are required for deployed registration", () => {
+  const issues = findRequiredEnvIssues(
+    completeEnv({ EMAIL_VERIFICATION_HMAC_KEY: undefined }),
+  );
+  assert.equal(
+    issues.some(
+      (issue) =>
+        issue.name === "EMAIL_VERIFICATION_HMAC_KEY" && issue.severity === "error",
+    ),
+    true,
+  );
+});
+
+test("email provider and legacy grace deadline values are validated", () => {
+  const issues = findRequiredEnvIssues(
+    completeEnv({ EMAIL_PROVIDER: "smtp", LEGACY_EMAIL_GRACE_DEADLINE: "someday" }),
+  );
+  assert.equal(
+    issues.some((issue) => issue.name === "EMAIL_PROVIDER" && issue.problem === "invalid"),
+    true,
+  );
+  assert.equal(
+    issues.some(
+      (issue) =>
+        issue.name === "LEGACY_EMAIL_GRACE_DEADLINE" && issue.problem === "invalid",
+    ),
+    true,
+  );
 });
 
 test("the report names the variable and explains the consequence", () => {

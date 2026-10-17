@@ -7,6 +7,7 @@ import {
 import { buildSessionCookie, getCookieValue } from "@/lib/cookies";
 import { prisma } from "@/lib/prisma";
 import { isAuthSessionCurrent } from "@/lib/auth-session-state";
+import { canUserAuthenticate } from "@/lib/email-verification-token";
 
 export { AUTH_SESSION_COOKIE_NAME };
 
@@ -23,7 +24,12 @@ export async function getAuthenticatedUserFromToken(token: string | null | undef
     where: { tokenHash: hashSessionToken(token) },
     include: { user: true },
   });
-  if (!isAuthSessionCurrent(session)) return null;
+  if (
+    !isAuthSessionCurrent(session) ||
+    !canUserAuthenticate(session.user.emailVerificationStatus)
+  ) {
+    return null;
+  }
   return {
     id: session.user.id,
     email: session.user.email,
@@ -33,6 +39,14 @@ export async function getAuthenticatedUserFromToken(token: string | null | undef
 }
 
 export async function createAuthSession(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerificationStatus: true },
+  });
+  if (!user || !canUserAuthenticate(user.emailVerificationStatus)) {
+    throw new Error("An authentication session cannot be created for this account.");
+  }
+
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + AUTH_SESSION_MAX_AGE_SECONDS * 1000);
