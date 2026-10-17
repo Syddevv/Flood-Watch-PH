@@ -102,6 +102,6 @@ test("only verified and explicit legacy-grace accounts can authenticate", () => 
     true,
   );
   assert.equal(canUserAuthenticate("legacy_grace", "2020-01-01T00:00:00.000Z"), false);
-  assert.equal(canUserAuthenticate("legacy_grace", undefined), false);
+  assert.equal(canUserAuthenticate("legacy_grace", ""), false);
   assert.equal(canUserAuthenticate("pending"), false);
 });
