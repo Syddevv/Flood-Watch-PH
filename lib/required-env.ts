@@ -55,34 +55,39 @@ const REQUIREMENTS: EnvRequirement[] = [
   },
   {
     name: "NEXT_PUBLIC_APP_URL",
-    severity: "warning",
-    hint: "Deployed origin. Only consulted when a request's Origin does not match its Host.",
+    severity: "error",
+    hint: "Exact deployed origin. Used as the trusted fallback when a request's Origin does not match its Host.",
   },
   {
     name: "EMAIL_PROVIDER",
     severity: "error",
-    hint: 'Transactional email provider. Phase U3 requires the value "resend".',
+    hint: 'Transactional email provider. Phase U3 requires the value "emailjs".',
   },
   {
-    name: "RESEND_API_KEY",
+    name: "EMAILJS_SERVICE_ID",
     severity: "error",
-    hint: "Server-only Resend API key used to deliver verification codes.",
+    hint: "EmailJS service connected to the verification-email sender.",
   },
   {
-    name: "EMAIL_FROM_ADDRESS",
+    name: "EMAILJS_TEMPLATE_ID",
     severity: "error",
-    hint: "Verified Resend sender used for Flood Watch verification messages.",
+    hint: "EmailJS template containing the U3 verification message.",
+  },
+  {
+    name: "EMAILJS_PUBLIC_KEY",
+    severity: "error",
+    hint: "EmailJS account public key. Kept server-side with the private key.",
+  },
+  {
+    name: "EMAILJS_PRIVATE_KEY",
+    severity: "error",
+    hint: "Server-only EmailJS private key used to authorize delivery.",
   },
   {
     name: "EMAIL_VERIFICATION_HMAC_KEY",
     minLength: MIN_SECRET_LENGTH,
     severity: "error",
     hint: "Random server-only key used to HMAC verification codes before storage.",
-  },
-  {
-    name: "RESEND_WEBHOOK_SECRET",
-    severity: "error",
-    hint: "Resend signing secret used to authenticate delivery and bounce events.",
   },
   {
     name: "LEGACY_EMAIL_GRACE_DEADLINE",
@@ -140,14 +145,48 @@ export function findRequiredEnvIssues(env: EnvLike): RequiredEnvIssue[] {
 
   if (
     env.EMAIL_PROVIDER?.trim() &&
-    env.EMAIL_PROVIDER.trim().toLowerCase() !== "resend"
+    env.EMAIL_PROVIDER.trim().toLowerCase() !== "emailjs"
   ) {
     issues.push({
       name: "EMAIL_PROVIDER",
       problem: "invalid",
       severity: "error",
-      hint: 'Phase U3 currently supports only the value "resend".',
+      hint: 'Phase U3 currently supports only the value "emailjs".',
     });
+  }
+
+  for (const name of [
+    "EMAILJS_SERVICE_ID",
+    "EMAILJS_TEMPLATE_ID",
+    "EMAILJS_PUBLIC_KEY",
+    "EMAILJS_PRIVATE_KEY",
+  ]) {
+    const value = env[name]?.trim();
+    if (value && (value.length > 256 || /[\u0000-\u001f\u007f]/.test(value))) {
+      issues.push({
+        name,
+        problem: "invalid",
+        severity: "error",
+        hint: "Use the unmodified value from EmailJS without control characters.",
+      });
+    }
+  }
+
+  const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    try {
+      const parsed = new URL(appUrl);
+      if (!/^https?:$/.test(parsed.protocol) || parsed.origin !== appUrl.replace(/\/$/, "")) {
+        throw new Error("invalid origin");
+      }
+    } catch {
+      issues.push({
+        name: "NEXT_PUBLIC_APP_URL",
+        problem: "invalid",
+        severity: "error",
+        hint: "Use the exact deployed http(s) origin with no path, query, or fragment.",
+      });
+    }
   }
 
   const graceDeadline = env.LEGACY_EMAIL_GRACE_DEADLINE?.trim();

@@ -3,14 +3,30 @@ import { ConfigurationError } from "@/lib/configuration-error";
 type EnvLike = Record<string, string | undefined>;
 type FetchLike = typeof fetch;
 
+const EMAILJS_SEND_URL = "https://api.emailjs.com/api/v1.0/email/send";
+const EMAILJS_REQUEST_TIMEOUT_MS = 10_000;
+const EMAILJS_CONFIG_MAX_LENGTH = 256;
+const FALLBACK_RECIPIENT_NAME = "Flood Watch resident";
+
 export class EmailDeliveryError extends Error {
   readonly safeCode: string;
+  readonly outcome: "rejected" | "ambiguous";
 
-  constructor(safeCode: string) {
+  constructor(
+    safeCode: string,
+    outcome: "rejected" | "ambiguous" = "rejected",
+  ) {
     super("The verification email provider did not accept the message.");
     this.name = "EmailDeliveryError";
     this.safeCode = safeCode;
+    this.outcome = outcome;
   }
+}
+
+export function isAmbiguousEmailDeliveryError(
+  error: unknown,
+): error is EmailDeliveryError & { outcome: "ambiguous" } {
+  return error instanceof EmailDeliveryError && error.outcome === "ambiguous";
 }
 
 function isTestDeliveryStubEnabled(env: EnvLike) {
@@ -22,60 +38,47 @@ function isTestDeliveryStubEnabled(env: EnvLike) {
   );
 }
 
+function readEmailJsConfigValue(name: string, env: EnvLike) {
+  const value = env[name]?.trim();
+  if (!value) {
+    throw new ConfigurationError(`${name} must be configured.`);
+  }
+  if (value.length > EMAILJS_CONFIG_MAX_LENGTH || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new ConfigurationError(`${name} has an invalid value.`);
+  }
+  return value;
+}
+
 export function getEmailDeliveryConfig(env: EnvLike = process.env) {
-  if (env.EMAIL_PROVIDER?.trim().toLowerCase() !== "resend") {
-    throw new ConfigurationError('EMAIL_PROVIDER must be set to "resend".');
+  if (env.EMAIL_PROVIDER?.trim().toLowerCase() !== "emailjs") {
+    throw new ConfigurationError('EMAIL_PROVIDER must be set to "emailjs".');
   }
 
-  const apiKey = env.RESEND_API_KEY?.trim();
-  const from = env.EMAIL_FROM_ADDRESS?.trim();
-  if (!apiKey || !from) {
-    throw new ConfigurationError(
-      "RESEND_API_KEY and EMAIL_FROM_ADDRESS must be configured.",
-    );
-  }
-
-  return { apiKey, from };
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-export function renderVerificationEmail(code: string) {
-  const safeCode = escapeHtml(code);
   return {
-    subject: `${code} is your Flood Watch verification code`,
-    text: `Verify your Flood Watch email with this code: ${code}\n\nThis code expires in 10 minutes and can be used once. Flood Watch will never ask you to share this code. If you did not create an account, ignore this email.`,
-    html: `<!doctype html>
-<html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;background:#f4f7f8;font-family:Arial,sans-serif;color:#16302b">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f8;padding:24px 12px">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:16px;border:1px solid #dce7e3;overflow:hidden">
-        <tr><td style="background:#075f52;padding:24px;color:#ffffff;font-size:22px;font-weight:700">Flood Watch</td></tr>
-        <tr><td style="padding:32px 28px">
-          <h1 style="margin:0 0 12px;font-size:24px">Verify your email</h1>
-          <p style="margin:0 0 24px;line-height:1.6;color:#52645f">Enter this six-digit code to finish creating your Flood Watch account.</p>
-          <div style="padding:18px;text-align:center;background:#eef7f4;border-radius:12px;font-size:34px;font-weight:700;letter-spacing:10px;color:#075f52">${safeCode}</div>
-          <p style="margin:24px 0 8px;line-height:1.6;color:#52645f">This code expires in 10 minutes and can only be used once.</p>
-          <p style="margin:0;line-height:1.6;color:#52645f">Never share this code. Flood Watch staff will not ask for it. If you did not create an account, you can safely ignore this email.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
+    serviceId: readEmailJsConfigValue("EMAILJS_SERVICE_ID", env),
+    templateId: readEmailJsConfigValue("EMAILJS_TEMPLATE_ID", env),
+    publicKey: readEmailJsConfigValue("EMAILJS_PUBLIC_KEY", env),
+    privateKey: readEmailJsConfigValue("EMAILJS_PRIVATE_KEY", env),
   };
 }
 
+function getRecipientName(value: string | null | undefined) {
+  const name = value?.replace(/[\u0000-\u001f\u007f<>]/g, " ").trim();
+  return name || FALLBACK_RECIPIENT_NAME;
+}
+
 export async function sendVerificationEmail(
-  input: { to: string; code: string; idempotencyKey: string },
-  options: { env?: EnvLike; fetchImpl?: FetchLike } = {},
+  input: {
+    to: string;
+    toName?: string | null;
+    code: string;
+    idempotencyKey: string;
+  },
+  options: {
+    env?: EnvLike;
+    fetchImpl?: FetchLike;
+    timeoutMs?: number;
+  } = {},
 ) {
   const env = options.env ?? process.env;
 
@@ -86,32 +89,49 @@ export async function sendVerificationEmail(
     return { messageId: `test-${input.idempotencyKey}` };
   }
 
-  const { apiKey, from } = getEmailDeliveryConfig(env);
-  const message = renderVerificationEmail(input.code);
-  const response = await (options.fetchImpl ?? fetch)("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": input.idempotencyKey,
-    },
-    body: JSON.stringify({
-      from,
-      to: [input.to],
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-    }),
-  });
+  const config = getEmailDeliveryConfig(env);
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? EMAILJS_REQUEST_TIMEOUT_MS,
+  );
+
+  let response: Response;
+  try {
+    response = await (options.fetchImpl ?? fetch)(EMAILJS_SEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        service_id: config.serviceId,
+        template_id: config.templateId,
+        user_id: config.publicKey,
+        accessToken: config.privateKey,
+        template_params: {
+          to_email: input.to,
+          to_name: getRecipientName(input.toName),
+          verification_code: input.code,
+          expires_in: "10 minutes",
+        },
+      }),
+    });
+  } catch (error) {
+    if (
+      controller.signal.aborted ||
+      (error instanceof Error && error.name === "AbortError")
+    ) {
+      throw new EmailDeliveryError("provider_timeout", "ambiguous");
+    }
+    throw new EmailDeliveryError("provider_network_error", "ambiguous");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new EmailDeliveryError(`provider_http_${response.status}`);
   }
 
-  const payload = (await response.json().catch(() => null)) as { id?: unknown } | null;
-  if (!payload || typeof payload.id !== "string" || !payload.id) {
-    throw new EmailDeliveryError("provider_invalid_response");
-  }
-
-  return { messageId: payload.id };
+  // EmailJS returns no durable provider message ID. A 2xx response means only
+  // that its API accepted the request, not that the recipient received it.
+  return { messageId: null };
 }

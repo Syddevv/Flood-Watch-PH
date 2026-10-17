@@ -20,11 +20,12 @@ function completeEnv(overrides: Record<string, string | undefined> = {}) {
     CLOUDINARY_CLOUD_NAME: "demo",
     CLOUDINARY_API_KEY: "key",
     CLOUDINARY_API_SECRET: "secret",
-    EMAIL_PROVIDER: "resend",
-    RESEND_API_KEY: "re_test",
-    EMAIL_FROM_ADDRESS: "Flood Watch <verify@example.com>",
+    EMAIL_PROVIDER: "emailjs",
+    EMAILJS_SERVICE_ID: "service_test",
+    EMAILJS_TEMPLATE_ID: "template_test",
+    EMAILJS_PUBLIC_KEY: "public_test",
+    EMAILJS_PRIVATE_KEY: "private_test",
     EMAIL_VERIFICATION_HMAC_KEY: VALID_SECRET,
-    RESEND_WEBHOOK_SECRET: "whsec_dGVzdC13ZWJob29rLXNlY3JldA==",
     LEGACY_EMAIL_GRACE_DEADLINE: "2099-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -94,6 +95,66 @@ test("email verification secrets are required for deployed registration", () => 
     issues.some(
       (issue) =>
         issue.name === "EMAIL_VERIFICATION_HMAC_KEY" && issue.severity === "error",
+    ),
+    true,
+  );
+});
+
+test("all EmailJS credentials are required and obsolete Resend values do not satisfy them", () => {
+  const issues = findRequiredEnvIssues(
+    completeEnv({
+      EMAILJS_TEMPLATE_ID: undefined,
+      RESEND_API_KEY: "re_obsolete",
+      EMAIL_FROM_ADDRESS: "Flood Watch <verify@example.com>",
+      RESEND_WEBHOOK_SECRET: "whsec_obsolete",
+    }),
+  );
+
+  assert.equal(
+    issues.some(
+      (issue) => issue.name === "EMAILJS_TEMPLATE_ID" && issue.problem === "missing",
+    ),
+    true,
+  );
+  assert.equal(issues.some((issue) => issue.name.startsWith("RESEND_")), false);
+});
+
+test("malformed EmailJS values and deployed origins are reported", () => {
+  const issues = findRequiredEnvIssues(
+    completeEnv({
+      EMAILJS_PRIVATE_KEY: "private\nkey",
+      NEXT_PUBLIC_APP_URL: "https://example.com/not-an-origin",
+    }),
+  );
+
+  assert.equal(
+    issues.some(
+      (issue) => issue.name === "EMAILJS_PRIVATE_KEY" && issue.problem === "invalid",
+    ),
+    true,
+  );
+  assert.equal(
+    issues.some(
+      (issue) =>
+        issue.name === "NEXT_PUBLIC_APP_URL" &&
+        issue.problem === "invalid" &&
+        issue.severity === "error",
+    ),
+    true,
+  );
+});
+
+test("the deployed application origin is required for secure fallback validation", () => {
+  const issues = findRequiredEnvIssues(
+    completeEnv({ NEXT_PUBLIC_APP_URL: undefined }),
+  );
+
+  assert.equal(
+    issues.some(
+      (issue) =>
+        issue.name === "NEXT_PUBLIC_APP_URL" &&
+        issue.problem === "missing" &&
+        issue.severity === "error",
     ),
     true,
   );
