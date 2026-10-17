@@ -25,8 +25,13 @@ model FloodReport {
   scopeVersion       String               @default("osm-1504656-2026-10-14")
   locationSource     String               @default("manual")
   gpsAccuracyMeters  Float?
+  gpsLatitude        Float?
+  gpsLongitude       Float?
+  gpsCapturedAt      DateTime?
   imageUrl           String?
   photoCapturedAt    DateTime?
+  onsitePolicyVersion String?
+  onsiteEligibleAt   DateTime?
   ownerSessionHash   String?
   reportedByName     String?
   sourceType         String               @default("Community")
@@ -53,6 +58,7 @@ model FloodReport {
   @@index([lastActivityAt])
   @@index([latitude, longitude])
   @@index([locationSource])
+  @@index([onsitePolicyVersion])
   @@index([incidentId])
   @@index([userId])
 }

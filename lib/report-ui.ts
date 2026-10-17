@@ -159,6 +159,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     photoCapturedAtLabel: report.photoCapturedAt
       ? formatAbsoluteTime(report.photoCapturedAt)
       : undefined,
+    onsiteEligible: Boolean(report.onsiteEligible),
     confirmations: confirmationCount,
     resolvedConfirmations: resolvedCount,
     lastConfirmedAt: report.lastConfirmedAt ?? null,

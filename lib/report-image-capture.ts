@@ -26,18 +26,18 @@ export const REPORT_CAPTURE_FILE_EXTENSION = ".jpg";
 export const REPORT_UPLOAD_DOWNSCALE_THRESHOLD_BYTES = 1_500_000;
 
 export const CAMERA_UNSUPPORTED_MESSAGE =
-  "This browser can't open the camera. Upload a photo instead.";
+  "This browser can't open the camera.";
 
 const CAMERA_ERROR_MESSAGES: Record<string, string> = {
   NotAllowedError:
-    "Camera permission was blocked. Allow camera access in your browser settings, or upload a photo instead.",
+    "Camera permission was blocked. Allow camera access in your browser settings to use it.",
   SecurityError:
-    "Camera permission was blocked. Allow camera access in your browser settings, or upload a photo instead.",
-  NotFoundError: "No camera was found on this device. Upload a photo instead.",
-  OverconstrainedError: "No camera was found on this device. Upload a photo instead.",
+    "Camera access requires a secure connection. Reopen Flood Watch over HTTPS.",
+  NotFoundError: "No camera was found on this device.",
+  OverconstrainedError: "No usable camera was found on this device.",
   NotReadableError:
-    "The camera is in use by another app. Close it and try again, or upload a photo instead.",
-  AbortError: "The camera stopped unexpectedly. Try again, or upload a photo instead.",
+    "The camera is in use by another app. Close it and try again.",
+  AbortError: "The camera stopped unexpectedly. Try again.",
 };
 
 export type CaptureDimensions = {
@@ -106,10 +106,6 @@ export function shouldDownscaleImage(image: {
   );
 }
 
-/**
- * Every message names uploading as the way forward - the camera is an
- * addition to the file picker, never a gate in front of it.
- */
 export function describeCameraError(error: unknown): string {
   const name =
     error && typeof error === "object" && "name" in error

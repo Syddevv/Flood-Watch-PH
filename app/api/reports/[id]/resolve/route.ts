@@ -15,6 +15,7 @@ import {
   REPORT_ACTION_UNDO_WINDOW_MS,
 } from "@/lib/report-session";
 import { protectApiRequest } from "@/lib/request-security";
+import { serializeReportRecord, type PublicReportRecord } from "@/lib/report-api";
 
 type RouteContext = {
   params: Promise<{
@@ -116,7 +117,9 @@ export async function POST(request: Request, context: RouteContext) {
       return finalReport;
     });
 
-    return successResponse(updatedReport);
+    return successResponse(
+      serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }),
+    );
   } catch (error) {
     if (isPrismaUniqueConstraintError(error)) {
       return errorResponse("This report has already been updated from this browser.", 409);
@@ -253,7 +256,9 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("Undo window has expired.", 400);
     }
 
-    return successResponse(updatedReport);
+    return successResponse(
+      serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }),
+    );
   } catch (error) {
     console.error("Failed to undo water receded report.", error);
     return errorResponse("Something went wrong while undoing the water receded report.");

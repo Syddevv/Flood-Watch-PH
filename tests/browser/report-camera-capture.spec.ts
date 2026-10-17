@@ -75,7 +75,7 @@ test.describe("in-browser photo capture", () => {
     await expect(page.getByTestId("report-image-preview")).toHaveCount(0);
   });
 
-  test("a blocked camera explains itself and still offers the upload path", async ({ page }) => {
+  test("a blocked camera explains why a new report cannot be submitted", async ({ page }) => {
     // Override getUserMedia before any app code runs. The fake device would
     // otherwise succeed, so denial has to be injected rather than configured.
     await page.addInitScript(() => {
@@ -96,26 +96,15 @@ test.describe("in-browser photo capture", () => {
 
     await expect(page.getByTestId("camera-error")).toContainText(/permission/i);
 
-    // The camera is an addition to the file picker, never a gate in front of it.
-    await page.getByTestId("camera-upload-instead").click();
-    await expect(page.getByTestId("report-camera-modal")).toHaveCount(0);
-    await expect(page.getByTestId("choose-report-image")).toBeVisible();
+    await expect(page.getByTestId("camera-upload-instead")).toHaveCount(0);
+    await expect(page.getByTestId("submit-report")).toBeDisabled();
   });
 
-  test("uploading is unaffected by the capture controls", async ({ page }) => {
+  test("the new-report form exposes no file upload or dropzone bypass", async ({ page }) => {
     await signIn(page);
 
-    // Still exactly one file input, so the report-flows locator stays valid.
-    await expect(page.locator('input[type="file"]')).toHaveCount(1);
-
-    await page.locator('input[type="file"]').setInputFiles({
-      name: "invalid.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from("not an accepted image"),
-    });
-
-    // Scoped to the toast: the dropzone copy also names the accepted formats.
-    await expect(page.getByText(/Upload a JPG, PNG, or WEBP image only/i)).toBeVisible();
-    await expect(page.getByTestId("report-image-preview")).toHaveCount(0);
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+    await expect(page.getByTestId("choose-report-image")).toHaveCount(0);
+    await expect(page.getByTestId("report-image-dropzone")).toHaveCount(0);
   });
 });

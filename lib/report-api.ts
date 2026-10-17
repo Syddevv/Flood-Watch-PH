@@ -54,8 +54,13 @@ export type PublicReportRecord = {
   longitude: number;
   locationSource: string;
   gpsAccuracyMeters: number | null;
+  gpsLatitude?: number | null;
+  gpsLongitude?: number | null;
+  gpsCapturedAt?: Date | null;
   imageUrl: string | null;
   photoCapturedAt: Date | null;
+  onsitePolicyVersion?: string | null;
+  onsiteEligibleAt?: Date | null;
   ownerSessionHash?: string | null;
   userId?: string | null;
   reportedByName: string | null;
@@ -142,12 +147,17 @@ export function serializeReportRecord<T extends PublicReportRecord>(
   delete safeReport.ownerSessionHash;
   delete safeReport.userId;
   delete safeReport.confirmations;
+  delete safeReport.gpsLatitude;
+  delete safeReport.gpsLongitude;
+  delete safeReport.gpsCapturedAt;
+  delete safeReport.onsiteEligibleAt;
   if (!owner) {
     safeReport.reportedByName = null;
   }
 
   return {
     ...safeReport,
+    onsiteEligible: Boolean(report.onsitePolicyVersion && report.onsiteEligibleAt),
     isOwner: owner,
     lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
     lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
@@ -224,7 +234,7 @@ export async function uploadReportImageFile(imageFile: File) {
   } catch (error) {
     console.error("Failed to upload report image.", error);
     return {
-      error: "Image storage is temporarily unavailable. Submit the report without an image or try again later.",
+      error: "Image storage is temporarily unavailable. Your form is preserved; try submitting again later.",
       status: 503,
     };
   }

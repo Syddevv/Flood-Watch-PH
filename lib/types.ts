@@ -242,6 +242,7 @@ export type IncidentReport = {
   lastActivityAtLabel?: string;
   locationProvenanceLabel?: string;
   photoCapturedAtLabel?: string;
+  onsiteEligible?: boolean;
   confirmations: number;
   resolvedConfirmations: number;
   lastConfirmedAt?: string | null;

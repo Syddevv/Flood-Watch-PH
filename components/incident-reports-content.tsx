@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
   Camera,
@@ -9,7 +9,6 @@ import {
   Clock3,
   Eye,
   Flame,
-  ImageUp,
   LoaderCircle,
   LogIn,
   Map as MapIcon,
@@ -28,10 +27,7 @@ import {
   REPORT_SEVERITIES,
   WATER_DEPTH_OPTIONS,
 } from "@/lib/constants";
-import {
-  getReportImageAcceptValue,
-  validateReportImageFile,
-} from "@/lib/report-image-validation";
+import { validateReportImageFile } from "@/lib/report-image-validation";
 import {
   deriveReportLifecycleStatus,
   isActiveLifecycleStatus,
@@ -42,10 +38,13 @@ import { cn } from "@/lib/utils";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
 import { ReportCameraCapture } from "@/components/report-camera-capture";
-import { downscaleImageFile } from "@/lib/report-image-browser";
 import { isCameraCaptureSupported } from "@/lib/report-image-capture";
 import { useAuthSession } from "@/components/auth-session-provider";
-import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
+import {
+  OUTSIDE_BULACAN_ERROR_MESSAGE,
+  distanceToBulacanBoundaryMeters,
+  isWithinBulacan,
+} from "@/lib/bulacan-scope";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import type {
   ReportDetailResponse,
@@ -83,6 +82,7 @@ import {
   type ReportLocationSource,
 } from "@/lib/report-location-metadata";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
+import { ONSITE_REPORT_POLICY } from "@/lib/onsite-report-policy";
 
 type FormState = {
   locationName: string;
@@ -90,6 +90,9 @@ type FormState = {
   longitude: string;
   locationSource: ReportLocationSource;
   gpsAccuracyMeters: number | null;
+  gpsLatitude: number | null;
+  gpsLongitude: number | null;
+  gpsCapturedAt: string | null;
   photoCapturedAt: string | null;
   category: string;
   severity: string;
@@ -127,6 +130,9 @@ const emptyFormState: FormState = {
   longitude: "",
   locationSource: DEFAULT_REPORT_LOCATION_SOURCE,
   gpsAccuracyMeters: null,
+  gpsLatitude: null,
+  gpsLongitude: null,
+  gpsCapturedAt: null,
   photoCapturedAt: null,
   category: INCIDENT_CATEGORY_OPTIONS[0],
   severity: REPORT_SEVERITIES[1],
@@ -138,7 +144,6 @@ const emptyFormState: FormState = {
   photos: [],
 };
 
-const reportImageAcceptValue = getReportImageAcceptValue();
 const emptySubscribe = () => () => {};
 
 function getTodaySnapshot() {
@@ -577,15 +582,12 @@ export function IncidentReportsContent() {
   const actionLoadingId = actionLoading?.reportId ?? null;
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [processingPhoto, setProcessingPhoto] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [formState, setFormState] = useState<FormState>(emptyFormState);
   const [pendingNearbyDuplicate, setPendingNearbyDuplicate] =
     useState<PendingNearbyDuplicateState>(null);
   const [updateContext, setUpdateContext] = useState<UpdateContextState>(null);
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const today = useSyncExternalStore(emptySubscribe, getTodaySnapshot, () => null);
   // Client-only capability check. The server snapshot is false so the camera
   // button is absent in the initial HTML rather than flashing in and out.
@@ -608,7 +610,12 @@ export function IncidentReportsContent() {
     formState.locationName.trim().length > 0 &&
     formState.description.trim().length > 0 &&
     hasValidCoordinates &&
-    !coordinatesOutsideArea;
+    !coordinatesOutsideArea &&
+    Boolean(selectedPhoto && formState.photoCapturedAt) &&
+    formState.gpsLatitude !== null &&
+    formState.gpsLongitude !== null &&
+    formState.gpsAccuracyMeters !== null &&
+    Boolean(formState.gpsCapturedAt);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -661,25 +668,6 @@ export function IncidentReportsContent() {
       }
     };
   }, [photoPreviewUrl]);
-
-  useEffect(() => {
-    if (!photoDialogOpen) {
-      return;
-    }
-
-    const handleWindowFocus = () => {
-      window.setTimeout(() => {
-        setPhotoDialogOpen(false);
-        photoInputRef.current?.blur();
-      }, 0);
-    };
-
-    window.addEventListener("focus", handleWindowFocus);
-
-    return () => {
-      window.removeEventListener("focus", handleWindowFocus);
-    };
-  }, [photoDialogOpen]);
 
   async function loadReports() {
     setLoadingReports(true);
@@ -911,7 +899,6 @@ export function IncidentReportsContent() {
       ...current,
       [key]: value,
       locationSource: "manual",
-      gpsAccuracyMeters: null,
     }));
   }
 
@@ -926,61 +913,8 @@ export function IncidentReportsContent() {
     }));
   }
 
-  function handleOpenPhotoPicker() {
-    setPhotoDialogOpen(true);
-    photoInputRef.current?.click();
-  }
-
-  async function handlePhotoSelection(files: FileList | null) {
-    setPhotoDialogOpen(false);
-    photoInputRef.current?.blur();
-
-    const pickedPhoto = files?.[0];
-
-    if (!pickedPhoto) {
-      if (photoInputRef.current) {
-        photoInputRef.current.value = "";
-      }
-      return;
-    }
-
-    const validationError = validateReportImageFile(pickedPhoto);
-
-    if (validationError) {
-      if (photoInputRef.current) {
-        photoInputRef.current.value = "";
-      }
-      setToast({
-        tone: "error",
-        message: validationError,
-      });
-      return;
-    }
-
-    setProcessingPhoto(true);
-
-    try {
-      // Shrink oversized phone photos before they cross a mobile connection.
-      // The re-encode also drops EXIF, so an uploaded image no longer carries
-      // the camera's own GPS coordinates.
-      const optimisedPhoto = await downscaleImageFile(pickedPhoto);
-
-      setFormState((current) => ({
-        ...current,
-        photos: [optimisedPhoto],
-        photoCapturedAt: null,
-      }));
-    } finally {
-      setProcessingPhoto(false);
-    }
-  }
-
   function handleCameraCapture(file: File, capturedAt: Date) {
     setCameraOpen(false);
-
-    if (photoInputRef.current) {
-      photoInputRef.current.value = "";
-    }
 
     setFormState((current) => ({
       ...current,
@@ -989,26 +923,12 @@ export function IncidentReportsContent() {
     }));
   }
 
-  function handleUploadInsteadOfCamera() {
-    setCameraOpen(false);
-    handleOpenPhotoPicker();
-  }
-
   function handleRemovePhoto() {
-    if (photoInputRef.current) {
-      photoInputRef.current.value = "";
-    }
-
     setFormState((current) => ({
       ...current,
       photos: [],
       photoCapturedAt: null,
     }));
-  }
-
-  function handlePhotoDrop(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    void handlePhotoSelection(event.dataTransfer.files);
   }
 
   async function handleConfirmReport(reportId: string) {
@@ -1275,9 +1195,32 @@ export function IncidentReportsContent() {
           setLoadingCurrentLocation(false);
           setToast({
             tone: "error",
-            message: `Your current location${accuracyLabel} appears to be outside Bulacan. If you are near the boundary, pick the exact spot on the map instead.`,
+            message: `Your current location${accuracyLabel} appears to be outside Bulacan.`,
           });
-          setLocationPickerOpen(true);
+          return;
+        }
+
+        if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > ONSITE_REPORT_POLICY.maximumGpsAccuracyMeters) {
+          setLoadingCurrentLocation(false);
+          setToast({
+            tone: "error",
+            message: `GPS accuracy must be ${ONSITE_REPORT_POLICY.maximumGpsAccuracyMeters} m or better. Move to an open area and try again.`,
+          });
+          return;
+        }
+
+        if (
+          distanceToBulacanBoundaryMeters(
+            position.coords.latitude,
+            position.coords.longitude,
+          ) <= accuracy
+        ) {
+          setLoadingCurrentLocation(false);
+          setToast({
+            tone: "error",
+            message:
+              "Your GPS accuracy area crosses the Bulacan boundary. Ask an administrator to review a legitimate border report.",
+          });
           return;
         }
 
@@ -1295,7 +1238,10 @@ export function IncidentReportsContent() {
           latitude,
           longitude,
           locationSource: "gps",
-          gpsAccuracyMeters: Number.isFinite(accuracy) ? accuracy : null,
+          gpsLatitude: position.coords.latitude,
+          gpsLongitude: position.coords.longitude,
+          gpsAccuracyMeters: accuracy,
+          gpsCapturedAt: new Date(position.timestamp).toISOString(),
         }));
 
         try {
@@ -1306,12 +1252,7 @@ export function IncidentReportsContent() {
 
           updateFormState("locationName", locationName);
 
-          if (precise && Number.isFinite(accuracy) && accuracy > 250) {
-            setToast({
-              tone: "success",
-              message: `Location added. GPS accuracy is about ${Math.round(accuracy)} m - double-check the pin on the map if you are near the municipal boundary.`,
-            });
-          } else if (!precise) {
+          if (!precise) {
             setToast({
               tone: "error",
               message: "Detailed address lookup failed. Coordinates were added with a broader location.",
@@ -1352,7 +1293,7 @@ export function IncidentReportsContent() {
       {
         enableHighAccuracy: true,
         timeout: 12000,
-        maximumAge: 30000,
+        maximumAge: 0,
       },
     );
   }
@@ -1373,7 +1314,6 @@ export function IncidentReportsContent() {
       latitude: location.latitude,
       longitude: location.longitude,
       locationSource: location.source,
-      gpsAccuracyMeters: null,
     }));
     setLocationPickerOpen(false);
   }
@@ -1453,16 +1393,29 @@ export function IncidentReportsContent() {
       return;
     }
 
-    if (selectedPhoto) {
-      const imageValidationError = validateReportImageFile(selectedPhoto);
+    if (!selectedPhoto || !formState.photoCapturedAt) {
+      setToast({ tone: "error", message: "Take a fresh photo with the in-app camera." });
+      return;
+    }
 
-      if (imageValidationError) {
-        setToast({
-          tone: "error",
-          message: imageValidationError,
-        });
-        return;
-      }
+    const imageValidationError = validateReportImageFile(selectedPhoto);
+
+    if (imageValidationError) {
+      setToast({
+        tone: "error",
+        message: imageValidationError,
+      });
+      return;
+    }
+
+    if (
+      formState.gpsLatitude === null ||
+      formState.gpsLongitude === null ||
+      formState.gpsAccuracyMeters === null ||
+      !formState.gpsCapturedAt
+    ) {
+      setToast({ tone: "error", message: "Refresh your current location before submitting." });
+      return;
     }
 
     setSubmittingReport(true);
@@ -1479,21 +1432,17 @@ export function IncidentReportsContent() {
       requestBody.set("longitude", String(longitude));
       requestBody.set("locationSource", formState.locationSource);
 
-      if (formState.locationSource === "gps" && formState.gpsAccuracyMeters !== null) {
-        requestBody.set("gpsAccuracyMeters", String(formState.gpsAccuracyMeters));
-      }
+      requestBody.set("gpsLatitude", String(formState.gpsLatitude));
+      requestBody.set("gpsLongitude", String(formState.gpsLongitude));
+      requestBody.set("gpsAccuracyMeters", String(formState.gpsAccuracyMeters));
+      requestBody.set("gpsCapturedAt", formState.gpsCapturedAt);
 
       if (!formState.submitAnonymously && formState.reportedByName.trim()) {
         requestBody.set("reportedByName", formState.reportedByName.trim());
       }
 
-      if (selectedPhoto) {
-        requestBody.set("image", selectedPhoto);
-
-        if (formState.photoCapturedAt) {
-          requestBody.set("photoCapturedAt", formState.photoCapturedAt);
-        }
-      }
+      requestBody.set("image", selectedPhoto);
+      requestBody.set("photoCapturedAt", formState.photoCapturedAt);
 
       if (!skipNearbyDuplicateCheck) {
         const nearbyReports = await fetchNearbyReportsForDuplicateCheck(latitude, longitude);
@@ -1802,6 +1751,14 @@ export function IncidentReportsContent() {
                       {OUTSIDE_BULACAN_ERROR_MESSAGE}
                     </p>
                   ) : null}
+                  <p
+                    data-testid="onsite-gps-status"
+                    className="text-[0.8rem] leading-5 text-[var(--color-muted-foreground)]"
+                  >
+                    {formState.gpsCapturedAt && formState.gpsAccuracyMeters !== null
+                      ? `Fresh GPS fix saved (about ${Math.round(formState.gpsAccuracyMeters)} m accuracy). You may adjust the report pin only within the allowed nearby distance.`
+                      : "A fresh GPS fix with 100 m accuracy or better is required, even if you place the report pin manually."}
+                  </p>
                 </div>
               </FormSection>
 
@@ -1865,94 +1822,38 @@ export function IncidentReportsContent() {
               <FormSection
                 step="3"
                 title="Photo evidence"
-                description="Add one optional image to help other residents verify the report. Keep uploads clear and relevant."
+                description="Take one fresh photo in Flood Watch. File uploads and gallery images are not accepted for new reports."
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-[0.84rem] font-medium text-[var(--color-foreground)]">
-                    Add image
+                    Live camera photo required
                   </div>
                   <div className="tabular-nums text-[0.78rem] text-[var(--color-muted-foreground)]">
                     {formState.photos.length} / 1 image
                   </div>
                 </div>
 
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept={reportImageAcceptValue}
-                  className="sr-only"
-                  tabIndex={-1}
-                  onChange={(event) => void handlePhotoSelection(event.target.files)}
-                />
-
                 {cameraSupported ? (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-3">
                     <button
                       type="button"
                       data-testid="capture-report-image"
                       onClick={() => setCameraOpen(true)}
-                      disabled={processingPhoto}
-                      className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.9rem] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70"
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-[11px] bg-[var(--color-primary)] px-4 text-[0.9rem] font-semibold text-white transition"
                     >
                       <Camera className="h-4 w-4" />
-                      <span>Take photo</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="choose-report-image"
-                      onClick={handleOpenPhotoPicker}
-                      disabled={processingPhoto}
-                      className="flex h-11 items-center justify-center gap-2 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-panel)] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <ImageUp className="h-4 w-4" />
-                      <span>Upload photo</span>
+                      <span>{formState.photos[0] ? "Retake photo" : "Open camera"}</span>
                     </button>
                   </div>
-                ) : null}
-
-                <div
-                  className="mt-3"
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={handlePhotoDrop}
-                >
-                  <button
-                    type="button"
-                    data-testid={cameraSupported ? "report-image-dropzone" : "choose-report-image"}
-                    onClick={handleOpenPhotoPicker}
-                    className="flex w-full cursor-pointer flex-col rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-5 text-left"
-                  >
-                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                     <div className="flex items-start gap-3">
-                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[color:color-mix(in_srgb,var(--color-surface)_96%,transparent)] text-[var(--color-muted-foreground)]">
-                        <ImageUp className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[0.92rem] font-medium text-[var(--color-foreground)]">
-                          Add a supporting photo
-                        </div>
-                        <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
-                          {cameraSupported
-                            ? "Or click to browse and drop one JPG, PNG, or WEBP image up to 5 MB."
-                            : "Click to browse or drop one JPG, PNG, or WEBP image up to 5 MB."}
-                        </div>
-                      </div>
-                    </div>
-                     <div className="rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 py-2 text-[0.8rem] font-medium text-[var(--color-foreground)]">
-                       Choose file
-                     </div>
-                   </div>
-                  </button>
-                </div>
-
-                {processingPhoto ? (
+                ) : (
                   <div
-                    data-testid="photo-processing"
-                    className="mt-3 flex items-center gap-2 text-[0.82rem] text-[var(--color-muted-foreground)]"
+                    role="alert"
+                    data-testid="camera-required-unavailable"
+                    className="mt-3 rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] px-3 py-2 text-[0.82rem] leading-6 text-[var(--color-danger-text)]"
                   >
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    <span>Optimising photo...</span>
+                    A camera in a secure browser context is required. Reopen this page over HTTPS on a camera-enabled device.
                   </div>
-                ) : null}
+                )}
 
                 {formState.photos[0] ? (
                   <div className="mt-3 flex items-center gap-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-3">
@@ -1970,9 +1871,7 @@ export function IncidentReportsContent() {
                         {formState.photos[0].name}
                       </div>
                       <div className="mt-1 text-[0.8rem] text-[var(--color-muted-foreground)]">
-                        {formState.photoCapturedAt
-                          ? "Captured photo. It uploads when you submit this report."
-                          : "Photo ready to upload with this report."}
+                        Captured photo. It uploads only when you submit this report.
                       </div>
                     </div>
                     <button
@@ -2102,8 +2001,8 @@ export function IncidentReportsContent() {
                     {coordinatesOutsideArea
                       ? "Location must be within Bulacan."
                       : !canSubmitReport
-                        ? "Location name, coordinates, and incident description are required before submission."
-                        : "Form ready. Submit the report to publish it to the community incident feed."}
+                        ? "Location, incident description, a fresh GPS fix, and a live camera photo are required before submission."
+                        : "Form ready. Server checks will confirm photo age, GPS age and accuracy, and distance to the report pin."}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button
@@ -2337,7 +2236,6 @@ export function IncidentReportsContent() {
         open={cameraOpen}
         onClose={() => setCameraOpen(false)}
         onCapture={handleCameraCapture}
-        onUploadInstead={handleUploadInsteadOfCamera}
       />
 
       {locationPickerOpen ? (

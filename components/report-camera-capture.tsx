@@ -13,8 +13,8 @@ type ReportCameraCaptureProps = {
   open: boolean;
   onClose: () => void;
   onCapture: (file: File, capturedAt: Date) => void;
-  /** Escape hatch offered on every failure: close and open the file picker. */
-  onUploadInstead: () => void;
+  /** Rescue intake remains optional-evidence and can still offer file upload. */
+  onUploadInstead?: () => void;
 };
 
 /**
@@ -238,6 +238,10 @@ export function ReportCameraCapture({
   }
 
   function handleUploadInstead() {
+    if (!onUploadInstead) {
+      return;
+    }
+
     resetToRequesting();
     onUploadInstead();
   }
@@ -344,7 +348,7 @@ export function ReportCameraCapture({
           ) : null}
 
           <div className="flex shrink-0 flex-col gap-2 border-t border-[color:color-mix(in_srgb,var(--color-border)_66%,transparent)] px-4 py-3 sm:flex-row sm:justify-end md:px-5">
-            {phase === "error" ? (
+            {phase === "error" && onUploadInstead ? (
               <button
                 type="button"
                 data-testid="camera-upload-instead"

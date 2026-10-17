@@ -34,6 +34,7 @@ import {
 } from "@/lib/report-api";
 import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
+import { validateOnsiteReportEvidence } from "@/lib/onsite-report-policy";
 import { logApiError } from "@/lib/structured-logger";
 
 const DEFAULT_LIMIT = 20;
@@ -365,6 +366,20 @@ export async function POST(request: Request) {
       return errorResponse(parsedReport.error ?? "Invalid report details.", 400);
     }
 
+    const imagePresent = imageFile instanceof File && imageFile.size > 0;
+    const onsiteEvidence = validateOnsiteReportEvidence(formData, {
+      reportLatitude: parsedReport.data.latitude,
+      reportLongitude: parsedReport.data.longitude,
+      imagePresent,
+    });
+
+    if (onsiteEvidence.error || !onsiteEvidence.data) {
+      return Response.json(
+        { error: onsiteEvidence.error ?? "Invalid onsite evidence.", code: onsiteEvidence.code },
+        { status: 422 },
+      );
+    }
+
     let imageUrl: string | undefined;
 
     if (imageFile instanceof File && imageFile.size > 0) {
@@ -387,10 +402,16 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       locationSource,
-      gpsAccuracyMeters,
-      photoCapturedAt,
     } = parsedReport.data;
     const { forceNewIncident } = parsedReport;
+    const {
+      gpsLatitude,
+      gpsLongitude,
+      gpsAccuracyMeters: onsiteGpsAccuracyMeters,
+      gpsCapturedAt,
+      photoCapturedAt,
+      policyVersion: onsitePolicyVersion,
+    } = onsiteEvidence.data;
 
     const now = new Date();
     const { report, incident } = await prisma.$transaction(
@@ -437,9 +458,14 @@ export async function POST(request: Request) {
                 latitude,
                 longitude,
                 locationSource,
-                gpsAccuracyMeters,
+                gpsAccuracyMeters: onsiteGpsAccuracyMeters,
+                gpsLatitude,
+                gpsLongitude,
+                gpsCapturedAt,
                 imageUrl,
-                photoCapturedAt: imageUrl ? photoCapturedAt : null,
+                photoCapturedAt,
+                onsitePolicyVersion,
+                onsiteEligibleAt: now,
                 userId: authenticatedUser.id,
                 reportedByName,
                 sourceType: "Community",
@@ -489,9 +515,14 @@ export async function POST(request: Request) {
             latitude,
             longitude,
             locationSource,
-            gpsAccuracyMeters,
+            gpsAccuracyMeters: onsiteGpsAccuracyMeters,
+            gpsLatitude,
+            gpsLongitude,
+            gpsCapturedAt,
             imageUrl,
-            photoCapturedAt: imageUrl ? photoCapturedAt : null,
+            photoCapturedAt,
+            onsitePolicyVersion,
+            onsiteEligibleAt: now,
             userId: authenticatedUser.id,
             reportedByName,
             sourceType: "Community",

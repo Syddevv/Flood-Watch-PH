@@ -59,7 +59,7 @@ test("downscaling is skipped for small images and triggered by size or dimension
   assert.equal(shouldDownscaleImage({ sizeBytes: 200_000, width: 4032, height: 3024 }), true);
 });
 
-test("camera failures map to actionable messages that always mention uploading", () => {
+test("camera failures map to actionable messages without an upload bypass", () => {
   const cases = [
     "NotAllowedError",
     "SecurityError",
@@ -78,6 +78,9 @@ test("camera failures map to actionable messages that always mention uploading",
   assert.match(messages[0], /permission/i);
   assert.match(messages[2], /camera/i);
   assert.match(messages[4], /another app|in use/i);
+  for (const message of messages) {
+    assert.doesNotMatch(message, /upload/i);
+  }
   // Distinct failures must not collapse into one vague sentence.
   assert.notEqual(messages[0], messages[2]);
   assert.notEqual(messages[2], messages[4]);
