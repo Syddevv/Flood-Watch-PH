@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
-import { cookieFromResponse, integrationTest, startTestServer, stopServer } from "./test-server";
+import {
+  cookieFromResponse,
+  createReportForm,
+  integrationTest,
+  startTestServer,
+  stopServer,
+} from "./test-server";
 
 function uniqueEmail(runId: string, label: string) {
   return `integration-auth-${label}-${runId}@example.com`;
@@ -46,18 +52,6 @@ async function login(baseUrl: string, address: string, email: string, password: 
   return { response, payload };
 }
 
-function reportForm(titleSuffix: string) {
-  const form = new FormData();
-  form.set("title", `Auth integration report ${titleSuffix}`);
-  form.set("description", "Created by the auth integration test.");
-  form.set("category", "Flooding");
-  form.set("severity", "Moderate");
-  form.set("locationName", "Poblacion, Calumpit");
-  form.set("latitude", "14.916");
-  form.set("longitude", "120.766");
-  return form;
-}
-
 integrationTest(
   "registration, login, logout, and the protected report-creation flow",
   async () => {
@@ -73,7 +67,7 @@ integrationTest(
       const unauthResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: { Origin: baseUrl, "X-Forwarded-For": address },
-        body: reportForm("unauth"),
+        body: createReportForm({ titleSuffix: "unauth" }),
       });
       assert.equal(unauthResponse.status, 401);
 
@@ -93,7 +87,7 @@ integrationTest(
       const createResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: { Origin: baseUrl, Cookie: registerCookie, "X-Forwarded-For": address },
-        body: reportForm("registered"),
+        body: createReportForm({ titleSuffix: "registered" }),
       });
       const createPayload = (await createResponse.json()) as {
         data?: { id: string; isOwner: boolean };
@@ -151,7 +145,7 @@ integrationTest(
       const postLogoutCreateResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: { Origin: baseUrl, Cookie: loginCookie, "X-Forwarded-For": address },
-        body: reportForm("post-logout"),
+        body: createReportForm({ titleSuffix: "post-logout" }),
       });
       assert.equal(postLogoutCreateResponse.status, 401);
     } finally {

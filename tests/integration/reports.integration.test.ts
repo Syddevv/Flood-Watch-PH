@@ -6,55 +6,11 @@ import { OUTSIDE_BULACAN_ERROR_MESSAGE } from "@/lib/bulacan-scope";
 import {
   createAnonymousSession as createSession,
   createAuthenticatedSession,
+  createReportForm,
   integrationTest,
   startTestServer,
   stopServer,
 } from "./test-server";
-
-function createReportForm(
-  overrides: {
-    latitude?: string;
-    longitude?: string;
-    forceNewIncident?: boolean;
-    titleSuffix?: string;
-  } = {},
-) {
-  const latitude = overrides.latitude ?? "14.916";
-  const longitude = overrides.longitude ?? "120.766";
-  const capturedAt = new Date().toISOString();
-  const form = new FormData();
-  form.set("title", `Integration report ${Date.now()}${overrides.titleSuffix ? ` ${overrides.titleSuffix}` : ""}`);
-  form.set("description", "Integration test report.");
-  form.set("category", "Flooding");
-  form.set("severity", "High");
-  form.set("locationName", "Poblacion, Calumpit");
-  form.set("reportedByName", "Automated integration test");
-  form.set("latitude", latitude);
-  form.set("longitude", longitude);
-  form.set("locationSource", "gps");
-  form.set("gpsLatitude", latitude);
-  form.set("gpsLongitude", longitude);
-  form.set("gpsAccuracyMeters", "10");
-  form.set("gpsCapturedAt", capturedAt);
-  form.set("photoCapturedAt", capturedAt);
-  form.set(
-    "image",
-    new File(
-      [
-        Buffer.from(
-          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-          "base64",
-        ),
-      ],
-      "onsite-report.png",
-      { type: "image/png" },
-    ),
-  );
-  if (overrides.forceNewIncident) {
-    form.set("forceNewIncident", "true");
-  }
-  return form;
-}
 
 async function submitReport(
   baseUrl: string,
