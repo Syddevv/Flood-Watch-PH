@@ -14,7 +14,7 @@
 /** Long enough that an HMAC key is not brute-forceable. Matches the getters. */
 export const MIN_SECRET_LENGTH = 32;
 
-export type RequiredEnvProblem = "missing" | "too-short";
+export type RequiredEnvProblem = "missing" | "too-short" | "invalid";
 
 export type RequiredEnvIssue = {
   name: string;
@@ -57,6 +57,37 @@ const REQUIREMENTS: EnvRequirement[] = [
     name: "NEXT_PUBLIC_APP_URL",
     severity: "warning",
     hint: "Deployed origin. Only consulted when a request's Origin does not match its Host.",
+  },
+  {
+    name: "EMAIL_PROVIDER",
+    severity: "error",
+    hint: 'Transactional email provider. Phase U3 requires the value "resend".',
+  },
+  {
+    name: "RESEND_API_KEY",
+    severity: "error",
+    hint: "Server-only Resend API key used to deliver verification codes.",
+  },
+  {
+    name: "EMAIL_FROM_ADDRESS",
+    severity: "error",
+    hint: "Verified Resend sender used for Flood Watch verification messages.",
+  },
+  {
+    name: "EMAIL_VERIFICATION_HMAC_KEY",
+    minLength: MIN_SECRET_LENGTH,
+    severity: "error",
+    hint: "Random server-only key used to HMAC verification codes before storage.",
+  },
+  {
+    name: "RESEND_WEBHOOK_SECRET",
+    severity: "error",
+    hint: "Resend signing secret used to authenticate delivery and bounce events.",
+  },
+  {
+    name: "LEGACY_EMAIL_GRACE_DEADLINE",
+    severity: "error",
+    hint: "ISO-8601 cutoff after which unreviewed legacy accounts and sessions are rejected.",
   },
   {
     name: "CLOUDINARY_CLOUD_NAME",
@@ -107,6 +138,28 @@ export function findRequiredEnvIssues(env: EnvLike): RequiredEnvIssue[] {
     }
   }
 
+  if (
+    env.EMAIL_PROVIDER?.trim() &&
+    env.EMAIL_PROVIDER.trim().toLowerCase() !== "resend"
+  ) {
+    issues.push({
+      name: "EMAIL_PROVIDER",
+      problem: "invalid",
+      severity: "error",
+      hint: 'Phase U3 currently supports only the value "resend".',
+    });
+  }
+
+  const graceDeadline = env.LEGACY_EMAIL_GRACE_DEADLINE?.trim();
+  if (graceDeadline && !Number.isFinite(Date.parse(graceDeadline))) {
+    issues.push({
+      name: "LEGACY_EMAIL_GRACE_DEADLINE",
+      problem: "invalid",
+      severity: "error",
+      hint: "Use a complete ISO-8601 timestamp such as 2027-01-31T00:00:00.000Z.",
+    });
+  }
+
   return issues;
 }
 
@@ -116,7 +169,9 @@ export function formatRequiredEnvIssues(issues: RequiredEnvIssue[]): string {
       const problem =
         issue.problem === "missing"
           ? "is not set"
-          : `is shorter than ${MIN_SECRET_LENGTH} characters`;
+          : issue.problem === "too-short"
+            ? `is shorter than ${MIN_SECRET_LENGTH} characters`
+            : "has an invalid value";
 
       return `  - ${issue.name} ${problem}\n      ${issue.hint}`;
     })

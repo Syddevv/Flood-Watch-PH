@@ -157,7 +157,9 @@ export async function stopServer(server: ChildProcess) {
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 5_000))]);
 }
 
-export async function startTestServer() {
+export async function startTestServer(
+  envOverrides: Record<string, string | undefined> = {},
+) {
   const port = await getAvailablePort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const output: string[] = [];
@@ -172,6 +174,15 @@ export async function startTestServer() {
         DIRECT_URL: testDatabaseUrl,
         NODE_ENV: "test",
         REPORT_IMAGE_UPLOAD_TEST_STUB: "true",
+        EMAIL_PROVIDER: "resend",
+        RESEND_API_KEY: "re_integration_test_only",
+        EMAIL_FROM_ADDRESS: "Flood Watch <integration@example.invalid>",
+        EMAIL_VERIFICATION_HMAC_KEY:
+          "integration-email-verification-hmac-key-32-chars",
+        EMAIL_DELIVERY_TEST_STUB:
+          process.env.EMAIL_DELIVERY_TEST_STUB ?? "success",
+        EMAIL_VERIFICATION_TEST_CODE: "123456",
+        LEGACY_EMAIL_GRACE_DEADLINE: "2099-01-01T00:00:00.000Z",
         REPORT_SESSION_SECRET:
           process.env.REPORT_SESSION_SECRET ??
           "integration-test-report-session-secret-32-chars",
@@ -179,6 +190,7 @@ export async function startTestServer() {
           process.env.ABUSE_PROTECTION_SECRET ??
           "integration-test-abuse-protection-secret-32-chars",
         TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
+        ...envOverrides,
       },
       // Own process group on POSIX so stopServer() can signal the whole
       // tree (npm -> shell -> next dev -> Turbopack workers), not just npm.
@@ -224,7 +236,7 @@ export async function createAnonymousSession(baseUrl: string, clientAddress: str
  */
 export async function createAuthenticatedSession(baseUrl: string, clientAddress: string) {
   const email = `integration-${clientAddress}@example.com`;
-  const response = await fetch(`${baseUrl}/api/auth/register`, {
+  const registrationResponse = await fetch(`${baseUrl}/api/auth/register`, {
     method: "POST",
     headers: {
       Origin: baseUrl,
@@ -234,6 +246,18 @@ export async function createAuthenticatedSession(baseUrl: string, clientAddress:
     body: JSON.stringify({ email, password: "integration-test-password" }),
   });
 
-  assert.equal(response.status, 201);
-  return cookieFromResponse(response);
+  assert.equal(registrationResponse.status, 202);
+
+  const verificationResponse = await fetch(`${baseUrl}/api/auth/verify-code`, {
+    method: "POST",
+    headers: {
+      Origin: baseUrl,
+      "Content-Type": "application/json",
+      "X-Forwarded-For": clientAddress,
+    },
+    body: JSON.stringify({ email, code: "123456" }),
+  });
+
+  assert.equal(verificationResponse.status, 200);
+  return cookieFromResponse(verificationResponse);
 }

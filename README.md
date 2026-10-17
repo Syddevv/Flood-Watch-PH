@@ -115,6 +115,15 @@ NEXT_PUBLIC_APP_URL=
 TRUSTED_PROXY_CLIENT_IP_HEADER=
 # Province scope is versioned in data/bulacan-boundary.geojson; see docs/bulacan-scope.md.
 
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=
+EMAIL_FROM_ADDRESS="Flood Watch <verify@your-domain.example>"
+EMAIL_VERIFICATION_HMAC_KEY=
+RESEND_WEBHOOK_SECRET=
+LEGACY_EMAIL_GRACE_DEADLINE=2027-01-31T00:00:00.000Z
+# Optional during an HMAC key rotation:
+EMAIL_VERIFICATION_HMAC_KEY_PREVIOUS=
+
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
@@ -165,6 +174,23 @@ it.
 The three `CLOUDINARY_*` values are required for report image uploads. Reports
 without images remain available if Cloudinary is unavailable, but image uploads
 are rejected instead of being stored as large Base64 values in PostgreSQL.
+
+Registration uses Resend email verification. Generate
+`EMAIL_VERIFICATION_HMAC_KEY` with the same 32-byte command shown above, keep it
+server-only, and set `EMAIL_PROVIDER=resend`. `EMAIL_FROM_ADDRESS` must use a
+sender/domain verified in Resend for production. Resend's `onboarding@resend.dev`
+testing sender is restricted and must not be treated as arbitrary-recipient
+production delivery. Configure the Resend webhook URL as
+`https://your-deployment.example/api/webhooks/resend` and store its signing
+secret in `RESEND_WEBHOOK_SECRET` so delivered, bounced, and complaint events
+update bounded delivery telemetry.
+
+Set `LEGACY_EMAIL_GRACE_DEADLINE` to an explicit ISO-8601 cutoff chosen for the
+existing-account review. Migrated accounts remain usable only until that time;
+review and approve them with `npm run user:verify-legacy -- user@example.com`.
+Administrator accounts require the additional `--allow-admin` flag. See
+`docs/email-verification.md` for rollout, key rotation, Vercel, and rollback
+instructions.
 
 ### Apply database migrations
 

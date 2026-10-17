@@ -9,7 +9,6 @@ import { AuthButton } from "@/components/auth/auth-button";
 import { AuthInput } from "@/components/auth/auth-input";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { PasswordInput } from "@/components/auth/password-input";
-import { useAuthSession } from "@/components/auth-session-provider";
 import { getSafeLocalRedirect } from "@/lib/safe-redirect";
 
 const MIN_PASSWORD_LENGTH = 10;
@@ -17,7 +16,6 @@ const MIN_PASSWORD_LENGTH = 10;
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refresh } = useAuthSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -39,15 +37,31 @@ function RegisterForm() {
           displayName: displayName.trim() || undefined,
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        code?: string;
+        email?: string;
+        data?: { email?: string };
+      };
+
+      const verificationEmail = payload.data?.email ?? payload.email ?? email;
+      if (payload.code === "VERIFICATION_DELIVERY_FAILED") {
+        const params = new URLSearchParams({ email: verificationEmail, delivery: "failed" });
+        const next = getSafeLocalRedirect(searchParams.get("next"), "");
+        if (next) params.set("next", next);
+        router.push(`/verify-email?${params.toString()}`);
+        return;
+      }
 
       if (!response.ok) {
         setError(payload.error ?? "Unable to create your account.");
         return;
       }
 
-      await refresh();
-      router.push(getSafeLocalRedirect(searchParams.get("next"), "/incident-reports"));
+      const params = new URLSearchParams({ email: verificationEmail, sent: "1" });
+      const next = getSafeLocalRedirect(searchParams.get("next"), "");
+      if (next) params.set("next", next);
+      router.push(`/verify-email?${params.toString()}`);
     } catch {
       setError("Unable to create your account right now. Please try again.");
     } finally {

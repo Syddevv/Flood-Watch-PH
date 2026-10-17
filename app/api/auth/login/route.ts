@@ -6,6 +6,7 @@ import { trimText } from "@/lib/report-api";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 import { recordAdminAudit } from "@/lib/admin-audit";
+import { canUserAuthenticate } from "@/lib/email-verification-token";
 
 type LoginPayload = {
   email?: unknown;
@@ -53,6 +54,16 @@ export async function POST(request: Request) {
 
     if (!user || !passwordValid) {
       return errorResponse(INVALID_CREDENTIALS_MESSAGE, 401);
+    }
+
+    if (!canUserAuthenticate(user.emailVerificationStatus)) {
+      return Response.json(
+        {
+          error: "Verify your email before signing in.",
+          code: "EMAIL_NOT_VERIFIED",
+        },
+        { status: 403 },
+      );
     }
 
     const session = await createAuthSession(user.id);

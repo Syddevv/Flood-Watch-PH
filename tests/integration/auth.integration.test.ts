@@ -29,7 +29,7 @@ async function register(
     body: JSON.stringify({ email, password }),
   });
   const payload = (await response.json()) as {
-    data?: { user: { id: string; email: string; role: string } };
+    data?: { verificationRequired: boolean; email: string };
     error?: string;
   };
   return { response, payload };
@@ -71,19 +71,36 @@ integrationTest(
       });
       assert.equal(unauthResponse.status, 401);
 
-      // Registration succeeds and never echoes back a password hash.
+      // Registration creates only a pending account and never a session.
       const registerResult = await register(baseUrl, address, email, password);
-      assert.equal(registerResult.response.status, 201);
-      assert.equal(registerResult.payload.data?.user.email, email);
-      assert.equal(registerResult.payload.data?.user.role, "user");
+      assert.equal(registerResult.response.status, 202);
+      assert.equal(registerResult.payload.data?.email, email);
+      assert.equal(registerResult.payload.data?.verificationRequired, true);
       assert.equal(JSON.stringify(registerResult.payload).includes("passwordHash"), false);
-      const registerCookie = cookieFromResponse(registerResult.response);
+      assert.equal(registerResult.response.headers.get("set-cookie"), null);
 
-      // Duplicate email registration is rejected with a generic message.
+      const pendingLogin = await login(baseUrl, address, email, password);
+      assert.equal(pendingLogin.response.status, 403);
+      assert.equal(pendingLogin.response.headers.get("set-cookie"), null);
+
+      // Duplicate registration receives the same generic pending response.
       const duplicateResult = await register(baseUrl, address, email, "a-different-password");
-      assert.equal(duplicateResult.response.status, 409);
+      assert.equal(duplicateResult.response.status, 202);
+      assert.equal(duplicateResult.payload.data?.verificationRequired, true);
 
-      // A registered session can immediately submit a report.
+      const verifyResponse = await fetch(`${baseUrl}/api/auth/verify-code`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          "Content-Type": "application/json",
+          "X-Forwarded-For": address,
+        },
+        body: JSON.stringify({ email, code: "123456" }),
+      });
+      assert.equal(verifyResponse.status, 200);
+      const registerCookie = cookieFromResponse(verifyResponse);
+
+      // Verification issues a session that can submit a protected report.
       const createResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: { Origin: baseUrl, Cookie: registerCookie, "X-Forwarded-For": address },

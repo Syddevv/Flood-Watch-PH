@@ -20,6 +20,7 @@ type ApiProtectionOptions = {
   windowMs: number;
   requireTrustedOrigin?: boolean;
   databaseFailureFallback?: "memory" | "fail-closed";
+  identity?: string;
 };
 
 const RATE_LIMIT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -50,12 +51,14 @@ function getProtectionSecret() {
   return secret;
 }
 
-function createRateLimitKey(request: Request, scope: string) {
-  const identity = getRateLimitIdentity(
-    request,
-    getReportSessionHashFromRequest(request),
-    process.env.TRUSTED_PROXY_CLIENT_IP_HEADER,
-  );
+function createRateLimitKey(request: Request, scope: string, identityOverride?: string) {
+  const identity =
+    identityOverride ??
+    getRateLimitIdentity(
+      request,
+      getReportSessionHashFromRequest(request),
+      process.env.TRUSTED_PROXY_CLIENT_IP_HEADER,
+    );
   const addressHash = createHmac("sha256", getProtectionSecret())
     .update(identity)
     .digest("hex");
@@ -184,7 +187,7 @@ export async function protectApiRequest(
   // absorb the first, defeating the fallback and surfacing as an unrelated
   // "temporarily unavailable" message on every route at once.
   try {
-    key = createRateLimitKey(request, options.scope);
+    key = createRateLimitKey(request, options.scope, options.identity);
   } catch (error) {
     console.error(
       "API abuse protection is misconfigured, so every rate-limited route will fail. " +

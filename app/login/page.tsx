@@ -34,10 +34,18 @@ function LoginForm() {
       });
       const payload = (await response.json()) as {
         error?: string;
+        code?: string;
         data?: { user?: { role?: string } };
       };
 
       if (!response.ok) {
+        if (payload.code === "EMAIL_NOT_VERIFIED") {
+          const params = new URLSearchParams({ email });
+          const next = getSafeLocalRedirect(searchParams.get("next"), "");
+          if (next) params.set("next", next);
+          router.push(`/verify-email?${params.toString()}`);
+          return;
+        }
         setError(payload.error ?? "Unable to sign in.");
         return;
       }

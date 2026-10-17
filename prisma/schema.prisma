@@ -187,18 +187,46 @@ model RequestRateLimit {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  passwordHash   String
-  displayName    String?
-  role           String          @default("user")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions       Session[]
-  reports        FloodReport[]
-  adminAuditLogs AdminAuditLog[]
+  id                      String                     @id @default(cuid())
+  email                   String                     @unique
+  passwordHash            String
+  displayName             String?
+  role                    String                     @default("user")
+  emailVerificationStatus String                     @default("pending")
+  emailVerifiedAt         DateTime?
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+  sessions                Session[]
+  reports                 FloodReport[]
+  adminAuditLogs          AdminAuditLog[]
+  emailVerification       EmailVerification?
 
   @@index([role])
+  @@index([emailVerificationStatus])
+}
+
+model EmailVerification {
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  codeHash                String
+  keyId                   String
+  expiresAt               DateTime
+  attemptCount            Int       @default(0)
+  resendAvailableAt       DateTime
+  consumedAt              DateTime?
+  version                 Int       @default(1)
+  providerMessageId       String?
+  deliveryStatus          String    @default("pending")
+  lastDeliveryAttemptAt   DateTime?
+  lastDeliverySucceededAt DateTime?
+  lastDeliveryErrorCode   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([consumedAt])
+  @@index([providerMessageId])
 }
 
 model AdminAuditLog {

@@ -20,6 +20,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "admin:promote": "tsx scripts/admin-promote.ts",
     "admin:reset-password": "tsx scripts/admin-reset-password.ts",
+    "user:verify-legacy": "tsx scripts/verify-legacy-user.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

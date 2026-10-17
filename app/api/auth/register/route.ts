@@ -1,7 +1,7 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { createAuthSession } from "@/lib/auth-session";
+import { createPendingRegistration } from "@/lib/email-verification";
 import { hashPassword, isValidPasswordLength } from "@/lib/password";
-import { isPrismaUniqueConstraintError, prisma } from "@/lib/prisma";
+import { isPrismaUniqueConstraintError } from "@/lib/prisma";
 import { getOptionalText, trimText } from "@/lib/report-api";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
@@ -55,33 +55,57 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
 
-    let user;
+    const emailProtectionResponse = await protectApiRequest(request, {
+      scope: "auth-register-email",
+      identity: `email:${email}`,
+      limit: 3,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (emailProtectionResponse) {
+      return emailProtectionResponse;
+    }
+
+    let registration;
     try {
-      user = await prisma.user.create({
-        data: { email, passwordHash, displayName },
+      registration = await createPendingRegistration({
+        email,
+        passwordHash,
+        displayName: displayName ?? null,
       });
     } catch (error) {
       if (isPrismaUniqueConstraintError(error)) {
-        return errorResponse("Unable to create an account with the provided details.", 409);
+        return successResponse(
+          {
+            verificationRequired: true,
+            email,
+            message:
+              "If this address can be registered, verification instructions are available.",
+          },
+          { status: 202 },
+        );
       }
       throw error;
     }
 
-    const session = await createAuthSession(user.id);
+    if (!registration.delivered) {
+      return Response.json(
+        {
+          error:
+            "Your account is pending, but the verification email could not be sent. Try resending it shortly.",
+          code: "VERIFICATION_DELIVERY_FAILED",
+          email,
+        },
+        { status: 503 },
+      );
+    }
 
     return successResponse(
       {
-        user: {
-          id: user.id,
-          email: user.email,
-          displayName: user.displayName,
-          role: user.role,
-        },
+        verificationRequired: true,
+        email,
+        message: "Check your email for a six-digit verification code.",
       },
-      {
-        status: 201,
-        headers: { "Set-Cookie": session.cookie },
-      },
+      { status: 202 },
     );
   } catch (error) {
     logApiError("auth-register-failed", request, error);
