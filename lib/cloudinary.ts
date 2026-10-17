@@ -3,9 +3,14 @@ import { v2 as cloudinary } from "cloudinary";
 const TEST_UPLOAD_BASE_URL = "https://example.invalid/test-report-images/";
 
 function getTestUploadUrl(fileName: string) {
+  // Next dev owns NODE_ENV, so bind the stub to the explicit test database
+  // instead of an environment value that Next rewrites to "development".
+  const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+
   if (
-    process.env.NODE_ENV !== "test" ||
-    process.env.REPORT_IMAGE_UPLOAD_TEST_STUB !== "true"
+    process.env.REPORT_IMAGE_UPLOAD_TEST_STUB !== "true" ||
+    !testDatabaseUrl ||
+    process.env.DATABASE_URL !== testDatabaseUrl
   ) {
     return null;
   }
