@@ -7,7 +7,6 @@ import {
   parseReportRequestFormData,
   reportDetailInclude,
   serializeReportRecord,
-  uploadReportImageFile,
   type PublicReportRecord,
 } from "@/lib/report-api";
 import { getReportIdentityFromRequest } from "@/lib/report-identity";
@@ -60,26 +59,17 @@ export async function POST(request: Request, context: RouteContext) {
     const formData = parsedFormData.formData;
     const imageFile = formData.get("image");
 
-    if (imageFile && typeof imageFile === "string") {
-      return errorResponse("Invalid image upload.", 400);
+    if (imageFile instanceof File && imageFile.size > 0) {
+      return errorResponse(
+        "Report updates are text-only. Submit a new onsite report for new photo evidence.",
+        400,
+      );
     }
 
     const parsedUpdate = parseReportUpdateFormData(formData);
 
     if (parsedUpdate.error || !parsedUpdate.data) {
       return errorResponse(parsedUpdate.error ?? "Invalid report update.", 400);
-    }
-
-    let imageUrl: string | undefined;
-
-    if (imageFile instanceof File && imageFile.size > 0) {
-      const uploadResult = await uploadReportImageFile(imageFile);
-
-      if (uploadResult.error) {
-        return errorResponse(uploadResult.error, uploadResult.status ?? 400);
-      }
-
-      imageUrl = uploadResult.imageUrl;
     }
 
     const now = new Date();
@@ -90,7 +80,6 @@ export async function POST(request: Request, context: RouteContext) {
           reportId: id,
           updateType: "Uploader Update",
           message: parsedUpdate.data.message,
-          imageUrl,
           severity: parsedUpdate.data.severity,
         },
       });

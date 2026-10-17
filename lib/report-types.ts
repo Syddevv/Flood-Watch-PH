@@ -28,6 +28,8 @@ export type ReportRecord = {
   gpsAccuracyMeters: number | null;
   imageUrl: string | null;
   photoCapturedAt: string | null;
+  onsiteEligible?: boolean;
+  onsitePolicyVersion?: string | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   officialSourceName?: string | null;

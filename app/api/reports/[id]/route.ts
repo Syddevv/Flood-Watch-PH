@@ -13,7 +13,6 @@ import {
   parseReportRequestFormData,
   reportDetailInclude,
   serializeReportRecord,
-  uploadReportImageFile,
   type PublicReportRecord,
 } from "@/lib/report-api";
 import { getReportIdentityFromRequest } from "@/lib/report-identity";
@@ -119,8 +118,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     const formData = parsedFormData.formData;
     const imageFile = formData.get("image");
 
-    if (imageFile && typeof imageFile === "string") {
-      return errorResponse("Invalid image upload.", 400);
+    if (imageFile instanceof File && imageFile.size > 0) {
+      return errorResponse(
+        "Report photos cannot be replaced through an edit. Submit a new onsite report for new evidence.",
+        400,
+      );
     }
 
     const parsedReport = parseReportDetailsFormData(formData);
@@ -129,39 +131,33 @@ export async function PATCH(request: Request, context: RouteContext) {
       return errorResponse(parsedReport.error ?? "Invalid report details.", 400);
     }
 
-    let imageUrl: string | undefined;
-
-    if (imageFile instanceof File && imageFile.size > 0) {
-      const uploadResult = await uploadReportImageFile(imageFile);
-
-      if (uploadResult.error) {
-        return errorResponse(uploadResult.error, uploadResult.status ?? 400);
-      }
-
-      imageUrl = uploadResult.imageUrl;
-    }
-
-    // Capture metadata describes how the location was originally obtained, so
-    // an edit that never touched the location must not overwrite it. The edit
-    // form omits `locationSource` entirely, and parsing an absent field yields
-    // "manual" - spreading that unconditionally would quietly downgrade every
-    // GPS report the first time somebody fixed a typo in its description.
     const {
-      locationSource,
-      gpsAccuracyMeters,
-      photoCapturedAt,
-      ...reportColumns
+      title,
+      description,
+      category,
+      severity,
+      locationName,
+      reportedByName,
+      latitude,
+      longitude,
     } = parsedReport.data;
-    const captureMetadata = formData.has("locationSource")
-      ? { locationSource, gpsAccuracyMeters }
-      : {};
+
+    if (latitude !== existingReport.latitude || longitude !== existingReport.longitude) {
+      return errorResponse(
+        "Report coordinates cannot be changed through a text edit. Submit a new onsite report for another location.",
+        400,
+      );
+    }
 
     const updatedReport = await prisma.floodReport.update({
       where: { id },
       data: {
-        ...reportColumns,
-        ...captureMetadata,
-        ...(imageUrl ? { imageUrl, photoCapturedAt } : {}),
+        title,
+        description,
+        category,
+        severity,
+        locationName,
+        reportedByName,
         lastActivityAt: new Date(),
       },
       include: reportDetailInclude,

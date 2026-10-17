@@ -65,7 +65,7 @@ test("Cloudinary failures do not fall back to Base64 database storage", async (c
 
     assert.deepEqual(await uploadReportImageFile(file), {
       error:
-        "Image storage is temporarily unavailable. Submit the report without an image or try again later.",
+        "Image storage is temporarily unavailable. Your form is preserved; try submitting again later.",
       status: 503,
     });
   } finally {

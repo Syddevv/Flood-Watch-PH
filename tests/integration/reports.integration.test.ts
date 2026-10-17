@@ -19,6 +19,9 @@ function createReportForm(
     titleSuffix?: string;
   } = {},
 ) {
+  const latitude = overrides.latitude ?? "14.916";
+  const longitude = overrides.longitude ?? "120.766";
+  const capturedAt = new Date().toISOString();
   const form = new FormData();
   form.set("title", `Integration report ${Date.now()}${overrides.titleSuffix ? ` ${overrides.titleSuffix}` : ""}`);
   form.set("description", "Integration test report.");
@@ -26,8 +29,27 @@ function createReportForm(
   form.set("severity", "High");
   form.set("locationName", "Poblacion, Calumpit");
   form.set("reportedByName", "Automated integration test");
-  form.set("latitude", overrides.latitude ?? "14.916");
-  form.set("longitude", overrides.longitude ?? "120.766");
+  form.set("latitude", latitude);
+  form.set("longitude", longitude);
+  form.set("locationSource", "gps");
+  form.set("gpsLatitude", latitude);
+  form.set("gpsLongitude", longitude);
+  form.set("gpsAccuracyMeters", "10");
+  form.set("gpsCapturedAt", capturedAt);
+  form.set("photoCapturedAt", capturedAt);
+  form.set(
+    "image",
+    new File(
+      [
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      ],
+      "onsite-report.png",
+      { type: "image/png" },
+    ),
+  );
   if (overrides.forceNewIncident) {
     form.set("forceNewIncident", "true");
   }
@@ -81,6 +103,39 @@ integrationTest(
       const otherCookie = await createSession(baseUrl, otherAddress);
       const thirdAddress = `integration-third-${runId}`;
       const thirdCookie = await createSession(baseUrl, thirdAddress);
+
+      const bypassAddress = `integration-onsite-bypass-${runId}`;
+      const bypassCookie = await createAuthenticatedSession(baseUrl, bypassAddress);
+      const missingImageForm = createReportForm();
+      missingImageForm.delete("image");
+      const missingImageResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: bypassCookie,
+          "X-Forwarded-For": bypassAddress,
+        },
+        body: missingImageForm,
+      });
+      assert.equal(missingImageResponse.status, 422);
+      assert.equal((await missingImageResponse.json()).code, "image_required");
+
+      const missingGpsForm = createReportForm();
+      missingGpsForm.delete("gpsLatitude");
+      missingGpsForm.delete("gpsLongitude");
+      missingGpsForm.delete("gpsCapturedAt");
+      const missingGpsResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: {
+          Origin: baseUrl,
+          Cookie: bypassCookie,
+          "X-Forwarded-For": bypassAddress,
+        },
+        body: missingGpsForm,
+      });
+      assert.equal(missingGpsResponse.status, 422);
+      assert.equal((await missingGpsResponse.json()).code, "gps_required");
+
       const reportResponse = await fetch(`${baseUrl}/api/reports`, {
         method: "POST",
         headers: {

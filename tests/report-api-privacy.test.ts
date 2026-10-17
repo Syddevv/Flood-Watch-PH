@@ -74,3 +74,21 @@ test("an admin identity owns every report regardless of session hash or userId",
     true,
   );
 });
+
+test("precise GPS evidence stays private while onsite eligibility is exposed", () => {
+  const onsiteReport = createReport({
+    gpsLatitude: 14.9161,
+    gpsLongitude: 120.7661,
+    gpsCapturedAt: new Date("2026-01-01T00:00:00Z"),
+    onsitePolicyVersion: "u2-provisional-2026-10-17",
+    onsiteEligibleAt: new Date("2026-01-01T00:00:01Z"),
+  });
+  const serialized = serializeReportRecord(onsiteReport);
+
+  assert.equal("gpsLatitude" in serialized, false);
+  assert.equal("gpsLongitude" in serialized, false);
+  assert.equal("gpsCapturedAt" in serialized, false);
+  assert.equal("onsiteEligibleAt" in serialized, false);
+  assert.equal(serialized.onsiteEligible, true);
+  assert.equal(serializeReportRecord(legacyReport).onsiteEligible, false);
+});

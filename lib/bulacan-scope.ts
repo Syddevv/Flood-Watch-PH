@@ -81,3 +81,50 @@ export function isWithinBulacan(latitude: number, longitude: number) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < BULACAN_BOUNDS[0][0] || latitude > BULACAN_BOUNDS[1][0] || longitude < BULACAN_BOUNDS[0][1] || longitude > BULACAN_BOUNDS[1][1]) return false;
   return pointInPolygons(latitude, longitude, polygons);
 }
+
+function distanceToSegmentMeters(
+  latitude: number,
+  longitude: number,
+  [startLongitude, startLatitude]: Position,
+  [endLongitude, endLatitude]: Position,
+) {
+  const latitudeScale = 111_320;
+  const longitudeScale = latitudeScale * Math.cos((latitude * Math.PI) / 180);
+  const startX = (startLongitude - longitude) * longitudeScale;
+  const startY = (startLatitude - latitude) * latitudeScale;
+  const endX = (endLongitude - longitude) * longitudeScale;
+  const endY = (endLatitude - latitude) * latitudeScale;
+  const segmentX = endX - startX;
+  const segmentY = endY - startY;
+  const squaredLength = segmentX * segmentX + segmentY * segmentY;
+  const projection =
+    squaredLength === 0
+      ? 0
+      : Math.max(0, Math.min(1, -(startX * segmentX + startY * segmentY) / squaredLength));
+  const closestX = startX + projection * segmentX;
+  const closestY = startY + projection * segmentY;
+
+  return Math.hypot(closestX, closestY);
+}
+
+/** Shortest local distance to any exterior or hole edge in the scope geometry. */
+export function distanceToBulacanBoundaryMeters(latitude: number, longitude: number) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return Number.NaN;
+  }
+
+  let shortest = Number.POSITIVE_INFINITY;
+
+  for (const polygon of polygons) {
+    for (const ring of polygon) {
+      for (let index = 1; index < ring.length; index += 1) {
+        shortest = Math.min(
+          shortest,
+          distanceToSegmentMeters(latitude, longitude, ring[index - 1], ring[index]),
+        );
+      }
+    }
+  }
+
+  return shortest;
+}

@@ -15,7 +15,6 @@ import {
   CloudRain,
   Clock3,
   FilePenLine,
-  ImageUp,
   LoaderCircle,
   Navigation,
   Send,
@@ -32,7 +31,6 @@ import {
   INCIDENT_CATEGORY_OPTIONS,
   REPORT_SEVERITIES,
 } from "@/lib/constants";
-import { getReportImageAcceptValue, validateReportImageFile } from "@/lib/report-image-validation";
 import { formatCountLabel, formatRelativeTime } from "@/lib/reporting";
 import type { IncidentReport, WeatherLocationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -83,18 +81,12 @@ type EditReportFormState = {
   category: string;
   severity: string;
   locationName: string;
-  latitude: string;
-  longitude: string;
-  image: File | null;
 };
 
 type ReportUpdateFormState = {
   message: string;
   severity: string;
-  image: File | null;
 };
-
-const reportImageAcceptValue = getReportImageAcceptValue();
 
 function SummaryMetric({
   icon,
@@ -183,14 +175,10 @@ export function IncidentReportModal({
     category: INCIDENT_CATEGORY_OPTIONS[0],
     severity: REPORT_SEVERITIES[1],
     locationName: "",
-    latitude: "",
-    longitude: "",
-    image: null,
   });
   const [updateForm, setUpdateForm] = useState<ReportUpdateFormState>({
     message: "",
     severity: "",
-    image: null,
   });
   const modalBodyRef = useRef<HTMLDivElement | null>(null);
   const ownerSectionRef = useRef<HTMLDivElement | null>(null);
@@ -198,8 +186,6 @@ export function IncidentReportModal({
   const updateFormRef = useRef<HTMLFormElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const updateMessageRef = useRef<HTMLTextAreaElement | null>(null);
-  const editImageInputRef = useRef<HTMLInputElement | null>(null);
-  const updateImageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open || !report?.coordinates) {
@@ -255,8 +241,6 @@ export function IncidentReportModal({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      const [latitude, longitude] = report.coordinates ?? [0, 0];
-
       setPhotoIndex(0);
       setOwnerSectionOpen(false);
       setEditPanelOpen(false);
@@ -269,59 +253,15 @@ export function IncidentReportModal({
         category: report.categoryValue,
         severity: report.severityValue,
         locationName: report.location,
-        latitude: String(latitude),
-        longitude: String(longitude),
-        image: null,
       });
       setUpdateForm({
         message: "",
         severity: "",
-        image: null,
       });
     });
 
     return () => window.cancelAnimationFrame(frameId);
   }, [open, report]);
-
-  function handleEditImageSelection(fileList: FileList | null) {
-    const file = fileList?.[0] ?? null;
-
-    if (!file) {
-      setEditForm((current) => ({ ...current, image: null }));
-      return;
-    }
-
-    const imageValidationError = validateReportImageFile(file);
-
-    if (imageValidationError) {
-      setOwnerActionError(imageValidationError);
-      setEditForm((current) => ({ ...current, image: null }));
-      return;
-    }
-
-    setOwnerActionError("");
-    setEditForm((current) => ({ ...current, image: file }));
-  }
-
-  function handleUpdateImageSelection(fileList: FileList | null) {
-    const file = fileList?.[0] ?? null;
-
-    if (!file) {
-      setUpdateForm((current) => ({ ...current, image: null }));
-      return;
-    }
-
-    const imageValidationError = validateReportImageFile(file);
-
-    if (imageValidationError) {
-      setOwnerActionError(imageValidationError);
-      setUpdateForm((current) => ({ ...current, image: null }));
-      return;
-    }
-
-    setOwnerActionError("");
-    setUpdateForm((current) => ({ ...current, image: file }));
-  }
 
   function scrollOwnerFormIntoView(
     formRef: RefObject<HTMLFormElement | null>,
@@ -364,28 +304,21 @@ export function IncidentReportModal({
     }
 
     const requestBody = new FormData();
+    const [latitude, longitude] = report.coordinates ?? [0, 0];
     requestBody.set("title", editForm.title.trim());
     requestBody.set("description", editForm.description.trim());
     requestBody.set("category", editForm.category);
     requestBody.set("severity", editForm.severity);
     requestBody.set("locationName", editForm.locationName.trim());
-    requestBody.set("latitude", editForm.latitude.trim());
-    requestBody.set("longitude", editForm.longitude.trim());
-
-    if (editForm.image) {
-      requestBody.set("image", editForm.image);
-    }
+    requestBody.set("latitude", String(latitude));
+    requestBody.set("longitude", String(longitude));
 
     setSavingOwnerAction("edit");
     setOwnerActionError("");
 
     try {
       await onEditReport(report, requestBody);
-      setEditForm((current) => ({ ...current, image: null }));
       setOwnerActionError("");
-      if (editImageInputRef.current) {
-        editImageInputRef.current.value = "";
-      }
     } catch (error) {
       setOwnerActionError(
         error instanceof Error && error.message
@@ -411,20 +344,12 @@ export function IncidentReportModal({
       requestBody.set("severity", updateForm.severity);
     }
 
-    if (updateForm.image) {
-      requestBody.set("image", updateForm.image);
-    }
-
     setSavingOwnerAction("update");
     setOwnerActionError("");
 
     try {
       await onSubmitReportUpdate(report, requestBody);
-      setUpdateForm((current) => ({ ...current, image: null }));
       setOwnerActionError("");
-      if (updateImageInputRef.current) {
-        updateImageInputRef.current.value = "";
-      }
     } catch (error) {
       setOwnerActionError(
         error instanceof Error && error.message
@@ -651,6 +576,14 @@ export function IncidentReportModal({
               <p className="mt-1 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem]">
                 {communitySignal}
               </p>
+              {report.onsiteEligible ? (
+                <p
+                  data-testid="onsite-eligibility-label"
+                  className="mt-1 text-[0.74rem] leading-5 text-[var(--color-muted-foreground)] md:text-[0.82rem]"
+                >
+                  Onsite submission checks met: a fresh camera image and nearby GPS fix passed the active policy. This does not prove physical presence or admin verification.
+                </p>
+              ) : null}
             </div>
 
             <div className="mt-3 md:mt-4 md:rounded-[14px] md:border md:border-[var(--color-border)] md:bg-[var(--color-surface)] md:px-3.5 md:py-3">
@@ -942,27 +875,6 @@ export function IncidentReportModal({
                           ))}
                         </select>
                       </ModalField>
-                      <ModalField label="Latitude">
-                        <input
-                          value={editForm.latitude}
-                          onChange={(event) =>
-                            setEditForm((current) => ({ ...current, latitude: event.target.value }))
-                          }
-                          className={modalInputClassName("tabular-nums")}
-                        />
-                      </ModalField>
-                      <ModalField label="Longitude">
-                        <input
-                          value={editForm.longitude}
-                          onChange={(event) =>
-                            setEditForm((current) => ({
-                              ...current,
-                              longitude: event.target.value,
-                            }))
-                          }
-                          className={modalInputClassName("tabular-nums")}
-                        />
-                      </ModalField>
                     </div>
                     <ModalField label="Description">
                       <textarea
@@ -977,25 +889,9 @@ export function IncidentReportModal({
                         className={modalInputClassName("py-2.5 leading-5")}
                       />
                     </ModalField>
-                    <div className="grid gap-2">
-                      <input
-                        ref={editImageInputRef}
-                        type="file"
-                        accept={reportImageAcceptValue}
-                        className="sr-only"
-                        onChange={(event) => handleEditImageSelection(event.target.files)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => editImageInputRef.current?.click()}
-                        className={cn(footerButtonBase, secondaryButtonClassName)}
-                      >
-                        <ImageUp className="h-4 w-4 shrink-0" />
-                        <span className="truncate">
-                          {editForm.image ? editForm.image.name : "Replace image"}
-                        </span>
-                      </button>
-                    </div>
+                    <p className="text-[0.78rem] leading-5 text-[var(--color-muted-foreground)]">
+                      Location and photo evidence cannot be changed here. Submit a new onsite report for a different place or new photo.
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="submit"
@@ -1068,23 +964,9 @@ export function IncidentReportModal({
                         </select>
                       </ModalField>
                     </div>
-                    <input
-                      ref={updateImageInputRef}
-                      type="file"
-                      accept={reportImageAcceptValue}
-                      className="sr-only"
-                      onChange={(event) => handleUpdateImageSelection(event.target.files)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateImageInputRef.current?.click()}
-                      className={cn(footerButtonBase, secondaryButtonClassName)}
-                    >
-                      <ImageUp className="h-4 w-4 shrink-0" />
-                      <span className="truncate">
-                        {updateForm.image ? updateForm.image.name : "Attach image"}
-                      </span>
-                    </button>
+                    <p className="text-[0.78rem] leading-5 text-[var(--color-muted-foreground)]">
+                      Updates are text-only. Submit a new onsite report for new photo evidence.
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="submit"
