@@ -174,9 +174,11 @@ export async function startTestServer(
         DIRECT_URL: testDatabaseUrl,
         NODE_ENV: "test",
         REPORT_IMAGE_UPLOAD_TEST_STUB: "true",
-        EMAIL_PROVIDER: "resend",
-        RESEND_API_KEY: "re_integration_test_only",
-        EMAIL_FROM_ADDRESS: "Flood Watch <integration@example.invalid>",
+        EMAIL_PROVIDER: "emailjs",
+        EMAILJS_SERVICE_ID: "service_integration_test_only",
+        EMAILJS_TEMPLATE_ID: "template_integration_test_only",
+        EMAILJS_PUBLIC_KEY: "public_integration_test_only",
+        EMAILJS_PRIVATE_KEY: "private_integration_test_only",
         EMAIL_VERIFICATION_HMAC_KEY:
           "integration-email-verification-hmac-key-32-chars",
         EMAIL_DELIVERY_TEST_STUB:

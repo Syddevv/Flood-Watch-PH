@@ -18,11 +18,12 @@ env:
   REPORT_SESSION_SECRET: ci-report-session-secret-32-characters-long
   ABUSE_PROTECTION_SECRET: ci-abuse-protection-secret-32-characters-long
   TRUSTED_PROXY_CLIENT_IP_HEADER: x-forwarded-for
-  EMAIL_PROVIDER: resend
-  RESEND_API_KEY: re_ci_build_only_not_used_for_delivery
-  EMAIL_FROM_ADDRESS: Flood Watch <ci@example.invalid>
+  EMAIL_PROVIDER: emailjs
+  EMAILJS_SERVICE_ID: service_ci_build_only
+  EMAILJS_TEMPLATE_ID: template_ci_build_only
+  EMAILJS_PUBLIC_KEY: public_ci_build_only
+  EMAILJS_PRIVATE_KEY: private_ci_build_only
   EMAIL_VERIFICATION_HMAC_KEY: ci-email-verification-hmac-key-32-characters
-  RESEND_WEBHOOK_SECRET: whsec_Y2ktd2ViaG9vay10ZXN0LXNlY3JldA==
   LEGACY_EMAIL_GRACE_DEADLINE: 2099-01-01T00:00:00.000Z
 
 jobs:

@@ -1,6 +1,10 @@
 import "server-only";
 
-import { sendVerificationEmail, EmailDeliveryError } from "@/lib/email-delivery";
+import {
+  sendVerificationEmail,
+  EmailDeliveryError,
+  isAmbiguousEmailDeliveryError,
+} from "@/lib/email-delivery";
 import {
   EMAIL_VERIFICATION_CODE_LIFETIME_MS,
   EMAIL_VERIFICATION_MAX_ATTEMPTS,
@@ -38,18 +42,19 @@ async function recordDeliveryFailure(
 ) {
   const safeCode =
     error instanceof EmailDeliveryError ? error.safeCode : "provider_request_failed";
+  const ambiguous = isAmbiguousEmailDeliveryError(error);
 
   await prisma.emailVerification
     .update({
       where: { id: verificationId },
       data: {
-        deliveryStatus: "failed",
+        deliveryStatus: ambiguous ? "pending" : "failed",
         lastDeliveryAttemptAt: new Date(),
         lastDeliveryErrorCode: safeCode,
-        // A failed provider request did not deliver a usable new code. Let the
-        // resident retry immediately instead of enforcing a cooldown for mail
-        // that never left the provider.
-        resendAvailableAt: new Date(),
+        // A definitive rejection can be retried immediately. A timeout or
+        // network failure may have happened after EmailJS accepted the message,
+        // so retain the cooldown instead of risking an immediate duplicate.
+        ...(ambiguous ? {} : { resendAvailableAt: new Date() }),
       },
     })
     .catch(() => undefined);
@@ -90,6 +95,7 @@ export async function createPendingRegistration(input: {
   try {
     const delivery = await sendVerificationEmail({
       to: created.user.email,
+      toName: created.user.displayName,
       code: created.code,
       idempotencyKey: `registration-${created.verification.id}-v1`,
     });
@@ -135,8 +141,9 @@ export async function requestVerificationEmail(email: string) {
     const code = generateEmailVerificationCode(verification.version);
     const dates = codeDates(now);
     // Reserve this resend while the provider request is in flight. The old
-    // hash remains usable until delivery succeeds, and a failed delivery
-    // releases the reservation in recordDeliveryFailure.
+    // hash remains usable until EmailJS accepts the request. A definitive
+    // rejection releases the reservation; an ambiguous timeout promotes the
+    // possibly delivered new code below while retaining the cooldown.
     await tx.emailVerification.update({
       where: { id: verification.id },
       data: {
@@ -149,6 +156,7 @@ export async function requestVerificationEmail(email: string) {
     return {
       userId: user.id,
       email: user.email,
+      displayName: user.displayName,
       verificationId: verification.id,
       expectedVersion: verification.version,
       nextVersion,
@@ -164,6 +172,7 @@ export async function requestVerificationEmail(email: string) {
   try {
     const delivery = await sendVerificationEmail({
       to: candidate.email,
+      toName: candidate.displayName,
       code: candidate.code,
       idempotencyKey: `verification-${candidate.verificationId}-v${candidate.nextVersion}`,
     });
@@ -190,6 +199,33 @@ export async function requestVerificationEmail(email: string) {
     });
     return { outcome: updated.count === 1 ? "sent" : "accepted" } as const;
   } catch (error) {
+    if (isAmbiguousEmailDeliveryError(error)) {
+      // EmailJS has no idempotency key or request-status lookup. If the request
+      // timed out after acceptance, the new code may already be in the user's
+      // inbox. Make that code usable while retaining the normal cooldown; if
+      // it was not accepted, the resident can request another code afterward.
+      await prisma.emailVerification.updateMany({
+        where: {
+          id: candidate.verificationId,
+          userId: candidate.userId,
+          version: candidate.expectedVersion,
+          consumedAt: null,
+        },
+        data: {
+          codeHash: candidate.codeHash,
+          keyId: candidate.keyId,
+          expiresAt: candidate.expiresAt,
+          attemptCount: 0,
+          resendAvailableAt: candidate.resendAvailableAt,
+          version: candidate.nextVersion,
+          providerMessageId: null,
+          deliveryStatus: "pending",
+          lastDeliveryAttemptAt: new Date(),
+          lastDeliveryErrorCode: error.safeCode,
+        },
+      });
+      return { outcome: "delivery_failed" } as const;
+    }
     await recordDeliveryFailure(candidate.verificationId, error);
     return { outcome: "delivery_failed" } as const;
   }
