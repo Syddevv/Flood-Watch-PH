@@ -1,5 +1,23 @@
 import { v2 as cloudinary } from "cloudinary";
 
+const TEST_UPLOAD_BASE_URL = "https://example.invalid/test-report-images/";
+
+function getTestUploadUrl(fileName: string) {
+  // Next dev owns NODE_ENV, so bind the stub to the explicit test database
+  // instead of an environment value that Next rewrites to "development".
+  const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+
+  if (
+    process.env.REPORT_IMAGE_UPLOAD_TEST_STUB !== "true" ||
+    !testDatabaseUrl ||
+    process.env.DATABASE_URL !== testDatabaseUrl
+  ) {
+    return null;
+  }
+
+  return `${TEST_UPLOAD_BASE_URL}${encodeURIComponent(fileName)}`;
+}
+
 function getRequiredCloudinaryConfig() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -22,6 +40,11 @@ export async function uploadReportImageToCloudinary(
   fileBuffer: Buffer,
   fileName: string,
 ) {
+  const testUploadUrl = getTestUploadUrl(fileName);
+  if (testUploadUrl) {
+    return testUploadUrl;
+  }
+
   cloudinary.config(getRequiredCloudinaryConfig());
 
   return new Promise<string>((resolve, reject) => {
