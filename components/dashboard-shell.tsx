@@ -1420,7 +1420,8 @@ export function DashboardShell({
 
           <main
             className={cn(
-              "relative h-full min-h-0 overflow-hidden md:col-start-2",
+              "relative h-full min-h-0 md:col-start-2",
+              isEvacuationCentersView || isEmergencyHotlinesView ? "overflow-y-auto" : "overflow-hidden",
               isContentOnlyView && "md:col-end-4",
             )}
           >
