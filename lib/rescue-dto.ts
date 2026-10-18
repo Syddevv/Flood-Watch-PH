@@ -20,6 +20,7 @@ export function toRescueDto(record: RecordWithEvents, admin = false) {
     requesterUserId: admin ? record.requesterUserId : undefined,
     creatorUserId: admin ? record.creatorUserId : undefined,
     intakeChannel: admin ? record.intakeChannel : undefined,
+    assistedIntakeMethod: admin ? record.assistedIntakeMethod : undefined,
     events: record.events?.filter((event) => admin || event.visibility === "public").map((event) => ({
       id: event.id, eventType: event.eventType, previousStatus: event.previousStatus,
       nextStatus: event.nextStatus, previousPriority: event.previousPriority,

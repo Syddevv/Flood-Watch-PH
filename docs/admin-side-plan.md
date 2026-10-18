@@ -106,9 +106,9 @@ For MVP, `caseOwnerUserId` refers to an existing administrator coordinator; it d
 **Goal.** Replace the admin intake placeholder with an accessible form using A0 contracts.
 
 **Tasks**
-- [ ] Make “New rescue” open a modal in `components/admin-rescue-requests.tsx`; keep direct `/admin/rescue-requests/new` navigation meaningful with the same form in a page shell or deep-linked modal.
-- [ ] Support phone/walk-in/other assisted intake with requester/assisted-person relationship, callback/contact, people and vulnerability details, U0 Bulacan municipality/barangay/point, description, optional linked report, and initial priority. Record authenticated creator and intake channel separately from assisted person; never invent a user account.
-- [ ] Reuse A0 validation and `POST /api/admin/rescue-requests`; include field errors, focus trap/return, Escape, keyboard controls, mobile layout, pending state, idempotency key, duplicate warning, success ID, and list refresh.
+- [x] Make “New rescue” open a modal in `components/admin-rescue-requests.tsx`; keep direct `/admin/rescue-requests/new` navigation meaningful with the same form in a page shell or deep-linked modal.
+- [x] Support phone/walk-in/other assisted intake with requester/assisted-person relationship, callback/contact, people and vulnerability details, U0 Bulacan municipality/barangay/point, description, optional linked report, and initial priority. Record authenticated creator and intake channel separately from assisted person; never invent a user account.
+- [x] Reuse A0 validation and `POST /api/admin/rescue-requests`; include field errors, focus trap/return, Escape, keyboard controls, mobile layout, pending state, idempotency key, duplicate warning, success ID, and list refresh.
 
 **Files.** Existing: `components/admin-rescue-requests.tsx`, `app/admin/rescue-requests/new/page.tsx`, `components/admin-shell.tsx`. Proposed: `components/admin-create-rescue-modal.tsx` and shared admin intake form. A0 owns schema/API; this phase changes UI only.
 

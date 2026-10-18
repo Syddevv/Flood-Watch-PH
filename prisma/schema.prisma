@@ -245,6 +245,7 @@ model RescueRequest {
   requesterUserId                String?
   creatorUserId                  String
   intakeChannel                  String
+  assistedIntakeMethod           String?
   idempotencyKey                 String
   idempotencyHash                String
   forWhom                        String
