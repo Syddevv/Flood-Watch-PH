@@ -22,6 +22,11 @@ row somehow exists. Login reveals the verification action only after the caller
 has supplied the correct password; nonexistent emails and wrong passwords retain
 the same generic response.
 
+Registration returns `409` with an already-registered error when the email is
+in use, including pending accounts. This intentionally reveals account existence
+at registration so the form does not claim a new code was sent. Existing pending
+accounts can request another code from the verification page.
+
 ## Required environment variables
 
 Configure these as server-side Vercel environment variables for Production and

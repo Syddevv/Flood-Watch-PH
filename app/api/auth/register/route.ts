@@ -74,14 +74,9 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       if (isPrismaUniqueConstraintError(error)) {
-        return successResponse(
-          {
-            verificationRequired: true,
-            email,
-            message:
-              "If this address can be registered, verification instructions are available.",
-          },
-          { status: 202 },
+        return errorResponse(
+          "This email is already registered. Log in or use a different email. If you still need to verify it, request a new code from the verification page.",
+          409,
         );
       }
       throw error;
