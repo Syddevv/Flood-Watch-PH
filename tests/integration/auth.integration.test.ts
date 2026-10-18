@@ -83,10 +83,11 @@ integrationTest(
       assert.equal(pendingLogin.response.status, 403);
       assert.equal(pendingLogin.response.headers.get("set-cookie"), null);
 
-      // Duplicate registration receives the same generic pending response.
+      // A duplicate cannot claim that another verification code was sent.
       const duplicateResult = await register(baseUrl, address, email, "a-different-password");
-      assert.equal(duplicateResult.response.status, 202);
-      assert.equal(duplicateResult.payload.data?.verificationRequired, true);
+      assert.equal(duplicateResult.response.status, 409);
+      assert.match(duplicateResult.payload.error ?? "", /already registered/i);
+      assert.equal(duplicateResult.payload.data, undefined);
 
       const verifyResponse = await fetch(`${baseUrl}/api/auth/verify-code`, {
         method: "POST",
@@ -99,6 +100,10 @@ integrationTest(
       });
       assert.equal(verifyResponse.status, 200);
       const registerCookie = cookieFromResponse(verifyResponse);
+
+      const verifiedDuplicateResult = await register(baseUrl, address, email, "a-different-password");
+      assert.equal(verifiedDuplicateResult.response.status, 409);
+      assert.match(verifiedDuplicateResult.payload.error ?? "", /already registered/i);
 
       // Verification issues a session that can submit a protected report.
       const createResponse = await fetch(`${baseUrl}/api/reports`, {
