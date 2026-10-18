@@ -12,42 +12,43 @@ datasource db {
 }
 
 model FloodReport {
-  id                 String               @id @default(cuid())
-  title              String
-  description        String
-  category           String
-  severity           String
-  status             String               @default("Needs More Confirmation")
-  verificationStatus String               @default("unreviewed")
-  locationName       String
-  latitude           Float
-  longitude          Float
-  scopeVersion       String               @default("osm-1504656-2026-10-14")
-  locationSource     String               @default("manual")
-  gpsAccuracyMeters  Float?
-  gpsLatitude        Float?
-  gpsLongitude       Float?
-  gpsCapturedAt      DateTime?
-  imageUrl           String?
-  photoCapturedAt    DateTime?
+  id                  String               @id @default(cuid())
+  title               String
+  description         String
+  category            String
+  severity            String
+  status              String               @default("Needs More Confirmation")
+  verificationStatus  String               @default("unreviewed")
+  locationName        String
+  latitude            Float
+  longitude           Float
+  scopeVersion        String               @default("osm-1504656-2026-10-14")
+  locationSource      String               @default("manual")
+  gpsAccuracyMeters   Float?
+  gpsLatitude         Float?
+  gpsLongitude        Float?
+  gpsCapturedAt       DateTime?
+  imageUrl            String?
+  photoCapturedAt     DateTime?
   onsitePolicyVersion String?
-  onsiteEligibleAt   DateTime?
-  ownerSessionHash   String?
-  reportedByName     String?
-  sourceType         String               @default("Community")
-  confirmationCount  Int                  @default(0)
-  resolvedCount      Int                  @default(0)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  lastActivityAt     DateTime             @default(now())
-  resolvedAt         DateTime?
-  archivedAt         DateTime?
-  incidentId         String
-  incident           Incident             @relation(fields: [incidentId], references: [id])
-  userId             String?
-  user               User?                @relation(fields: [userId], references: [id])
-  confirmations      ReportConfirmation[]
-  updates            ReportUpdate[]
+  onsiteEligibleAt    DateTime?
+  ownerSessionHash    String?
+  reportedByName      String?
+  sourceType          String               @default("Community")
+  confirmationCount   Int                  @default(0)
+  resolvedCount       Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lastActivityAt      DateTime             @default(now())
+  resolvedAt          DateTime?
+  archivedAt          DateTime?
+  incidentId          String
+  incident            Incident             @relation(fields: [incidentId], references: [id])
+  userId              String?
+  user                User?                @relation(fields: [userId], references: [id])
+  confirmations       ReportConfirmation[]
+  updates             ReportUpdate[]
+  rescueRequests      RescueRequest[]
 
   @@index([ownerSessionHash])
   @@index([status, createdAt])
@@ -111,34 +112,34 @@ model ReportUpdate {
 }
 
 model EvacuationCenter {
-  id                 String    @id @default(cuid())
-  name               String
-  description        String?
-  address            String
-  city               String
-  province           String
-  latitude           Float
-  longitude          Float
-  scopeVersion       String    @default("osm-1504656-2026-10-14")
-  contactNumber      String?
-  facilities         String[]
-  status             String    @default("needs_verification")
-  barangay           String?
-  region             String?
-  verificationStatus String    @default("needs_verification")
-  sourceType         String    @default("community_reference")
-  sourceName         String?
-  sourceUrl          String?
-  lastVerifiedAt     DateTime?
+  id                      String    @id @default(cuid())
+  name                    String
+  description             String?
+  address                 String
+  city                    String
+  province                String
+  latitude                Float
+  longitude               Float
+  scopeVersion            String    @default("osm-1504656-2026-10-14")
+  contactNumber           String?
+  facilities              String[]
+  status                  String    @default("needs_verification")
+  barangay                String?
+  region                  String?
+  verificationStatus      String    @default("needs_verification")
+  sourceType              String    @default("community_reference")
+  sourceName              String?
+  sourceUrl               String?
+  lastVerifiedAt          DateTime?
   availabilityConfirmedAt DateTime?
-  notes              String?
-  estimatedCapacity  Int?
-  isArchived         Boolean   @default(false)
-  archivedAt         DateTime?
-  archivedByUserId   String?
-  updatedByUserId    String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  notes                   String?
+  estimatedCapacity       Int?
+  isArchived              Boolean   @default(false)
+  archivedAt              DateTime?
+  archivedByUserId        String?
+  updatedByUserId         String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   @@index([status])
   @@index([verificationStatus])
@@ -188,22 +189,94 @@ model RequestRateLimit {
 }
 
 model User {
-  id                      String                     @id @default(cuid())
-  email                   String                     @unique
+  id                      String               @id @default(cuid())
+  email                   String               @unique
   passwordHash            String
   displayName             String?
-  role                    String                     @default("user")
-  emailVerificationStatus String                     @default("pending")
+  role                    String               @default("user")
+  emailVerificationStatus String               @default("pending")
   emailVerifiedAt         DateTime?
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
   sessions                Session[]
   reports                 FloodReport[]
   adminAuditLogs          AdminAuditLog[]
   emailVerification       EmailVerification?
+  createdRescueRequests   RescueRequest[]      @relation("RescueCreator")
+  requestedRescueRequests RescueRequest[]      @relation("RescueRequester")
+  ownedRescueRequests     RescueRequest[]      @relation("RescueCaseOwner")
+  rescueEvents            RescueRequestEvent[] @relation("RescueEventActor")
 
   @@index([role])
   @@index([emailVerificationStatus])
+}
+
+model RescueRequest {
+  id                             String               @id @default(cuid())
+  reference                      String               @unique
+  requesterUserId                String?
+  creatorUserId                  String
+  intakeChannel                  String
+  idempotencyKey                 String
+  idempotencyHash                String
+  forWhom                        String
+  assistedPersonName             String?
+  relationship                   String?
+  primaryContact                 String
+  alternateContact               String?
+  peopleCount                    Int
+  vulnerabilityTags              String[]             @default([])
+  vulnerabilityNotes             String?
+  description                    String
+  locationName                   String
+  latitude                       Float?
+  longitude                      Float?
+  locationUncertainty            String
+  localityCode                   String
+  barangay                       String
+  linkedReportId                 String?
+  linkedReportConsentConfirmedAt DateTime?
+  priority                       String               @default("routine")
+  status                         String               @default("received")
+  caseOwnerUserId                String?
+  confirmedTeamReference         String?
+  outcome                        String?
+  version                        Int                  @default(1)
+  createdAt                      DateTime             @default(now())
+  updatedAt                      DateTime             @updatedAt
+  requester                      User?                @relation("RescueRequester", fields: [requesterUserId], references: [id])
+  creator                        User                 @relation("RescueCreator", fields: [creatorUserId], references: [id])
+  caseOwner                      User?                @relation("RescueCaseOwner", fields: [caseOwnerUserId], references: [id])
+  linkedReport                   FloodReport?         @relation(fields: [linkedReportId], references: [id])
+  events                         RescueRequestEvent[]
+
+  @@unique([creatorUserId, intakeChannel, idempotencyKey])
+  @@index([requesterUserId, createdAt, id])
+  @@index([status, priority, updatedAt])
+  @@index([localityCode, status])
+  @@index([caseOwnerUserId, status])
+  @@index([primaryContact, createdAt])
+}
+
+model RescueRequestEvent {
+  id                      String        @id @default(cuid())
+  requestId               String
+  actorUserId             String
+  eventType               String
+  previousStatus          String?
+  nextStatus              String?
+  previousPriority        String?
+  nextPriority            String?
+  previousCaseOwnerUserId String?
+  nextCaseOwnerUserId     String?
+  visibility              String
+  reason                  String?
+  note                    String?
+  createdAt               DateTime      @default(now())
+  request                 RescueRequest @relation(fields: [requestId], references: [id])
+  actor                   User          @relation("RescueEventActor", fields: [actorUserId], references: [id])
+
+  @@index([requestId, createdAt, id])
 }
 
 model EmailVerification {
