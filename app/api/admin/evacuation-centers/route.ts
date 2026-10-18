@@ -1,6 +1,6 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
-import { parseCenterPayload } from "@/lib/admin-evacuation";
+import { parseCenterPayload, parseOperationalConfirmation } from "@/lib/admin-evacuation";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { prisma } from "@/lib/prisma";
 
@@ -44,12 +44,14 @@ export async function POST(request: Request) {
     city: parsed.data.city,
   }, select: { id: true } });
   if (duplicate) return adminErrorResponse(request, "A center with this name and address already exists.", 409);
-  const confirmAvailability = body && typeof body === "object" && body.confirmAvailability === true;
+  const confirmation = parseOperationalConfirmation(body, parsed.data.status);
+  if (confirmation.error) return adminErrorResponse(request, confirmation.error, 400);
   const center = await prisma.evacuationCenter.create({ data: {
     ...parsed.data,
-    availabilityConfirmedAt: confirmAvailability && ["available", "temporarily_unavailable"].includes(parsed.data.status) ? new Date() : null,
+    adminEvidenceUrl: parsed.data.adminEvidenceUrl ?? confirmation.evidenceUrl ?? null,
+    availabilityConfirmedAt: confirmation.confirmedAt ?? null,
     updatedByUserId: auth.user.id,
   } });
-  await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_CREATED", targetType: "EvacuationCenter", targetId: center.id, requestId: request.headers.get("x-request-id") ?? undefined });
+  await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_CREATED", targetType: "EvacuationCenter", targetId: center.id, requestId: request.headers.get("x-request-id") ?? undefined, metadata: { operationalConfirmation: confirmation.confirmedAt ? { at: confirmation.confirmedAt.toISOString(), evidenceUrl: confirmation.evidenceUrl, directNote: confirmation.directNote } : null } });
   return adminSuccessResponse(request, { center }, { status: 201 });
 }

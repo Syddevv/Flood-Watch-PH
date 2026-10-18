@@ -5,7 +5,7 @@ import { isPublishableCenter, toPublicCenter } from "@/lib/public-evacuation-cen
 
 export async function getPublicEvacuationCenters() {
   const rows = await prisma.evacuationCenter.findMany({
-    where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" }, verificationStatus: "verified" },
+    where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" }, verificationStatus: { in: ["verified", "official_publication_found"] } },
     orderBy: [{ city: "asc" }, { name: "asc" }],
     take: 1000,
   });

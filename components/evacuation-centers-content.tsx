@@ -2,849 +2,205 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { ChevronDown, MapPin, Navigation, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Accessibility,
-  AlertTriangle,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Crosshair,
-  Droplets,
-  LoaderCircle,
-  MapPinned,
-  Phone,
-  Search,
-  ShieldPlus,
-  Sparkles,
-  Toilet,
-} from "lucide-react";
 
-import {
-  EMERGENCY_RESOURCE_CONTACTS,
-  EVACUATION_CENTER_DATA_STATUS_NOTE,
-  EVACUATION_CENTER_FACILITIES,
-  FLOOD_SAFETY_CHECKLIST,
-} from "@/lib/constants";
-import {
-  buildCenterMapHref,
-  buildDirectionsUrl,
-  buildEvacuationCenterLocationLabel,
-  buildEvacuationCenterSearchIndex,
-  calculateDistanceKm,
-  EMERGENCY_CONTACT_CATEGORY_ACCENTS,
-  EVACUATION_SOURCE_META,
-  EVACUATION_STATUS_META,
-  formatEstimatedCapacity,
-  formatEvacuationFacilityLabel,
-  formatDistanceKm,
-  formatLastVerified,
-  summarizeEvacuationFacilities,
-} from "@/lib/emergency-resources";
-import {
-  EVACUATION_CENTER_COVERAGE_LABEL,
-  NEARBY_EVACUATION_CENTERS,
-  NEARBY_EVACUATION_CENTER_IDS,
-  getEvacuationCenterDistanceKm,
-} from "@/lib/evacuation-center-scope";
-import type {
-  EvacuationCenterResource,
-  EvacuationCenterStatus,
-  EvacuationFacility,
-} from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { isWithinBulacan } from "@/lib/bulacan-scope";
+import { buildCenterMapHref, buildDirectionsUrl, calculateDistanceKm, centerListingLabel, centerOpeningLabel, formatLastVerified, formatOperationalUpdate, hasCenterCoordinates } from "@/lib/emergency-resources";
+import type { PublicEmergencyContact, PublicEvacuationCenter } from "@/lib/types";
 
-const STATUS_FILTERS: Array<{ value: "All" | EvacuationCenterStatus; label: string }> = [
-  { value: "All", label: "All" },
-  { value: "available", label: "Available" },
-  { value: "standby", label: "Standby" },
-  { value: "needs_verification", label: "Needs Verification" },
-  { value: "temporarily_unavailable", label: "Temporarily Unavailable" },
-];
+type Point = { latitude: number; longitude: number };
 
-const FACILITY_ICONS: Record<EvacuationFacility, ReactNode> = {
-  pwd_accessible: <Accessibility className="h-3.5 w-3.5" />,
-  medical_support: <ShieldPlus className="h-3.5 w-3.5" />,
-  drinking_water: <Droplets className="h-3.5 w-3.5" />,
-  restrooms: <Toilet className="h-3.5 w-3.5" />,
-  pet_friendly: <Sparkles className="h-3.5 w-3.5" />,
-  parking: <MapPinned className="h-3.5 w-3.5" />,
-};
-
-type NearestCenterResult = {
-  center: EvacuationCenterResource;
-  distanceKm: number;
-};
-
-function rankCentersByDistance(origin: { latitude: number; longitude: number }) {
-  return NEARBY_EVACUATION_CENTERS.map((center) => ({
-    center,
-    distanceKm: calculateDistanceKm(origin, {
-      latitude: center.latitude,
-      longitude: center.longitude,
-    }),
-  })).sort((left, right) => left.distanceKm - right.distanceKm);
+function openingStatusDisplay(center: PublicEvacuationCenter) {
+  if (center.openingStatus === "open") return { label: "Open", className: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100" };
+  if (center.openingStatus === "full") return { label: "Full", className: "bg-orange-100 text-orange-950 dark:bg-orange-900/40 dark:text-orange-100" };
+  return { label: centerOpeningLabel(center), className: "bg-[var(--color-panel)] text-[var(--color-foreground)]" };
 }
 
-function EvacuationCenterCard({
-  center,
-  highlighted,
-  selectedFromMap,
-  directionsOrigin,
-  outsideCoverage,
-  distanceFromCalumpitKm,
-}: {
-  center: EvacuationCenterResource;
-  highlighted: boolean;
-  selectedFromMap: boolean;
-  directionsOrigin?: { latitude: number; longitude: number } | null;
-  outsideCoverage: boolean;
-  distanceFromCalumpitKm: number;
-}) {
-  const statusMeta = EVACUATION_STATUS_META[center.status];
-
-  return (
-    <article
-      id={`evacuation-center-${center.id}`}
-      className={cn(
-        "rounded-[22px] border bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)] transition-[box-shadow,border-color] duration-300",
-        highlighted
-          ? "border-[var(--color-primary)] shadow-[0_0_0_1px_rgba(37,99,235,0.28),0_0_0_10px_rgba(37,99,235,0.08),var(--shadow-soft)]"
-          : "border-[var(--color-border)]",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {selectedFromMap ? (
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(37,99,235,0.2)] bg-[rgba(37,99,235,0.08)] px-2.5 py-1 text-[0.68rem] font-semibold text-[var(--color-primary)]">
-              <MapPinned className="h-3 w-3" />
-              <span>Viewing selected center</span>
-            </div>
-          ) : null}
-          <h2 className="text-[1rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)]">
-            {center.name}
-          </h2>
-          <div className="mt-1 text-[0.88rem] text-[var(--color-muted-foreground)]">
-            {center.address}
-          </div>
-          <div className="mt-1 text-[0.82rem] text-[var(--color-muted-foreground)]">
-            {buildEvacuationCenterLocationLabel(center)}
-            <span className="tabular-nums"> &middot; ~{distanceFromCalumpitKm.toFixed(distanceFromCalumpitKm < 10 ? 1 : 0)} km from Bulacan map center</span>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span
-            className={cn(
-              "rounded-full border px-3 py-1 text-[0.7rem] font-semibold",
-              statusMeta.badgeClassName,
-            )}
-          >
-            {statusMeta.label}
-          </span>
-          {outsideCoverage ? (
-            <span
-              data-testid="outside-coverage-badge"
-              className="rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]"
-            >
-              Outside coverage
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {center.facilities.map((facility) => (
-          <span
-            key={facility}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-2.5 py-1 text-[0.74rem] font-medium text-[var(--color-foreground)]"
-          >
-            {FACILITY_ICONS[facility]}
-            <span>{formatEvacuationFacilityLabel(facility)}</span>
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-3 space-y-2 text-[0.84rem] text-[var(--color-muted-foreground)]">
-        {center.contactNumber ? (
-          <div className="flex items-center gap-2">
-            <Phone className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-            <span>{center.contactNumber}</span>
-          </div>
-        ) : null}
-        {center.lastVerifiedAt ? (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-[var(--color-success)]" />
-            <span>Last verified {formatLastVerified(center.lastVerifiedAt)}</span>
-          </div>
-        ) : null}
-        {typeof center.estimatedCapacity === "number" ? (
-          <div className="flex items-center gap-2">
-            <MapPinned className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-            <span>Estimated capacity: {formatEstimatedCapacity(center.estimatedCapacity)}</span>
-          </div>
-        ) : null}
-        {center.sourceName ? <div>Source: {center.sourceName}</div> : null}
-      </div>
-
-      {center.notes ? (
-        <p className="mt-3 line-clamp-2 rounded-[16px] bg-[var(--color-panel)] px-3.5 py-3 text-[0.84rem] leading-6 text-[var(--color-foreground)]">
-          {center.notes}
-        </p>
-      ) : null}
-
-      <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <Link
-          href={buildCenterMapHref(center.id)}
-          className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.88rem] font-medium text-[var(--color-foreground)]"
-        >
-          View on Map
-        </Link>
-        <a
-          href={buildDirectionsUrl(center, directionsOrigin)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-10 items-center justify-center rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white"
-        >
-          Get Directions
-        </a>
-      </div>
-    </article>
-  );
+function drrmoForCenter(contacts: PublicEmergencyContact[], center: PublicEvacuationCenter) {
+  const offices = contacts.filter((contact) => /\b(?:PDRRMO|MDRRMO|CDRRMO|DRRMO)\b/i.test(contact.agencyName));
+  return offices.find((contact) => contact.city === center.city) ?? offices.find((contact) => contact.city === null) ?? null;
 }
 
-function NearestCenterCard({
-  nearest,
-  suggestions,
-  directionsOrigin,
-}: {
-  nearest: NearestCenterResult;
-  suggestions: NearestCenterResult[];
-  directionsOrigin?: { latitude: number; longitude: number } | null;
-}) {
-  const statusMeta = EVACUATION_STATUS_META[nearest.center.status];
-  const sourceMeta = EVACUATION_SOURCE_META[nearest.center.sourceType];
-  const facilitySummary = summarizeEvacuationFacilities(nearest.center.facilities, 4);
-
-  return (
-    <section className="rounded-[22px] border border-[rgba(37,99,235,0.28)] bg-[linear-gradient(135deg,rgba(14,28,52,0.96),rgba(26,43,75,0.98))] p-4 text-white shadow-[var(--shadow-soft)]">
-      <div className="flex items-center gap-2 text-[0.76rem] font-semibold uppercase tracking-[0.1em] text-sky-300">
-        <Crosshair className="h-4 w-4" />
-        <span>Nearest evacuation center</span>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[1.1rem] font-semibold tracking-[-0.02em] text-white">
-            {nearest.center.name}
-          </h2>
-          <div className="mt-1 text-[0.88rem] text-slate-300">{nearest.center.address}</div>
-          <div className="mt-1 text-[0.8rem] text-slate-400">
-            {buildEvacuationCenterLocationLabel(nearest.center)}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[1.2rem] font-semibold text-white">
-            {formatDistanceKm(nearest.distanceKm)}
-          </div>
-          <div className="text-[0.76rem] text-slate-400">from your location</div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span
-          className={cn(
-            "rounded-full border px-3 py-1 text-[0.72rem] font-semibold",
-            statusMeta.badgeClassName,
-          )}
-        >
-          {statusMeta.label}
-        </span>
-        <span className="text-[0.78rem] text-slate-300">
-          {nearest.center.lastVerifiedAt
-            ? `Last verified ${formatLastVerified(nearest.center.lastVerifiedAt)}`
-            : sourceMeta.label}
-        </span>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {facilitySummary.visible.map((facilityLabel, index) => (
-          <span
-            key={`${facilityLabel}-${index}`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(148,163,184,0.24)] bg-[rgba(15,23,42,0.42)] px-2.5 py-1 text-[0.74rem] font-medium text-slate-100"
-          >
-            {FACILITY_ICONS[nearest.center.facilities[index]]}
-            <span>{facilityLabel}</span>
-          </span>
-        ))}
-        {facilitySummary.remaining > 0 ? (
-          <span className="inline-flex items-center rounded-full border border-[rgba(148,163,184,0.24)] bg-[rgba(15,23,42,0.42)] px-2.5 py-1 text-[0.74rem] font-medium text-slate-300">
-            +{facilitySummary.remaining} more
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-3 text-[0.78rem] text-slate-300">Source: {sourceMeta.label}</div>
-
-      <p className="mt-3 text-[0.76rem] leading-5 text-slate-300">
-        Distances are approximate direct distances. Actual travel distance may be longer.
-        Use directions for the best route.
-      </p>
-
-      <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <Link
-          href={buildCenterMapHref(nearest.center.id)}
-          className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[rgba(148,163,184,0.28)] bg-[rgba(15,23,42,0.36)] px-4 text-[0.88rem] font-medium text-white"
-        >
-          View on Map
-        </Link>
-        <a
-          href={buildDirectionsUrl(nearest.center, directionsOrigin)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex h-10 items-center justify-center rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.88rem] font-semibold text-white"
-        >
-          Get Directions
-        </a>
-      </div>
-
-      {suggestions.length > 0 ? (
-        <div className="mt-4 border-t border-[rgba(148,163,184,0.18)] pt-4">
-          <div className="text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-slate-400">
-            Next nearest centers
-          </div>
-          <div className="mt-2 grid gap-2">
-            {suggestions.map((entry) => (
-              <div
-                key={entry.center.id}
-                className="flex flex-col gap-1.5 rounded-[14px] border border-[rgba(148,163,184,0.18)] bg-[rgba(15,23,42,0.28)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-[0.84rem] font-medium text-slate-100">
-                    {entry.center.name}
-                  </div>
-                  <div className="truncate text-[0.74rem] text-slate-400">
-                    {entry.center.city}
-                  </div>
-                </div>
-                <div className="text-[0.8rem] font-semibold text-sky-300 sm:shrink-0 sm:text-right">
-                  {formatDistanceKm(entry.distanceKm)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-export function EvacuationCentersContent() {
+export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergencyContact[] }) {
   const searchParams = useSearchParams();
-  const resultsSectionRef = useRef<HTMLDivElement | null>(null);
+  const selectedCenterId = searchParams.get("center");
+  const [centers, setCenters] = useState<PublicEvacuationCenter[]>([]);
+  const [municipality, setMunicipality] = useState("");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | EvacuationCenterStatus>("All");
-  const [facilityFilter, setFacilityFilter] = useState<"All" | EvacuationFacility>("All");
-  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
-  const [highlightedCenterId, setHighlightedCenterId] = useState<string | null>(null);
-  const [checklistExpanded, setChecklistExpanded] = useState(false);
-  const [isFindingNearest, setIsFindingNearest] = useState(false);
-  const [nearestResults, setNearestResults] = useState<NearestCenterResult[]>([]);
-  const [nearestMessage, setNearestMessage] = useState<string | null>(null);
-  const [nearestSearchCycle, setNearestSearchCycle] = useState(0);
-  const [pendingScrollCycle, setPendingScrollCycle] = useState<number | null>(null);
-  const [directionsOrigin, setDirectionsOrigin] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [fromReportContext, setFromReportContext] = useState(false);
-  const coverageSummary = `Showing ${NEARBY_EVACUATION_CENTERS.length} evacuation centers ${EVACUATION_CENTER_COVERAGE_LABEL}.`;
+  const [facilityType, setFacilityType] = useState("");
+  const [origin, setOrigin] = useState<Point | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(selectedCenterId);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    const centerId = searchParams.get("center");
-    const latitude = Number(searchParams.get("lat"));
-    const longitude = Number(searchParams.get("lng"));
-    const fromReport = searchParams.get("fromReport");
-    const hasMatch = centerId
-      ? NEARBY_EVACUATION_CENTERS.some((center) => center.id === centerId)
-      : false;
+    const controller = new AbortController();
+    fetch("/api/evacuation-centers", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error ?? "Unable to load centers.");
+        setCenters(payload.data.centers);
+      })
+      .catch((cause) => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load centers."); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [refreshKey]);
 
-    const frameId = window.requestAnimationFrame(() => {
-      setSelectedCenterId(hasMatch ? centerId : null);
-      setHighlightedCenterId(hasMatch ? centerId : null);
-
-      if (fromReport && Number.isFinite(latitude) && Number.isFinite(longitude)) {
-        const origin = { latitude, longitude };
-
-        setFromReportContext(true);
-        setDirectionsOrigin(origin);
-        setNearestResults(rankCentersByDistance(origin));
-        setNearestMessage(null);
-        setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
-      } else {
-        setFromReportContext(false);
-      }
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [nearestSearchCycle, searchParams]);
-
-  useEffect(() => {
-    if (!selectedCenterId) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      const card = document.getElementById(`evacuation-center-${selectedCenterId}`);
-      if (card) {
-        card.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 120);
-
-    const clearHighlightTimeoutId = window.setTimeout(() => {
-      setHighlightedCenterId((current) => (current === selectedCenterId ? null : current));
-    }, 4500);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.clearTimeout(clearHighlightTimeoutId);
-    };
-  }, [selectedCenterId]);
-
-  const selectedCenter = useMemo(
-    () => NEARBY_EVACUATION_CENTERS.find((center) => center.id === selectedCenterId) ?? null,
-    [selectedCenterId],
-  );
-
-  const activeCenters = NEARBY_EVACUATION_CENTERS;
-
-  const filteredCenters = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    const matches = activeCenters.filter((center) => {
-      const matchesQuery = normalizedQuery
-        ? buildEvacuationCenterSearchIndex(center).includes(normalizedQuery)
-        : true;
-      const matchesStatus = statusFilter === "All" || center.status === statusFilter;
-      const matchesFacility =
-        facilityFilter === "All" || center.facilities.includes(facilityFilter);
-
-      return matchesQuery && matchesStatus && matchesFacility;
-    });
-
-    if (selectedCenter && !matches.some((center) => center.id === selectedCenter.id)) {
-      return [selectedCenter, ...matches];
-    }
-
-    return matches;
-  }, [activeCenters, facilityFilter, query, selectedCenter, statusFilter]);
-
-  const visibleChecklistItems = useMemo(
-    () =>
-      checklistExpanded
-        ? FLOOD_SAFETY_CHECKLIST
-        : FLOOD_SAFETY_CHECKLIST.slice(0, 4),
-    [checklistExpanded],
-  );
-
-  const nearestCenter = nearestResults[0] ?? null;
-  const nextNearestCenters = nearestResults.slice(1, 5);
-  const activeHighlightedCenterId = highlightedCenterId ?? nearestCenter?.center.id ?? null;
+  const visibleCenters = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const results = centers.filter((center) =>
+      (!municipality || center.city === municipality) &&
+      (!facilityType || center.facilityType === facilityType) &&
+      (!needle || [center.name, center.address, center.city, center.barangay ?? ""].join(" ").toLowerCase().includes(needle)),
+    );
+    return origin
+      ? results.sort((a, b) => (hasCenterCoordinates(a) ? calculateDistanceKm(origin, a) : Infinity) - (hasCenterCoordinates(b) ? calculateDistanceKm(origin, b) : Infinity))
+      : results.sort((a, b) => a.city.localeCompare(b.city) || a.name.localeCompare(b.name));
+  }, [centers, municipality, facilityType, query, origin]);
+  const facilityTypes = useMemo(() => [...new Set(centers.map((center) => center.facilityType).filter((type): type is string => Boolean(type)))].sort(), [centers]);
+  const selectedCenter = centers.find((center) => center.id === selectedId) ?? null;
+  const relevantDrrmo = selectedCenter ? drrmoForCenter(contacts, selectedCenter) : null;
+  const hasFilters = Boolean(municipality || query || facilityType || origin);
 
   useEffect(() => {
-    if (pendingScrollCycle === null || isFindingNearest) {
-      return;
+    const dialog = dialogRef.current;
+    if (selectedCenter && dialog && !dialog.open) {
+      dialog.showModal();
+      closeButtonRef.current?.focus();
     }
+  }, [selectedCenter]);
 
-    if (!nearestCenter && !nearestMessage) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      resultsSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-      setPendingScrollCycle((current) => (current === pendingScrollCycle ? null : current));
-    }, 140);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [isFindingNearest, nearestCenter, nearestMessage, pendingScrollCycle]);
-
-  function handleFacilityFilterSelect(facility: EvacuationFacility) {
-    setFacilityFilter((current) => (current === facility ? "All" : facility));
+  function clearFilters() {
+    setMunicipality("");
+    setQuery("");
+    setFacilityType("");
+    setOrigin(null);
+    setLocationMessage(null);
   }
 
-  function handleFindNearestCenter() {
-    if (NEARBY_EVACUATION_CENTERS.length === 0) {
-      setNearestMessage("No evacuation centers found from the current data.");
-      setNearestResults([]);
-      setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
-      return;
-    }
-
-    if (typeof window === "undefined" || !("geolocation" in navigator)) {
-      setNearestMessage("Your browser does not support location detection.");
-      setNearestResults([]);
-      setPendingScrollCycle((current) => current ?? nearestSearchCycle + 1);
-      return;
-    }
-
-    const nextCycle = nearestSearchCycle + 1;
-    setNearestSearchCycle(nextCycle);
-    setPendingScrollCycle(nextCycle);
-    setIsFindingNearest(true);
-    setNearestMessage("Finding nearest evacuation center...");
-
+  function findNearest() {
+    if (!navigator.geolocation) { setLocationMessage("Your browser cannot provide a location. Choose a municipality instead."); return; }
+    setLocationMessage("Finding your location…");
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const origin = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-
-        setDirectionsOrigin(origin);
-
-        setFromReportContext(false);
-        setNearestResults(rankCentersByDistance(origin));
-        setNearestMessage(null);
-        setIsFindingNearest(false);
+      ({ coords }) => {
+        if (!isWithinBulacan(coords.latitude, coords.longitude)) {
+          setLocationMessage("Your location is outside Bulacan. Choose a municipality to browse all published centers.");
+          return;
+        }
+        setOrigin({ latitude: coords.latitude, longitude: coords.longitude });
+        setLocationMessage("Centers are ordered by direct distance. Confirm road access before travel.");
       },
-      (error) => {
-        const denied =
-          error.code === error.PERMISSION_DENIED
-            ? "Location access was blocked. You can still search by city, barangay, or province."
-            : "Unable to detect your location right now. You can still search by city, barangay, or province.";
-
-        setNearestMessage(denied);
-        setNearestResults([]);
-        setIsFindingNearest(false);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 300000,
-      },
+      () => setLocationMessage("Location was unavailable. Choose a municipality instead."),
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
     );
   }
 
-  return (
-    <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)] [scrollbar-gutter:stable]">
-      <div className="mx-auto flex min-h-full w-full max-w-[1480px] flex-col gap-5 px-4 py-5 md:px-6 md:py-6 xl:px-8">
-        <section className="rounded-[24px] border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(9,16,31,0.94),rgba(16,28,53,0.96))] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.1em] text-sky-300">
-            <MapPinned className="h-4 w-4" />
-            <span>Public Emergency Resource Hub</span>
-          </div>
-          <h1 className="mt-3 text-[2rem] font-semibold tracking-[-0.04em] text-white">
-            Evacuation Centers & Emergency Resources
-          </h1>
-          <p className="mt-2 max-w-[820px] text-[0.96rem] leading-7 text-slate-300">
-            Find evacuation centers, emergency contacts, and flood safety guidance in one
-            public-facing page. Center information below uses static reference data so people
-            can plan quickly even when live occupancy systems are unavailable.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.8rem] leading-6 text-slate-300">
-            <span className="font-semibold text-sky-300">Data status:</span>
-            <span className="max-w-[960px]">{EVACUATION_CENTER_DATA_STATUS_NOTE}</span>
-          </div>
-        </section>
+  return <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 pb-24 md:px-8 md:py-8">
+    <header>
+      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Evacuation Centers</h1>
+      <p className="mt-2 text-lg leading-relaxed">Find an evacuation center near you.</p>
+      <p className="mt-2 text-base leading-relaxed text-[var(--color-muted-foreground)]">Listed centers may open during emergencies. Check their opening status before going.</p>
+    </header>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
-          <section className="min-w-0 space-y-4">
-            <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                  <label className="flex min-h-12 flex-1 items-center gap-3 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-4">
-                    <Search className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                    <input
-                      type="search"
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search by center, barangay, city, province, facility, or source..."
-                      className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
-                    />
-                  </label>
+    <div className="grid gap-5 md:grid-cols-2">
+      <label className="grid gap-2 text-lg font-semibold">Municipality or city
+        <select value={municipality} onChange={(event) => setMunicipality(event.target.value)} className="min-h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg font-normal focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
+          <option value="">All municipalities</option>
+          {BULACAN_LOCALITIES.map((locality) => <option key={locality.code} value={locality.name}>{locality.name}</option>)}
+        </select>
+      </label>
+      <label className="grid gap-2 text-lg font-semibold">Search by center or barangay
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} className="min-h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg font-normal focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]" />
+      </label>
+    </div>
 
-                  <div className="flex flex-col gap-2 xl:items-end">
-                    <button
-                      type="button"
-                      onClick={handleFindNearestCenter}
-                      disabled={isFindingNearest}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] bg-[var(--color-primary)] px-4 text-[0.86rem] font-semibold text-white disabled:opacity-70"
-                    >
-                      {isFindingNearest ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Crosshair className="h-4 w-4" />
-                      )}
-                      <span>Evacuation Center Near Me</span>
-                    </button>
-                    <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
-                      Your location stays in your browser and is only used to find nearby centers.
-                    </p>
-                  </div>
-                </div>
-
-                {nearestMessage ? (
-                  <div
-                    className={cn(
-                      "rounded-[14px] px-3.5 py-2.5 text-[0.82rem]",
-                      isFindingNearest
-                        ? "border border-[rgba(37,99,235,0.22)] bg-[rgba(37,99,235,0.08)] text-[var(--color-primary)]"
-                        : "border border-[rgba(245,158,11,0.28)] bg-[rgba(245,158,11,0.08)] text-[var(--color-warning)]",
-                    )}
-                  >
-                    {nearestMessage}
-                  </div>
-                ) : null}
-
-                {fromReportContext ? (
-                  <div className="rounded-[14px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-3.5 py-2.5 text-[0.82rem] font-medium text-[var(--color-info-text)]">
-                    Showing evacuation centers near the selected flood report.
-                  </div>
-                ) : null}
-
-                <p className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
-                  {coverageSummary}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_FILTERS.map((status) => (
-                    <button
-                      key={status.value}
-                      type="button"
-                      onClick={() => setStatusFilter(status.value)}
-                      className={cn(
-                        "rounded-full px-3.5 py-2 text-[0.78rem] font-semibold transition",
-                        statusFilter === status.value
-                          ? "bg-[var(--color-primary)] text-white"
-                          : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
-                      )}
-                    >
-                      {status.label}
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
-                  Statuses are reference labels, not live availability.
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFacilityFilter("All")}
-                    className={cn(
-                      "rounded-full border px-3.5 py-2 text-[0.78rem] font-semibold transition",
-                      facilityFilter === "All"
-                        ? "border-[rgba(37,99,235,0.2)] bg-[rgba(37,99,235,0.08)] text-[var(--color-primary)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
-                    )}
-                  >
-                    All Facilities
-                  </button>
-                  {EVACUATION_CENTER_FACILITIES.map((facility) => (
-                    <button
-                      key={facility}
-                      type="button"
-                      onClick={() => handleFacilityFilterSelect(facility)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[0.78rem] font-semibold transition",
-                        facilityFilter === facility
-                          ? "border-[rgba(37,99,235,0.3)] bg-[rgba(37,99,235,0.1)] text-[var(--color-primary)]"
-                          : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
-                      )}
-                    >
-                      {FACILITY_ICONS[facility]}
-                      <span>{formatEvacuationFacilityLabel(facility)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div ref={resultsSectionRef} className="space-y-4">
-              {nearestCenter ? (
-                <NearestCenterCard
-                  nearest={nearestCenter}
-                  suggestions={nextNearestCenters}
-                  directionsOrigin={directionsOrigin}
-                />
-              ) : nearestMessage && !isFindingNearest ? (
-                <div className="rounded-[18px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-[0.88rem] text-[var(--color-muted-foreground)]">
-                  {nearestMessage}
-                </div>
-              ) : null}
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                {filteredCenters.map((center) => (
-                  <EvacuationCenterCard
-                    key={center.id}
-                    center={center}
-                    highlighted={activeHighlightedCenterId === center.id}
-                    selectedFromMap={selectedCenterId === center.id}
-                    directionsOrigin={directionsOrigin}
-                    outsideCoverage={!NEARBY_EVACUATION_CENTER_IDS.has(center.id)}
-                    distanceFromCalumpitKm={getEvacuationCenterDistanceKm(center)}
-                  />
-                ))}
-              </div>
-
-              {filteredCenters.length === 0 ? (
-                <div className="rounded-[20px] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 text-[0.9rem] text-[var(--color-muted-foreground)]">
-                  No evacuation centers matched the current search and filters.
-                </div>
-              ) : null}
-            </div>
-
-            <section className="rounded-[20px] border border-[rgba(56,189,248,0.18)] bg-[rgba(15,23,42,0.72)] p-4 shadow-[var(--shadow-soft)] xl:hidden">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 text-sky-300">
-                    <AlertTriangle className="h-4 w-4" />
-                    <h2 className="text-[1rem] font-semibold text-white">
-                      Flood Safety Checklist
-                    </h2>
-                  </div>
-                  <p className="mt-1 text-[0.8rem] text-slate-400">
-                    Quick reminders during flood situations.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setChecklistExpanded((current) => !current)}
-                  className="inline-flex items-center gap-1 rounded-full border border-[rgba(148,163,184,0.2)] px-3 py-1.5 text-[0.74rem] font-semibold text-slate-200"
-                >
-                  <span>{checklistExpanded ? "Show less" : "Show more"}</span>
-                  {checklistExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-
-              <ul className="mt-3 space-y-2">
-                {visibleChecklistItems.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-start gap-2.5 text-[0.82rem] leading-5.5 text-slate-100"
-                  >
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                    <span>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </section>
-
-          <aside className="space-y-4">
-            <section className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-soft)]">
-              <h2 className="text-[1.06rem] font-semibold text-[var(--color-foreground)]">
-                Emergency Contacts
-              </h2>
-              <p className="mt-1 text-[0.86rem] leading-6 text-[var(--color-muted-foreground)]">
-                Contact numbers may vary by location. For immediate life-threatening
-                emergencies, contact your local emergency hotline or authorities.
-              </p>
-
-              <div className="mt-4 space-y-3">
-                {EMERGENCY_RESOURCE_CONTACTS.map((contact) => (
-                  <article
-                    key={contact.id}
-                    className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-panel)] p-3.5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-[0.94rem] font-semibold text-[var(--color-foreground)]">
-                          {contact.name}
-                        </h3>
-                        <div
-                          className={cn(
-                            "mt-1 text-[0.72rem] font-semibold uppercase tracking-[0.08em]",
-                            EMERGENCY_CONTACT_CATEGORY_ACCENTS[contact.category],
-                          )}
-                        >
-                          {contact.category}
-                        </div>
-                      </div>
-                    </div>
-
-                    {contact.phone ? (
-                      <div className="mt-3 text-[0.94rem] font-semibold text-[var(--color-primary)]">
-                        {contact.phone}
-                      </div>
-                    ) : null}
-                    {contact.coverage ? (
-                      <div className="mt-1 text-[0.78rem] text-[var(--color-muted-foreground)]">
-                        {contact.coverage}
-                      </div>
-                    ) : null}
-                    <p className="mt-2 text-[0.82rem] leading-6 text-[var(--color-muted-foreground)]">
-                      {contact.note}
-                    </p>
-                    {contact.sourceName ? (
-                      <div className="mt-2 text-[0.74rem] text-[var(--color-muted-foreground)]">
-                        Source: {contact.sourceName}
-                      </div>
-                    ) : null}
-
-                    {contact.callHref ? (
-                      <a
-                        href={contact.callHref}
-                        className="mt-3 inline-flex h-9 items-center justify-center rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-[0.82rem] font-semibold text-[var(--color-foreground)]"
-                      >
-                        Call
-                      </a>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="hidden rounded-[20px] border border-[rgba(56,189,248,0.18)] bg-[rgba(15,23,42,0.72)] p-4 shadow-[var(--shadow-soft)] xl:block">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 text-sky-300">
-                    <AlertTriangle className="h-4 w-4" />
-                    <h2 className="text-[1rem] font-semibold text-white">
-                      Flood Safety Checklist
-                    </h2>
-                  </div>
-                  <p className="mt-1 text-[0.8rem] text-slate-400">
-                    Quick reminders during flood situations.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setChecklistExpanded((current) => !current)}
-                  className="inline-flex items-center gap-1 rounded-full border border-[rgba(148,163,184,0.2)] px-3 py-1.5 text-[0.74rem] font-semibold text-slate-200"
-                >
-                  <span>{checklistExpanded ? "Show less" : "Show more"}</span>
-                  {checklistExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-
-              <ul className="mt-3 space-y-2">
-                {visibleChecklistItems.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-start gap-2.5 text-[0.82rem] leading-5.5 text-slate-100"
-                  >
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                    <span>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </aside>
+    <details className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <summary className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><SlidersHorizontal aria-hidden="true" className="h-5 w-5" />More filters<ChevronDown aria-hidden="true" className="ml-auto h-5 w-5" /></summary>
+      <div className="grid gap-4 border-t border-[var(--color-border)] p-4">
+        <label className="grid gap-2 text-lg font-medium">Facility type
+          <select value={facilityType} onChange={(event) => setFacilityType(event.target.value)} className="min-h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-lg focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><option value="">All types</option>{facilityTypes.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select>
+        </label>
+        <div className="flex flex-wrap gap-3 md:col-span-2">
+          <button type="button" onClick={findNearest} className="min-h-12 rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><MapPin aria-hidden="true" className="mr-2 inline h-5 w-5" />Sort nearest to me</button>
+          <button type="button" onClick={() => { setLoading(true); setError(null); setRefreshKey((value) => value + 1); }} className="min-h-12 rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Refresh list</button>
         </div>
       </div>
-    </div>
-  );
+    </details>
+
+    {locationMessage ? <p role="status" className="text-lg">{locationMessage}</p> : null}
+    {loading ? <p role="status" className="text-lg">Loading centers…</p> : error ? <div role="alert" className="space-y-3 text-lg"><p>Unable to load centers. Please try again.</p><button type="button" onClick={() => { setLoading(true); setError(null); setRefreshKey((value) => value + 1); }} className="min-h-12 rounded-xl border border-[var(--color-border)] px-5 font-semibold">Retry</button></div> : <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p aria-live="polite" className="text-lg font-semibold">{visibleCenters.length} center{visibleCenters.length === 1 ? "" : "s"} found</p>
+        {hasFilters ? <button type="button" onClick={clearFilters} className="min-h-12 rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Clear search and filters</button> : null}
+      </div>
+      {visibleCenters.length === 0 ? <p className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-lg leading-relaxed">No centers match this search. Try another municipality or clear the filters. This directory is still being expanded.</p> : <div className="grid items-start gap-4 lg:grid-cols-2">
+        {visibleCenters.map((center) => {
+          const status = openingStatusDisplay(center);
+          const listing = centerListingLabel(center);
+          return <article key={center.id} id={`evacuation-center-${center.id}`} className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm sm:p-6">
+            <h2 className="text-xl font-bold leading-snug wrap-break-word">{center.name}</h2>
+            <p className="mt-3 flex items-start gap-2 text-lg leading-relaxed"><MapPin aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-[var(--color-primary)]" />{[center.barangay, center.city].filter(Boolean).join(", ")}</p>
+            <p className={`mt-4 w-fit rounded-lg px-3 py-2 text-lg font-bold ${status.className}`}>{center.openingStatus === "unknown" && listing ? listing : status.label}</p>
+            {center.openingStatus === "unknown" ? <p className="mt-2 text-lg">Check opening before going.</p> : center.availabilityConfirmedAt ? <p className="mt-2 text-base">Updated {formatOperationalUpdate(center.availabilityConfirmedAt)}</p> : null}
+            {origin && hasCenterCoordinates(center) ? <p className="mt-3 text-lg">{calculateDistanceKm(origin, center).toFixed(1)} km direct distance</p> : null}
+            <div className="mt-auto flex flex-wrap gap-3 pt-6">
+              <button type="button" aria-label={`View details for ${center.name}`} onClick={(event) => { triggerRef.current = event.currentTarget; setSelectedId(center.id); }} className="min-h-12 rounded-xl bg-[var(--color-primary)] px-5 text-lg font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View details</button>
+              {hasCenterCoordinates(center) ? <a href={buildDirectionsUrl(center, origin)} aria-label={`Directions to ${center.name}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-5 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><Navigation aria-hidden="true" className="mr-2 h-5 w-5" />Directions</a> : null}
+            </div>
+          </article>;
+        })}
+      </div>}
+      <p className="text-base leading-relaxed text-[var(--color-muted-foreground)]">This partial directory is still being expanded.</p>
+    </>}
+
+    {selectedCenter ? <dialog ref={dialogRef} aria-labelledby="center-detail-title" onClose={() => { setSelectedId(null); triggerRef.current?.focus(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-foreground)] shadow-2xl backdrop:bg-slate-950/70">
+      <div className="p-5 sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <h2 id="center-detail-title" className="text-2xl font-bold leading-snug wrap-break-word">{selectedCenter.name}</h2>
+          <button ref={closeButtonRef} type="button" onClick={() => dialogRef.current?.close()} aria-label="Close details" className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="h-6 w-6" /></button>
+        </div>
+        <p className="mt-3 text-lg">{[selectedCenter.barangay, selectedCenter.city].filter(Boolean).join(", ")}</p>
+        <p className="mt-4 text-lg"><span className="font-semibold">Listing:</span> {centerListingLabel(selectedCenter) ?? "Listing not confirmed"}</p>
+        <p className="mt-3 text-lg"><span className="font-semibold">Opening status:</span> <span className={`inline-block rounded-lg px-3 py-2 font-bold ${openingStatusDisplay(selectedCenter).className}`}>{centerOpeningLabel(selectedCenter)}</span></p>
+        {selectedCenter.openingStatus === "unknown" ? <p className="mt-2 text-lg">Check with the local DRRMO before going.</p> : selectedCenter.availabilityConfirmedAt ? <p className="mt-2 text-base">Operational update: {formatOperationalUpdate(selectedCenter.availabilityConfirmedAt)}</p> : null}
+        {selectedCenter.address ? <p className="mt-5 text-lg leading-relaxed"><span className="font-semibold">Address:</span> {selectedCenter.address}</p> : null}
+        {hasCenterCoordinates(selectedCenter) ? <div className="mt-5 flex flex-wrap gap-3">
+          <Link href={buildCenterMapHref(selectedCenter.id)} className="inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View on map</Link>
+          <a href={buildDirectionsUrl(selectedCenter, origin)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-xl bg-[var(--color-primary)] px-4 text-lg font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><Navigation aria-hidden="true" className="mr-2 h-5 w-5" />Directions</a>
+          <p className="w-full text-base">Map location is a reference. Route safety is not confirmed.</p>
+        </div> : <p className="mt-5 text-lg">Exact location unavailable. Contact the local DRRMO for guidance.</p>}
+        {relevantDrrmo ? <div className="mt-5 rounded-xl border border-[var(--color-border)] p-4 text-lg">
+          <p className="font-semibold">{relevantDrrmo.city ? "Municipal or city DRRMO contact" : "Bulacan PDRRMO contact"}</p>
+          <p>{relevantDrrmo.agencyName}</p>
+          {relevantDrrmo.phones[0] ? <p className="mt-2">{relevantDrrmo.phones[0].telUri ? <a href={relevantDrrmo.phones[0].telUri} className="font-semibold text-[var(--color-primary)] underline">Call {relevantDrrmo.phones[0].raw}</a> : relevantDrrmo.phones[0].raw}</p> : null}
+          <p className="mt-2 text-base">This is the DRRMO contact, not the facility’s direct number. Confirm that the number is current.</p>
+        </div> : null}
+        <Link href="/emergency-hotlines" className="mt-4 inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Find local emergency contacts</Link>
+        {selectedCenter.contactNumber ? <p className="mt-4 text-lg"><span className="font-semibold">Listed facility contact:</span> {selectedCenter.contactNumber}</p> : null}
+        {selectedCenter.facilityType ? <p className="mt-5 text-lg"><span className="font-semibold">Facility type:</span> {selectedCenter.facilityType.replaceAll("_", " ")}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</p> : null}
+        {selectedCenter.estimatedCapacity != null || selectedCenter.capacityFamilies != null ? <p className="mt-4 text-lg leading-relaxed"><span className="font-semibold">Historical or planned capacity:</span> {[selectedCenter.estimatedCapacity != null ? `${selectedCenter.estimatedCapacity} people` : null, selectedCenter.capacityFamilies != null ? `${selectedCenter.capacityFamilies} families` : null].filter(Boolean).join(" · ")}. This is not a count of available spaces.</p> : null}
+        {selectedCenter.facilities.length ? <p className="mt-4 text-lg"><span className="font-semibold">Listed facilities:</span> {selectedCenter.facilities.join(", ").replaceAll("_", " ")}</p> : null}
+
+        <details className="mt-6 border-t border-[var(--color-border)] pt-3">
+          <summary className="flex min-h-12 cursor-pointer items-center text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Sources and updates</summary>
+          <div className="space-y-3 pb-3 text-base leading-relaxed">
+            {selectedCenter.sourceCheckedAt ? <p>Source researched {formatLastVerified(selectedCenter.sourceCheckedAt)}.</p> : null}
+            {selectedCenter.lastDocumentedEventDate ? <p>Documented event: {formatLastVerified(selectedCenter.lastDocumentedEventDate)}.</p> : null}
+            {selectedCenter.verificationStatus === "outdated" ? <p>Source needs rechecking.</p> : null}
+            {selectedCenter.locationProvenance ? <p>{selectedCenter.locationProvenance}</p> : null}
+            {selectedCenter.locationNotes ? <p>{selectedCenter.locationNotes}</p> : null}
+            {selectedCenter.sourceNotes ? <p>{selectedCenter.sourceNotes}</p> : null}
+            {selectedCenter.sourceLinks.length ? <ul className="space-y-2">{selectedCenter.sourceLinks.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{source.title}{source.publishedAt ? ` (${source.publishedAt})` : ""}</a></li>)}</ul> : selectedCenter.sourceUrl ? <a href={selectedCenter.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2">Official source</a> : null}
+          </div>
+        </details>
+      </div>
+    </dialog> : null}
+  </div>;
 }

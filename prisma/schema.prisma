@@ -112,25 +112,36 @@ model ReportUpdate {
 }
 
 model EvacuationCenter {
-  id                      String    @id @default(cuid())
-  name                    String
-  description             String?
-  address                 String
-  city                    String
-  province                String
-  latitude                Float
-  longitude               Float
-  scopeVersion            String    @default("osm-1504656-2026-10-14")
-  contactNumber           String?
-  facilities              String[]
-  status                  String    @default("needs_verification")
-  barangay                String?
-  region                  String?
-  verificationStatus      String    @default("needs_verification")
-  sourceType              String    @default("community_reference")
-  sourceName              String?
-  sourceUrl               String?
-  lastVerifiedAt          DateTime?
+  id                 String    @id @default(cuid())
+  name               String
+  description        String?
+  address            String
+  city               String
+  province           String
+  latitude           Float?
+  longitude          Float?
+  externalKey        String?   @unique
+  sourceSnapshot     Json?
+  sourceCheckedAt    DateTime?
+  facilityType       String?
+  permanent          Boolean?
+  capacityFamilies   Int?
+  lastDocumentedEventDate DateTime?
+  currentOccupancy   Int?
+  currentCapacity    Int?
+  adminEvidenceUrl   String?
+  duplicateReviewNotes String?
+  scopeVersion       String    @default("osm-1504656-2026-10-14")
+  contactNumber      String?
+  facilities         String[]
+  status             String    @default("needs_verification")
+  barangay           String?
+  region             String?
+  verificationStatus String    @default("needs_verification")
+  sourceType         String    @default("community_reference")
+  sourceName         String?
+  sourceUrl          String?
+  lastVerifiedAt     DateTime?
   availabilityConfirmedAt DateTime?
   notes                   String?
   estimatedCapacity       Int?
@@ -162,6 +173,20 @@ model EmergencyContact {
   id            String   @id @default(cuid())
   agencyName    String
   contactNumber String
+  sourceKey     String?  @unique
+  sourceSnapshot Json?
+  phones        Json?
+  sourceFreshness String?
+  preferred     Boolean @default(false)
+  updatedByUserId String?
+  adminEvidenceUrl String?
+  notes         String?
+  duplicateReviewNotes String?
+  sourceUrl     String?
+  lastSourceCheckedAt DateTime?
+  verificationStatus String @default("needs_verification")
+  isArchived    Boolean @default(false)
+  category      String   @default("Local Response")
   region        String?
   province      String?
   city          String?
@@ -169,6 +194,9 @@ model EmergencyContact {
   isNational    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([verificationStatus, isArchived])
+  @@index([province, city])
 }
 
 model AboutContent {

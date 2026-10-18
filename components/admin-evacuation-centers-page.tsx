@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { currentCenterOpeningStatus, centerOpeningLabel } from "@/lib/emergency-resources";
 import { useEffect, useState } from "react";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
@@ -8,12 +9,16 @@ import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 export type AdminCenter = {
   id: string; name: string; description: string | null; address: string;
   barangay: string | null; city: string; province: string;
-  latitude: number; longitude: number; contactNumber: string | null;
+  latitude: number | null; longitude: number | null; contactNumber: string | null;
   facilities: string[]; status: string; verificationStatus: string;
   sourceType: string; sourceName: string | null; sourceUrl: string | null;
   notes: string | null; estimatedCapacity: number | null;
   lastVerifiedAt: string | null; availabilityConfirmedAt: string | null;
   isArchived: boolean; updatedAt: string;
+  externalKey: string | null; sourceSnapshot: unknown; sourceCheckedAt: string | null;
+  facilityType: string | null; permanent: boolean | null; capacityFamilies: number | null;
+  currentOccupancy: number | null; currentCapacity: number | null;
+  adminEvidenceUrl: string | null; duplicateReviewNotes: string | null;
 };
 
 export function AdminEvacuationCentersPage() {
@@ -56,7 +61,7 @@ export function AdminEvacuationCentersPage() {
           <h2 className="mt-2 text-3xl font-bold tracking-tight">Evacuation centers</h2>
           <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">Manage source verification and current availability separately.</p>
         </div>
-        <Link href="/admin/data/new" className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Add center</Link>
+        <div className="flex gap-3"><Link href="/admin/emergency-contacts" className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-semibold">Manage contacts</Link><Link href="/admin/data/new" className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Add center</Link></div>
       </header>
       <div className="flex flex-wrap gap-2">
         <input aria-label="Search centers" value={search} onChange={(event) => { setLoading(true); setError(null); setSearch(event.target.value); setPage(1); }} placeholder="Search name or address" className={filterClass} />
@@ -67,6 +72,7 @@ export function AdminEvacuationCentersPage() {
         <select aria-label="Verification" value={verificationStatus} onChange={(event) => { setLoading(true); setError(null); setVerificationStatus(event.target.value); setPage(1); }} className={filterClass}>
           <option value="">All verification states</option>
           <option value="verified">Verified</option>
+          <option value="official_publication_found">Official publication found</option>
           <option value="needs_verification">Needs verification</option>
           <option value="outdated">Outdated</option>
           <option value="disputed">Disputed</option>
@@ -82,7 +88,9 @@ export function AdminEvacuationCentersPage() {
                 <h3 className="font-semibold">{center.name}</h3>
                 <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{center.address}, {center.city}</p>
                 <p className="mt-3 text-sm">Identity: {center.verificationStatus.replaceAll("_", " ")}</p>
-                <p className="text-sm">Availability: {center.availabilityConfirmedAt ? center.status.replaceAll("_", " ") : "unknown"}</p>
+                {center.externalKey ? <p className="text-xs">Imported: {center.externalKey}</p> : null}
+                {center.duplicateReviewNotes ? <p className="text-xs text-[var(--color-warning)]">Duplicate review: {center.duplicateReviewNotes}</p> : null}
+                <p className="text-sm">Opening status: {centerOpeningLabel({ openingStatus: currentCenterOpeningStatus(center.status, center.availabilityConfirmedAt) })}</p>
                 <p className="text-sm">Estimated capacity: {center.estimatedCapacity ?? "not recorded"}</p>
                 <Link href={`/admin/data/${center.id}`} className="mt-4 inline-block font-semibold text-[var(--color-primary)]">Manage center</Link>
               </article>)}

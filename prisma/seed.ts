@@ -33,14 +33,6 @@ const safetyTipTitles = [
   "Keep emergency contacts accessible",
 ] as const;
 
-const emergencyContactNames = [
-  "National Emergency Hotline 911",
-  "NDRRMC",
-  "Philippine Red Cross",
-  "Bureau of Fire Protection",
-  "Philippine National Police",
-] as const;
-
 async function main() {
   await prisma.$transaction(async (tx) => {
     const now = new Date();
@@ -231,58 +223,6 @@ async function main() {
             "Save hotline numbers on your phone and write them on paper in case you lose power or battery access.",
           category: "Emergency Kit",
           priority: 2,
-        },
-      ],
-    });
-
-    await tx.emergencyContact.deleteMany({
-      where: {
-        agencyName: {
-          in: [...emergencyContactNames],
-        },
-      },
-    });
-
-    await tx.emergencyContact.createMany({
-      data: [
-        {
-          agencyName: emergencyContactNames[0],
-          contactNumber: "911",
-          region: "National Capital Region",
-          description:
-            "National emergency dispatch for police, fire, and medical response.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[1],
-          contactNumber: "(02) 8911-1406",
-          region: "National",
-          description:
-            "National disaster coordination and emergency operations center.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[2],
-          contactNumber: "143",
-          region: "National",
-          description:
-            "Emergency medical transport, rescue support, and humanitarian assistance.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[3],
-          contactNumber: "(02) 8426-0219",
-          region: "National",
-          description:
-            "Fire response, rescue dispatch, and emergency assistance.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[4],
-          contactNumber: "117",
-          region: "National",
-          description: "Police emergency response and incident coordination.",
-          isNational: true,
         },
       ],
     });

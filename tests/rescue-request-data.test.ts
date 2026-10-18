@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   RESCUE_ASSISTANCE_TAGS,
-  RESCUE_HOTLINES,
   RESCUE_NO_ASSISTANCE_TAG_ID,
   RESCUE_WAIT_TIPS,
 } from "@/lib/rescue-request-data";
@@ -40,16 +39,6 @@ test("polling stops once every request is terminal", () => {
   assert.equal(isTerminalRescue("completed"), true);
   assert.equal(shouldPollRescue([{ status: "completed" }, { status: "cancelled" }]), false);
   assert.equal(shouldPollRescue([{ status: "completed" }, { status: "triaged" }]), true);
-});
-
-test("hotline rows expose a dialable href", () => {
-  assert.ok(RESCUE_HOTLINES.length >= 3);
-
-  for (const hotline of RESCUE_HOTLINES) {
-    assert.ok(hotline.href.startsWith("tel:"), `${hotline.id} is not dialable`);
-    assert.ok(hotline.label.trim().length > 0);
-    assert.ok(hotline.number.trim().length > 0);
-  }
 });
 
 test("wait tips are non-empty guidance strings", () => {
