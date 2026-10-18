@@ -15,20 +15,21 @@ function display(value: number | null) { return value === null ? "Unavailable" :
 function stateLabel(state: SourceState) { return state === "locality_unavailable" ? "Locality not recorded for this source" : state === "unavailable" ? "Source unavailable or too large for this view" : ""; }
 
 function VolumeChart({ data }: { data: AnalyticsData }) {
+  const [activeBucketIndex, setActiveBucketIndex] = useState<number | null>(null);
+  const activeBucket = activeBucketIndex === null ? null : data.buckets[activeBucketIndex];
   const max = Math.max(1, ...data.buckets.flatMap((bucket) => series.map((item) => bucket[item.key] ?? 0)));
   const zero = data.buckets.every((bucket) => series.every((item) => !bucket[item.key]));
   return <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-6" aria-label="Operational volume chart">
     <h3 className="text-lg font-semibold">Operational volume</h3>
     <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Created within the selected Manila-time dates. Incidents count once, not once per report.</p>
     <div className="mt-3 flex flex-wrap gap-4 text-xs">{series.map((item) => <span key={item.key} className="flex items-center gap-2"><span className={`h-3 w-3 rounded-sm ${item.color}`} />{item.label}</span>)}</div>
-    {zero ? <p className="mt-5 text-sm">No recorded volume in this range, or selected sources are unavailable.</p> : <div className="mt-5 overflow-x-auto pb-3"><div className="min-w-max">
+    {zero ? <p className="mt-5 text-sm">No recorded volume in this range, or selected sources are unavailable.</p> : <div className="relative mt-5"><div className="overflow-x-auto pb-3"><div className="min-w-max">
       <div className="flex justify-between text-xs text-[var(--color-muted-foreground)]"><span>0</span><span>Scale: {max}</span></div>
-      <div className="mt-1 flex h-48 items-end gap-2 border-b border-[var(--color-border)]">{data.buckets.map((bucket) => <div key={bucket.start} className="group relative flex h-full min-w-12 flex-1 items-end justify-center gap-0.5" title={bucket.label}>
-        {series.map((item) => <button key={item.key} type="button" disabled={bucket[item.key] === null} aria-label={`${bucket.label}: ${item.label} ${display(bucket[item.key])}`} className={`min-h-0 w-3 rounded-t focus-visible:outline-2 focus-visible:outline-offset-2 ${item.color} disabled:opacity-25`} style={{ height: `${Math.max(bucket[item.key] ? 4 : 0, (bucket[item.key] ?? 0) / max * 100)}%` }} />)}
-        <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden min-w-36 rounded-lg bg-slate-950 p-2 text-xs text-white shadow-lg group-hover:block group-focus-within:block">{bucket.label}{series.map((item) => <div key={item.key}>{item.label}: {display(bucket[item.key])}</div>)}</div>
+      <div className="mt-1 flex h-48 items-end gap-2 border-b border-[var(--color-border)]">{data.buckets.map((bucket, index) => <div key={bucket.start} className="flex h-full min-w-12 flex-1 items-end justify-center gap-0.5" onMouseEnter={() => setActiveBucketIndex(index)} onMouseLeave={() => setActiveBucketIndex(null)}>
+        {series.map((item) => <button key={item.key} type="button" disabled={bucket[item.key] === null} onFocus={() => setActiveBucketIndex(index)} onBlur={() => setActiveBucketIndex(null)} aria-label={`${bucket.label}: ${item.label} ${display(bucket[item.key])}`} className={`min-h-0 w-3 rounded-t focus-visible:outline-2 focus-visible:outline-offset-2 ${item.color} disabled:opacity-25`} style={{ height: `${Math.max(bucket[item.key] ? 4 : 0, (bucket[item.key] ?? 0) / max * 100)}%` }} />)}
       </div>)}</div>
       <div className="mt-2 flex gap-2">{data.buckets.map((bucket) => <span key={bucket.start} className="min-w-12 flex-1 text-center text-[10px] text-[var(--color-muted-foreground)]">{bucket.label.slice(5)}</span>)}</div>
-    </div></div>}
+    </div></div>{activeBucket && <div data-testid="volume-tooltip" className="pointer-events-none absolute right-2 top-2 z-10 max-w-[calc(100%-1rem)] rounded-lg bg-slate-950 p-3 text-xs text-white shadow-xl">{activeBucket.label}{series.map((item) => <div key={item.key}>{item.label}: {display(activeBucket[item.key])}</div>)}</div>}</div>}
   </section>;
 }
 

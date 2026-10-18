@@ -35,7 +35,16 @@ test("live filters and CSV agree, and chart bars expose keyboard details", async
   assert.ok(count >= 1);
   const chartBar = page.getByRole("button", { name: /Rescue requests \d+/ }).first();
   await chartBar.focus();
-  await expect(page.getByText(/Rescue requests: /).first()).toBeVisible();
+  const tooltip = page.getByTestId("volume-tooltip");
+  await expect(tooltip).toContainText("Rescue requests:");
+  const chart = page.getByRole("region", { name: "Operational volume chart" });
+  const chartBounds = await chart.boundingBox();
+  const tooltipBounds = await tooltip.boundingBox();
+  assert.ok(chartBounds && tooltipBounds);
+  assert.ok(tooltipBounds.x >= chartBounds.x && tooltipBounds.x + tooltipBounds.width <= chartBounds.x + chartBounds.width);
+  assert.ok(tooltipBounds.y >= chartBounds.y && tooltipBounds.y + tooltipBounds.height <= chartBounds.y + chartBounds.height);
+  await page.getByRole("button", { name: /Rescue requests \d+/ }).last().hover();
+  await expect(tooltip).toBeVisible();
   const href = await page.getByRole("link", { name: "Download matching CSV" }).getAttribute("href");
   const csvResponse = await page.request.get(`http://localhost:3000${href}`, { headers: { Cookie: `floodwatch_auth_session=${token}` } });
   assert.equal(csvResponse.status(), 200);
