@@ -1,13 +1,14 @@
 import { adminSuccessResponse } from "@/lib/admin-api-response";
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { readRescueJson, rescueApiError } from "@/lib/rescue-api";
-import { createRescueRequest, listRescueRequests } from "@/lib/rescue-service";
+import { createRescueRequest } from "@/lib/rescue-service";
+import { listAdminRescueQueue } from "@/lib/admin-rescue-queue";
 
 export async function GET(request: Request) {
   try {
     const auth = await requireProtectedAdminApi(request, { scope: "admin-rescue-list", limit: 120, windowMs: 60_000 });
     if (auth.response) return auth.response;
-    return adminSuccessResponse(request, await listRescueRequests(auth.user.id, new URL(request.url).searchParams, true));
+    return adminSuccessResponse(request, await listAdminRescueQueue(new URL(request.url).searchParams));
   } catch (error) { return rescueApiError(request, error); }
 }
 

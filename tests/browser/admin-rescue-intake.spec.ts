@@ -19,6 +19,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (!db) return;
   const requestIds = (await db.rescueRequest.findMany({ where: { creatorUserId: userId }, select: { id: true } })).map((request) => request.id);
+  await db.adminNotification.deleteMany({ where: { targetId: { in: requestIds } } });
   await db.rescueRequestEvent.deleteMany({ where: { requestId: { in: requestIds } } });
   await db.rescueRequest.deleteMany({ where: { creatorUserId: userId } });
   await db.session.deleteMany({ where: { userId } });
@@ -31,11 +32,12 @@ async function signIn(page: Page) {
 }
 
 async function fillIntake(page: Page) {
-  await page.getByLabel("Callback number").fill("09171234567");
-  await page.getByLabel("Situation").fill("Water is rising at the house");
-  await page.getByLabel("City or municipality").selectOption("0301407000");
-  await page.getByLabel("Barangay").fill("Meysulao");
-  await page.getByLabel("Place description").fill("Near the barangay hall");
+  const form = page.getByTestId("admin-rescue-intake-form");
+  await form.getByLabel("Callback number").fill("09171234567");
+  await form.getByLabel("Situation").fill("Water is rising at the house");
+  await form.getByLabel("City or municipality").selectOption("0301407000");
+  await form.getByLabel("Barangay").fill("Meysulao");
+  await form.getByLabel("Place description").fill("Near the barangay hall");
 }
 
 test("modal traps focus, protects unfinished input, and records one admin-assisted request after retry", async ({ page }) => {

@@ -26,7 +26,7 @@ export function toRescueDto(record: RecordWithEvents, admin = false) {
       nextStatus: event.nextStatus, previousPriority: event.previousPriority,
       nextPriority: event.nextPriority, createdAt: event.createdAt,
       reason: admin ? event.reason : null,
-      note: admin ? event.note : event.eventType === "received" ? event.note : null,
+      note: admin || event.visibility === "public" ? event.note : null,
       ...(admin ? { actorUserId: event.actorUserId, visibility: event.visibility,
         previousCaseOwnerUserId: event.previousCaseOwnerUserId,
         nextCaseOwnerUserId: event.nextCaseOwnerUserId } : {}),

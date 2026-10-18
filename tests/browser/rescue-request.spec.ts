@@ -171,6 +171,25 @@ test.describe("Request Rescue page", () => {
     await expect(page.getByRole("button", { name: "Request cancellation" })).toBeVisible();
   });
 
+  test("keeps the last requester update visible during a failed refresh and reconnects", async ({ page }) => {
+    await page.route("**/api/auth/session", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { user: { id: "test-user", email: "test@example.com", displayName: "Test", role: "user" } } }) }));
+    let unavailable = false;
+    const record = { id: "test-request", reference: "RR-TEST123", status: "received", priority: "routine", version: 1, createdAt: "2026-10-18T03:00:00.000Z", updatedAt: "2026-10-18T03:00:00.000Z", forWhom: "self", primaryContact: "09171234567", peopleCount: 1, vulnerabilityTags: [], description: "Water is rising", locationName: "Meysulao", locationUncertainty: "manual", localityCode: "0301407000", barangay: "Meysulao", events: [{ id: "e1", eventType: "received", nextStatus: "received", createdAt: "2026-10-18T03:00:00.000Z", note: "Request received. Dispatch is not yet confirmed." }] };
+    await page.route("**/api/rescue-requests/test-request", (route) => route.fulfill(unavailable
+      ? { status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporarily unavailable" }) }
+      : { status: 200, contentType: "application/json", body: JSON.stringify({ data: { ...record, status: "triaged", version: 2, events: [...record.events, { id: "e2", eventType: "transition", nextStatus: "triaged", createdAt: "2026-10-18T03:05:00.000Z", note: "Operator is reviewing your request" }] } }) }));
+    await page.goto("/rescue-request/test-request");
+    await expect(page.getByRole("heading", { name: "Under review" })).toBeVisible();
+    unavailable = true;
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect(page.getByText(/Showing last known information/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Under review" })).toBeVisible();
+    unavailable = false;
+    await page.getByRole("button", { name: "Retry" }).click();
+    await expect(page.getByText(/Showing last known information/)).toHaveCount(0);
+    await expect(page.getByText("Operator is reviewing your request")).toBeVisible();
+  });
+
   test("the layout has no horizontal overflow on a phone viewport", async ({
     page,
   }) => {

@@ -7,7 +7,7 @@ import { integrationTest, startTestServer, stopServer, testDatabaseUrl } from ".
 
 integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline", async () => {
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: testDatabaseUrl! }) });
-  const ids = [randomUUID(), randomUUID(), randomUUID()];
+  const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
   const cookies = ids.map((id) => `floodwatch_auth_session=${id}`);
   const runId = randomUUID();
   let server: Awaited<ReturnType<typeof startTestServer>> | undefined;
@@ -16,7 +16,7 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
   let legacyAdminRequestId: string | undefined;
   try {
     for (const [index, id] of ids.entries()) {
-      await db.user.create({ data: { id, email: `rescue-${index}-${runId}@example.com`, passwordHash: "unused", role: index === 2 ? "admin" : "user", emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
+      await db.user.create({ data: { id, email: `rescue-${index}-${runId}@example.com`, passwordHash: "unused", role: index >= 2 ? "admin" : "user", emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
       await db.session.create({ data: { userId: id, tokenHash: hashSessionToken(id), expiresAt: new Date(Date.now() + 60_000) } });
     }
     server = await startTestServer();
@@ -35,6 +35,27 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     assert.equal((await post({ ...intake, description: "Different" }, key)).status, 409);
     assert.equal(await db.rescueRequest.count({ where: { id: requestId } }), 1);
     assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 1);
+    assert.equal(await db.adminNotification.count({ where: { targetId: requestId } }), 2);
+    const notices = await fetch(`${baseUrl}/api/admin/notifications`, { headers: { Cookie: cookies[2] } });
+    assert.equal(notices.status, 200);
+    const noticeBody = await notices.json();
+    assert.equal(noticeBody.data.unreadCount, 1);
+    const noticeId = noticeBody.data.notifications[0].id;
+    const markedRead = await fetch(`${baseUrl}/api/admin/notifications`, { method: "PATCH", headers: { Cookie: cookies[2], Origin: baseUrl, "Content-Type": "application/json" }, body: JSON.stringify({ id: noticeId }) });
+    assert.equal(markedRead.status, 200);
+    assert.equal((await markedRead.json()).data.unreadCount, 0);
+    const queue = await fetch(`${baseUrl}/api/admin/rescue-requests?status=received&priority=routine&search=Meysulao`, { headers: { Cookie: cookies[2] } });
+    assert.equal(queue.status, 200);
+    const queueBody = await queue.json();
+    assert.equal(queueBody.data.requests.some((item: { id: string }) => item.id === requestId), true);
+    assert.equal(queueBody.data.requests.some((item: { primaryContact?: string }) => "primaryContact" in item), false);
+    assert.equal(queueBody.data.summary.total >= 1, true);
+    const exported = await fetch(`${baseUrl}/api/admin/rescue-requests/export?search=${encodeURIComponent(firstBody.data.request.reference)}`, { headers: { Cookie: cookies[2] } });
+    assert.equal(exported.status, 200);
+    const csv = await exported.text();
+    assert.match(csv, /Reference,Received at,Status/);
+    assert.doesNotMatch(csv, /09171234567|Water rising|14\.916/);
+    assert.equal((await fetch(`${baseUrl}/api/admin/rescue-requests/export`, { headers: { Cookie: cookies[0] } })).status, 403);
 
     const ownerRead = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     assert.equal(ownerRead.status, 200);
@@ -54,21 +75,33 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "en_route" })).status, 400);
     assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "triaged" })).status, 200);
     assert.equal((await action({ expectedVersion: 1, action: "priority", priority: "critical" })).status, 409);
+    const competingAction = await fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[3], "Content-Type": "application/json" }, body: JSON.stringify({ expectedVersion: 2, action: "priority", priority: "critical" }) });
+    assert.equal(competingAction.status, 409);
     assert.equal((await action({ expectedVersion: 3, action: "assign", caseOwnerUserId: ids[2] })).status, 200);
     assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route" })).status, 400);
-    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1" })).status, 200);
+    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1" })).status, 400);
+    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1", reason: "Team leader confirmed by phone" })).status, 200);
     assert.equal((await correction({ expectedVersion: 5, action: "cancel" })).status, 200);
     const updated = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     assert.equal((await updated.json()).data.status, "en_route");
     assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 6);
     assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 6);
+    assert.equal((await action({ expectedVersion: 6, action: "note", note: "Private caller details", visibility: "internal" })).status, 200);
+    assert.equal((await action({ expectedVersion: 7, action: "note", note: "Operator is reviewing your request", visibility: "public" })).status, 200);
+    const ownerTimeline = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
+    const ownerEvents = (await ownerTimeline.json()).data.events;
+    assert.equal(ownerEvents.some((event: { note: string | null }) => event.note === "Private caller details"), false);
+    assert.equal(ownerEvents.some((event: { note: string | null }) => event.note === "Operator is reviewing your request"), true);
+    assert.equal((await action({ expectedVersion: 8, action: "transition", nextStatus: "on_scene" })).status, 200);
+    assert.equal((await action({ expectedVersion: 9, action: "transition", nextStatus: "completed", outcome: "Resident moved to agreed safe pickup point" })).status, 200);
+    assert.equal((await action({ expectedVersion: 10, action: "priority", priority: "urgent" })).status, 400);
 
     const assisted = { ...intake, intakeChannel: "admin_assisted", assistedIntakeMethod: "walk_in", priority: "critical", forWhom: "other", assistedPersonName: "Resident", relationship: "Neighbor" };
     const assistedKey = randomUUID();
     const assistedPost = (cookie: string) => fetch(`${baseUrl}/api/admin/rescue-requests`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookie, "Content-Type": "application/json", "Idempotency-Key": assistedKey }, body: JSON.stringify(assisted) });
     assert.equal((await assistedPost(cookies[0])).status, 403);
     const adminIntake = await assistedPost(cookies[2]);
-    assert.equal(adminIntake.status, 201);
+    assert.equal(adminIntake.status, 201, server.output.join("").slice(-2000));
     const adminBody = await adminIntake.json();
     adminRequestId = adminBody.data.request.id;
     assert.equal(adminBody.data.request.priority, "critical");
@@ -93,14 +126,17 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
   } finally {
     if (server) await stopServer(server.server);
     if (requestId) {
+      await db.adminNotification.deleteMany({ where: { targetId: requestId } });
       await db.rescueRequestEvent.deleteMany({ where: { requestId } });
       await db.rescueRequest.deleteMany({ where: { id: requestId } });
     }
     if (adminRequestId) {
+      await db.adminNotification.deleteMany({ where: { targetId: adminRequestId } });
       await db.rescueRequestEvent.deleteMany({ where: { requestId: adminRequestId } });
       await db.rescueRequest.deleteMany({ where: { id: adminRequestId } });
     }
     if (legacyAdminRequestId) {
+      await db.adminNotification.deleteMany({ where: { targetId: legacyAdminRequestId } });
       await db.rescueRequestEvent.deleteMany({ where: { requestId: legacyAdminRequestId } });
       await db.rescueRequest.deleteMany({ where: { id: legacyAdminRequestId } });
     }
