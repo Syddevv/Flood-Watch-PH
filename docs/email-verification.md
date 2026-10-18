@@ -22,6 +22,13 @@ row somehow exists. Login reveals the verification action only after the caller
 has supplied the correct password; nonexistent emails and wrong passwords retain
 the same generic response.
 
+Temporary admin exception: until 1 November 2026 (00:00 UTC), the existing
+`admin@example.com` account may sign in without email verification only if its
+database role is `admin` and its password is correct. This exception is checked
+both when creating and reading sessions. It does not mark the address verified,
+does not apply to other accounts, and expires automatically. Remove the
+exception after the administrator completes normal verification.
+
 Registration returns `409` with an already-registered error when the email is
 in use, including pending accounts. This intentionally reveals account existence
 at registration so the form does not claim a new code was sent. Existing pending

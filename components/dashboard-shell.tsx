@@ -7,6 +7,7 @@ import { Plus, SquareStack, X } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { AboutContent } from "@/components/about-content";
 import { EmergencyHotlinesContent } from "@/components/emergency-hotlines-content";
+import { useEmergencyContacts } from "@/components/use-emergency-contacts";
 import { FloodMap } from "@/components/flood-map";
 import { IncidentReportModal } from "@/components/incident-report-modal";
 import { EvacuationCentersContent } from "@/components/evacuation-centers-content";
@@ -16,16 +17,11 @@ import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
 import { RescueRequestContent } from "@/components/rescue-request-content";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { useAuthSession } from "@/components/auth-session-provider";
-import {
-  NEARBY_EVACUATION_CENTERS,
-  NEARBY_EVACUATION_FEATURED_CENTERS,
-} from "@/lib/evacuation-center-scope";
 import { useReportSessionReady } from "@/components/report-session-provider";
 import { Sidebar } from "@/components/sidebar";
 import { WeatherMonitoringContent } from "@/components/weather-monitoring-content";
 import { WeatherAlertViewer } from "@/components/weather-alert-viewer";
 import {
-  EMERGENCY_HOTLINES,
   FLOOD_LEGEND,
   FLOOD_POLYGONS,
   HOTLINE_NOTICE,
@@ -49,6 +45,7 @@ import {
   mapReportToIncident,
 } from "@/lib/report-ui";
 import { copyPublicReportUrl } from "@/lib/report-share";
+import { hasCenterCoordinates } from "@/lib/emergency-resources";
 import {
   compareReportsByPriority,
   getReportFreshnessBadge,
@@ -56,6 +53,7 @@ import {
 } from "@/lib/report-trust";
 import type {
   EvacuationCenterMapMarker,
+  PublicEvacuationCenter,
   FloodAlert,
   IncidentReport,
   ReportMapMarker,
@@ -274,6 +272,10 @@ export function DashboardShell({
     isEmergencyHotlinesView ||
     isAboutView;
   const [floodMapReports, setFloodMapReports] = useState<IncidentReport[]>([]);
+  const [publicCenters, setPublicCenters] = useState<PublicEvacuationCenter[]>([]);
+  const [centersLoading, setCentersLoading] = useState(true);
+  const [centersError, setCentersError] = useState(false);
+  const { contacts: emergencyContacts, loading: contactsLoading, error: contactsError } = useEmergencyContacts();
   const [floodMapUpdatesByReportId, setFloodMapUpdatesByReportId] = useState<Record<string, ReportDetailResponse["data"]["updates"]>>({});
   const [floodMapLoadingReports, setFloodMapLoadingReports] = useState(false);
   const [floodMapReportLoadError, setFloodMapReportLoadError] = useState<string | null>(null);
@@ -308,6 +310,19 @@ export function DashboardShell({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [userLocationStatus, setUserLocationStatus] = useState<UserLocationStatus>("idle");
   const [userLocationError, setUserLocationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/evacuation-centers", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load evacuation centers.");
+        const payload = await response.json();
+        if (!controller.signal.aborted) setPublicCenters(payload.data.centers);
+      })
+      .catch(() => { if (!controller.signal.aborted) setCentersError(true); })
+      .finally(() => { if (!controller.signal.aborted) setCentersLoading(false); });
+    return () => controller.abort();
+  }, []);
 
   const requestUserLocation = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -726,7 +741,7 @@ export function DashboardShell({
 
   const floodMapEvacuationCenterMarkers = useMemo<EvacuationCenterMapMarker[]>(
     () =>
-      NEARBY_EVACUATION_CENTERS.map((center) => ({
+      publicCenters.filter(hasCenterCoordinates).map((center) => ({
         id: `center-marker-${center.id}`,
         label: "E",
         category: "center",
@@ -736,7 +751,7 @@ export function DashboardShell({
         center,
         status: center.status,
       })),
-    [],
+    [publicCenters],
   );
 
   const floodMapSidebarReports = useMemo(
@@ -1405,7 +1420,8 @@ export function DashboardShell({
 
           <main
             className={cn(
-              "relative h-full min-h-0 overflow-hidden md:col-start-2",
+              "relative h-full min-h-0 md:col-start-2",
+              isEvacuationCentersView || isEmergencyHotlinesView ? "overflow-y-auto" : "overflow-hidden",
               isContentOnlyView && "md:col-end-4",
             )}
           >
@@ -1423,7 +1439,7 @@ export function DashboardShell({
                   </div>
                 }
               >
-                <EvacuationCentersContent />
+                <EvacuationCentersContent contacts={emergencyContacts} />
               </Suspense>
             ) : isIncidentReportsView ? (
               <IncidentReportsContent />
@@ -1517,8 +1533,12 @@ export function DashboardShell({
               weatherError={weatherError}
               alertsLoading={weatherLoading}
               alertsError={weatherError}
-               centers={NEARBY_EVACUATION_FEATURED_CENTERS}
-              hotlines={EMERGENCY_HOTLINES}
+              centers={publicCenters.slice(0, 4)}
+              centersLoading={centersLoading}
+              centersError={centersError}
+              hotlines={emergencyContacts.slice(0, 4)}
+              contactsLoading={contactsLoading}
+              contactsError={contactsError}
               hotlineNotice={HOTLINE_NOTICE}
               timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
               officialAlertsTitle={
@@ -1549,8 +1569,12 @@ export function DashboardShell({
           weatherError={weatherError}
           alertsLoading={weatherLoading}
           alertsError={weatherError}
-           centers={NEARBY_EVACUATION_FEATURED_CENTERS}
-          hotlines={EMERGENCY_HOTLINES}
+          centers={publicCenters.slice(0, 4)}
+          centersLoading={centersLoading}
+          centersError={centersError}
+          hotlines={emergencyContacts.slice(0, 4)}
+          contactsLoading={contactsLoading}
+          contactsError={contactsError}
           hotlineNotice={HOTLINE_NOTICE}
           timestamp={weatherOverview.fetchedAt || LIVE_TIMESTAMP}
           officialAlertsTitle={

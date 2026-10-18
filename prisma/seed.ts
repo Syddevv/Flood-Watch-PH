@@ -24,12 +24,6 @@ const seedReportTitles = [
   "Frances Low-Lying Area Flood Watch",
 ] as const;
 
-const evacuationCenterNames = [
-  "Marikina Sports Center",
-  "Quezon City Memorial Circle Evacuation Area",
-  "Pasig City Rainforest Park Evacuation Site",
-] as const;
-
 const safetyTipTitles = [
   "Prepare an emergency go bag",
   "Avoid walking through floodwater",
@@ -37,14 +31,6 @@ const safetyTipTitles = [
   "Follow official evacuation instructions",
   "Disinfect items after flooding",
   "Keep emergency contacts accessible",
-] as const;
-
-const emergencyContactNames = [
-  "National Emergency Hotline 911",
-  "NDRRMC",
-  "Philippine Red Cross",
-  "Bureau of Fire Protection",
-  "Philippine National Police",
 ] as const;
 
 async function main() {
@@ -186,57 +172,6 @@ async function main() {
       ],
     });
 
-    await tx.evacuationCenter.deleteMany({
-      where: {
-        name: {
-          in: [...evacuationCenterNames],
-        },
-      },
-    });
-
-    await tx.evacuationCenter.createMany({
-      data: [
-        {
-          name: evacuationCenterNames[0],
-          description:
-            "Primary evacuation venue near the Marikina River corridor.",
-          address: "Sumulong Highway, Marikina City",
-          city: "Marikina City",
-          province: "Metro Manila",
-          latitude: 14.6353,
-          longitude: 121.1016,
-          contactNumber: "(02) 8646-2436",
-          facilities: ["Sleeping Area", "Medical Desk", "Charging Station"],
-          status: "Open",
-        },
-        {
-          name: evacuationCenterNames[1],
-          description:
-            "Standby site for families from nearby low-lying barangays.",
-          address: "Elliptical Road, Diliman, Quezon City",
-          city: "Quezon City",
-          province: "Metro Manila",
-          latitude: 14.6512,
-          longitude: 121.0493,
-          contactNumber: "(02) 8988-4242",
-          facilities: ["Relief Goods", "Restrooms", "Pet Area"],
-          status: "Standby",
-        },
-        {
-          name: evacuationCenterNames[2],
-          description:
-            "Community evacuation area serving Pasig and nearby flood-prone zones.",
-          address: "F. Legaspi Bridge, Pasig City",
-          city: "Pasig City",
-          province: "Metro Manila",
-          latitude: 14.5767,
-          longitude: 121.0857,
-          facilities: ["Open Grounds", "Covered Court", "Water Station"],
-          status: "Unknown",
-        },
-      ],
-    });
-
     await tx.safetyTip.deleteMany({
       where: {
         title: {
@@ -288,58 +223,6 @@ async function main() {
             "Save hotline numbers on your phone and write them on paper in case you lose power or battery access.",
           category: "Emergency Kit",
           priority: 2,
-        },
-      ],
-    });
-
-    await tx.emergencyContact.deleteMany({
-      where: {
-        agencyName: {
-          in: [...emergencyContactNames],
-        },
-      },
-    });
-
-    await tx.emergencyContact.createMany({
-      data: [
-        {
-          agencyName: emergencyContactNames[0],
-          contactNumber: "911",
-          region: "National Capital Region",
-          description:
-            "National emergency dispatch for police, fire, and medical response.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[1],
-          contactNumber: "(02) 8911-1406",
-          region: "National",
-          description:
-            "National disaster coordination and emergency operations center.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[2],
-          contactNumber: "143",
-          region: "National",
-          description:
-            "Emergency medical transport, rescue support, and humanitarian assistance.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[3],
-          contactNumber: "(02) 8426-0219",
-          region: "National",
-          description:
-            "Fire response, rescue dispatch, and emergency assistance.",
-          isNational: true,
-        },
-        {
-          agencyName: emergencyContactNames[4],
-          contactNumber: "117",
-          region: "National",
-          description: "Police emergency response and incident coordination.",
-          isNational: true,
         },
       ],
     });

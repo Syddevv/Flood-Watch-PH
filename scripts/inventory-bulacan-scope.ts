@@ -5,12 +5,13 @@ import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { isWithinCalumpit } from "@/lib/calumpit-boundary";
 import { prisma } from "@/lib/prisma";
 
-function classify(rows: Array<{ latitude: number; longitude: number }>) {
+function classify(rows: Array<{ latitude: number | null; longitude: number | null }>) {
   return {
     total: rows.length,
-    withinCalumpit: rows.filter((row) => isWithinCalumpit(row.latitude, row.longitude)).length,
-    withinBulacan: rows.filter((row) => isWithinBulacan(row.latitude, row.longitude)).length,
-    outsideBulacan: rows.filter((row) => !isWithinBulacan(row.latitude, row.longitude)).length,
+    unlocated: rows.filter((row) => row.latitude === null || row.longitude === null).length,
+    withinCalumpit: rows.filter((row) => row.latitude !== null && row.longitude !== null && isWithinCalumpit(row.latitude, row.longitude)).length,
+    withinBulacan: rows.filter((row) => row.latitude !== null && row.longitude !== null && isWithinBulacan(row.latitude, row.longitude)).length,
+    outsideBulacan: rows.filter((row) => row.latitude !== null && row.longitude !== null && !isWithinBulacan(row.latitude, row.longitude)).length,
   };
 }
 

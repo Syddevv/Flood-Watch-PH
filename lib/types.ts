@@ -102,12 +102,15 @@ export type WeatherLocationResult = {
 
 export type EvacuationCenterStatus =
   | "available"
+  | "closed"
+  | "full"
   | "standby"
   | "needs_verification"
   | "temporarily_unavailable";
 
 export type EvacuationCenterVerificationStatus =
   | "verified"
+  | "official_publication_found"
   | "needs_verification"
   | "sample_demo"
   | "outdated";
@@ -115,6 +118,7 @@ export type EvacuationCenterVerificationStatus =
 export type EvacuationCenterSourceType =
   | "official_dswd"
   | "official_lgu"
+  | "official_government"
   | "openstreetmap"
   | "community_reference"
   | "sample_demo";
@@ -146,11 +150,53 @@ export type EvacuationCenterResource = {
   sourceName?: string;
   sourceUrl?: string;
   lastVerifiedAt?: string;
+  locationProvenance?: string | null;
+  sourceLinks?: { title: string; url: string; publishedAt: string | null }[];
+  facilityType?: string | null;
   notes?: string;
   isSample?: boolean;
 };
 
 export type EvacuationCenter = EvacuationCenterResource;
+
+export type PublicEvacuationCenter = Omit<EvacuationCenterResource, "latitude" | "longitude"> & {
+  latitude: number | null;
+  longitude: number | null;
+  listingKind: "center" | "site" | null;
+  openingStatus: "unknown" | "open" | "closed" | "full" | "temporarily_unavailable";
+  availability: "unknown" | "confirmed_available" | "confirmed_unavailable";
+  availabilityConfirmedAt: string | null;
+  facilityType: string | null;
+  permanent: boolean | null;
+  capacityFamilies: number | null;
+  sourceCheckedAt: string | null;
+  lastDocumentedEventDate: string | null;
+  sourceLinks: { title: string; url: string; publishedAt: string | null }[];
+  sourceNotes: string | null;
+  locationProvenance: string | null;
+  locationNotes: string | null;
+};
+
+export type PublicEmergencyContact = {
+  id: string;
+  agencyName: string;
+  contactNumber: string;
+  callHref: string | null;
+  phones: { raw: string; telUri: string | null }[];
+  category: string;
+  description: string | null;
+  city: string | null;
+  province: string | null;
+  isNational: boolean;
+  sourceUrl: string | null;
+  lastSourceCheckedAt: string | null;
+  isStale: boolean;
+  sourceFreshness: string | null;
+  preferred: boolean;
+  sourceLinks: { title: string; url: string; publishedAt: string | null }[];
+  sourceNotes: string | null;
+  emails: string[];
+};
 
 export type EmergencyHotline = {
   id: string;
@@ -299,7 +345,7 @@ export type EvacuationCenterMapMarker = {
   coordinates: [number, number];
   title: string;
   centerId: string;
-  center: EvacuationCenterResource;
+  center: EvacuationCenterResource & Partial<Pick<PublicEvacuationCenter, "listingKind" | "openingStatus" | "availabilityConfirmedAt">>;
   status: EvacuationCenterStatus;
 };
 

@@ -185,36 +185,8 @@ export const RESCUE_WAIT_TIPS: readonly string[] = [
   "Keep your phone charged and volume up for callbacks.",
 ];
 
-export type RescueHotlineRow = {
-  id: string;
-  label: string;
-  number: string;
-  href: string;
-};
-
-export const RESCUE_HOTLINES: readonly RescueHotlineRow[] = [
-  {
-    id: "rescue-hotline-911",
-    label: "National Emergency",
-    number: "911",
-    href: "tel:911",
-  },
-  {
-    id: "rescue-hotline-ndrrmc",
-    label: "NDRRMC Operations",
-    number: "(02) 8911-1406",
-    href: "tel:+63289111406",
-  },
-  {
-    id: "rescue-hotline-coast-guard",
-    label: "Philippine Coast Guard",
-    number: "(02) 8527-8481",
-    href: "tel:+63285278481",
-  },
-];
-
 export const RESCUE_HOTLINE_NOTICE =
-  "For immediate, life-threatening danger, always call 911 first.";
+  "For immediate, life-threatening danger, call an official emergency service first. This form does not dispatch responders.";
 
 export const RESCUE_DISCLAIMER =
   "This is a community-assist tool. Requests are prioritized by responders based on severity and available units. Always follow official advisories from PAGASA, NDRRMC, and your LGU.";

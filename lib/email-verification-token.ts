@@ -118,6 +118,21 @@ export function canUserAuthenticate(
   return Number.isFinite(deadline) && deadline > now;
 }
 
+// Temporary, account-specific exception. Remove after 2026-11-01.
+const TEMP_ADMIN_BYPASS_EXPIRES_AT = Date.parse("2026-11-01T00:00:00.000Z");
+
+export function canAccountAuthenticate(
+  account: { email: string; role: string; emailVerificationStatus: string },
+  legacyGraceDeadline = process.env.LEGACY_EMAIL_GRACE_DEADLINE,
+  now = Date.now(),
+) {
+  if (canUserAuthenticate(account.emailVerificationStatus, legacyGraceDeadline, now)) return true;
+  return account.email.toLowerCase() === "admin@example.com" &&
+    account.role === "admin" &&
+    (account.emailVerificationStatus === "pending" || account.emailVerificationStatus === "legacy_admin_review") &&
+    now < TEMP_ADMIN_BYPASS_EXPIRES_AT;
+}
+
 export function getEmailVerificationState(
   verification: {
     consumedAt: Date | null;

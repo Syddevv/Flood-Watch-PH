@@ -1,566 +1,181 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  Activity,
-  Building2,
-  CloudRain,
-  Copy,
-  LifeBuoy,
-  LocateFixed,
-  MapPinned,
-  Phone,
-  Share2,
-  ShieldAlert,
-  Stethoscope,
-  Waves,
-} from "lucide-react";
+import { ChevronDown, Phone, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EMERGENCY_HOTLINES } from "@/lib/constants";
-import type { EmergencyHotline } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { useEmergencyContacts } from "@/components/use-emergency-contacts";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { matchesContactGroup, resolveContactGroups, type ContactGroup } from "@/lib/emergency-contact-directory";
+import { formatLastVerified } from "@/lib/emergency-resources";
 
-const HOTLINE_FILTERS = [
-  "All",
-  "National",
-  "Local Government",
-  "Flood & Weather",
-  "Medical",
-  "Rescue",
-  "Traffic",
-  "Utilities",
-] as const;
+const inputClass = "min-h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg text-[var(--color-foreground)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]";
+const outlineButton = "inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--color-border)] px-5 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]";
+const callButton = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-lg font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]";
 
-type HotlineFilter = (typeof HOTLINE_FILTERS)[number];
-
-const CATEGORY_META: Record<
-  EmergencyHotline["category"],
-  { title: string; icon: React.ReactNode; accentClassName: string }
-> = {
-  "Emergency Response": {
-    title: "Emergency Response",
-    icon: <ShieldAlert className="h-4 w-4" />,
-    accentClassName: "text-[#ef4444]",
-  },
-  "Flood & Weather Monitoring": {
-    title: "Flood & Weather Monitoring",
-    icon: <Waves className="h-4 w-4" />,
-    accentClassName: "text-[var(--color-primary)]",
-  },
-  "Medical & Health": {
-    title: "Medical & Health",
-    icon: <Stethoscope className="h-4 w-4" />,
-    accentClassName: "text-[#16a34a]",
-  },
-  "Maritime & Water Rescue": {
-    title: "Maritime & Water Rescue",
-    icon: <LifeBuoy className="h-4 w-4" />,
-    accentClassName: "text-[var(--color-primary)]",
-  },
-  "Local DRRM Offices": {
-    title: "Local DRRM Offices",
-    icon: <Building2 className="h-4 w-4" />,
-    accentClassName: "text-[var(--color-foreground)]",
-  },
-  Traffic: {
-    title: "Traffic",
-    icon: <Activity className="h-4 w-4" />,
-    accentClassName: "text-[var(--color-warning)]",
-  },
-  Utilities: {
-    title: "Utilities",
-    icon: <Building2 className="h-4 w-4" />,
-    accentClassName: "text-[var(--color-muted-foreground)]",
-  },
-};
-
-const QUICK_CONTACT_IDS = [
-  "hotline-red-cross",
-  "hotline-mmda",
-  "hotline-pagasa",
-] as const;
-
-const NEARBY_CONTACTS = [
-  {
-    id: "nearby-bulacan",
-    name: "Bulacan DRRMO",
-    detail: "Provincial disaster coordination and rescue support.",
-    coverage: "Region III",
-  },
-  {
-    id: "nearby-rescue",
-    name: "Municipal Rescue Office",
-    detail: "Nearest responder for flood incidents and evacuation support.",
-    coverage: "Local Government",
-  },
-  {
-    id: "nearby-hospital",
-    name: "Nearest Public Hospital",
-    detail: "Emergency medical care and ambulance referral access.",
-    coverage: "Medical",
-  },
-  {
-    id: "nearby-center",
-    name: "Nearest Evacuation Center",
-    detail: "Shelter and relief access during flooding or severe weather.",
-    coverage: "Community Support",
-  },
-];
-
-function normalizeSearchValue(value: string) {
-  return value.trim().toLowerCase();
+function coverage(group: ContactGroup) {
+  return group.primary.isNational ? "National" : group.primary.city ?? "Bulacan-wide";
 }
 
-function HotlineActionButton({
-  icon,
-  label,
-  onClick,
-  variant = "default",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  variant?: "default" | "critical";
-}) {
-  const className = cn(
-    "inline-flex h-11 items-center justify-center gap-2 rounded-[11px] px-4 text-[0.92rem] font-medium leading-5 whitespace-nowrap transition",
-    variant === "critical"
-      ? "border border-[color:color-mix(in_srgb,var(--color-danger)_34%,transparent)] bg-[var(--color-danger)] text-white shadow-[var(--shadow-accent)] hover:brightness-105"
-      : "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-foreground)] hover:bg-[var(--color-panel)]",
-  );
-
-  return (
-    <button type="button" onClick={onClick} className={className}>
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
+function serviceLabel(category: string) {
+  return category.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function HotlineCard({
-  hotline,
-  onCopy,
-  onShare,
-}: {
-  hotline: EmergencyHotline;
-  onCopy: (hotline: EmergencyHotline) => void;
-  onShare: (hotline: EmergencyHotline) => void;
+function PhoneAction({ phone, agency, prominent = false }: {
+  phone: { raw: string; telUri: string | null }; agency: string; prominent?: boolean;
 }) {
-  const Icon = hotline.icon;
-
-  return (
-    <article className="flex h-full flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-4 shadow-[var(--shadow-soft)]">
-      <div className="flex flex-1 items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[var(--color-info-surface)] text-[var(--color-primary)]">
-          <Icon className="h-5 w-5" />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[1rem] font-semibold leading-6 text-[var(--color-foreground)]">
-              {hotline.name}
-            </h3>
-            <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-panel)_86%,transparent)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
-              {hotline.coverage}
-            </span>
-          </div>
-
-          <p className="mt-0.5 text-[0.98rem] font-medium text-[var(--color-primary)]">
-            {hotline.number}
-          </p>
-          <p className="mt-2 text-[0.88rem] leading-6 text-[var(--color-muted-foreground)]">
-            {hotline.serviceDescription}
-          </p>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {hotline.statusBadges.map((badge) => (
-              <span
-                key={badge}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-surface)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-success-text)]"
-              >
-                <span className="h-2 w-2 rounded-full bg-[var(--color-success)]" />
-                {badge}
-              </span>
-            ))}
-          </div>
-
-          <div className="flex-1" />
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <HotlineActionButton
-          icon={<Phone className="h-4 w-4" />}
-          label="Call"
-          onClick={() => {
-            window.location.href = `tel:${hotline.number.replace(/[^\d+]/g, "")}`;
-          }}
-          variant={hotline.number === "911" ? "critical" : "default"}
-        />
-        <HotlineActionButton
-          icon={<Copy className="h-4 w-4" />}
-          label="Copy Number"
-          onClick={() => onCopy(hotline)}
-        />
-        <HotlineActionButton
-          icon={<Share2 className="h-4 w-4" />}
-          label="Share Contact"
-          onClick={() => onShare(hotline)}
-        />
-      </div>
-    </article>
-  );
+  const [message, setMessage] = useState("");
+  const className = prominent ? callButton : outlineButton;
+  if (phone.telUri && /^tel:(?:\+\d{7,15}|\d{3})$/.test(phone.telUri)) {
+    return <a href={phone.telUri} aria-label={`Call ${agency} at ${phone.raw}`} className={className}><Phone aria-hidden="true" className="h-5 w-5" />Call</a>;
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(phone.raw);
+      setMessage("Number copied.");
+    } catch {
+      setMessage("Could not copy. Select the number to copy it.");
+    }
+  }
+  return <div className="grid gap-1">
+    <button type="button" onClick={copy} aria-label={`Copy number for ${agency}: ${phone.raw}`} className={className}>Copy number</button>
+    {message ? <span role="status" className="text-base">{message}</span> : null}
+  </div>;
 }
 
-function QuickContactCard({
-  title,
-  number,
-  description,
-  icon,
-}: {
-  title: string;
-  number: string;
-  description: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <article className="flex h-full flex-col rounded-[20px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-4 shadow-[var(--shadow-soft)]">
-      <div className="flex items-start gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[var(--color-info-surface)] text-[var(--color-primary)]">
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[1rem] font-semibold leading-6 text-[var(--color-foreground)]">
-            {title}
-          </h3>
-          <div className="mt-0.5 text-[1.18rem] font-semibold tracking-[-0.02em] text-[var(--color-primary)]">
-            {number}
-          </div>
-          <p className="mt-1.5 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
-            {description}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1" />
-
-      <a
-        href={`tel:${number.replace(/[^\d+]/g, "")}`}
-        className="floodwatch-primary-action mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-[12px] px-4 text-[0.98rem] font-semibold"
-      >
-        <Phone className="h-4 w-4" />
-        <span>Call Now</span>
-      </a>
-    </article>
-  );
+function ContactCard({ group, onDetails }: { group: ContactGroup; onDetails: (trigger: HTMLButtonElement) => void }) {
+  const phone = group.numbers[0];
+  return <article className="flex min-w-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm sm:p-6">
+    <h3 className="text-xl font-bold leading-snug wrap-break-word">{group.primary.agencyName}</h3>
+    <p className="mt-2 text-lg">{coverage(group)}</p>
+    {phone ? <p className="mt-4 text-2xl font-bold leading-snug text-[var(--color-primary)] break-all select-text">{phone.raw}</p>
+      : <p className="mt-4 text-lg">No published number available.</p>}
+    <div className="mt-auto flex flex-wrap items-center gap-3 pt-5">
+      {phone ? <PhoneAction phone={phone} agency={group.primary.agencyName} prominent={Boolean(phone.telUri)} /> : null}
+      <button type="button" onClick={(event) => onDetails(event.currentTarget)} aria-label={`View details for ${group.primary.agencyName}`} className={outlineButton}>View details</button>
+    </div>
+    {group.numbers.length > 1 ? <button type="button" onClick={(event) => onDetails(event.currentTarget)} className="mt-3 inline-flex min-h-12 w-fit items-center text-left text-lg font-semibold text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">More numbers</button> : null}
+  </article>;
 }
 
 export function EmergencyHotlinesContent() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<HotlineFilter>("All");
-  const [locationEnabled, setLocationEnabled] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { contacts, loading, error, refresh } = useEmergencyContacts(true);
+  const [municipality, setMunicipality] = useState("");
+  const [category, setCategory] = useState("");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const groups = useMemo(() => resolveContactGroups(contacts), [contacts]);
+  const selected = groups.find((group) => group.id === selectedId) ?? null;
+  const categories = useMemo(() => [...new Set(contacts.filter((contact) => !contact.isNational).map((contact) => contact.category))].sort(), [contacts]);
+  const matches = (group: ContactGroup) => matchesContactGroup(group, query, category);
+  const preferredProvincial = groups.filter((group) => !group.primary.isNational && !group.primary.city && group.primary.preferred);
+  const otherProvincial = groups.filter((group) => !group.primary.isNational && !group.primary.city && !group.primary.preferred && matches(group));
+  const local = groups.filter((group) => !group.primary.isNational && group.primary.city &&
+    (!municipality || group.primary.city === municipality) && matches(group));
+  const national = groups.filter((group) => group.primary.isNational && matches(group));
+  const hasFilters = Boolean(municipality || category || query.trim());
 
-  const quickContacts = useMemo(() => {
-    const quickMapped = EMERGENCY_HOTLINES.filter((hotline) =>
-      QUICK_CONTACT_IDS.includes(hotline.id as (typeof QUICK_CONTACT_IDS)[number]),
-    );
-
-    return [
-      {
-        id: "emergency-911",
-        title: "Emergency Hotline",
-        number: "911",
-        description: "Immediate emergency response for life-threatening situations.",
-        icon: <ShieldAlert className="h-5 w-5" />,
-      },
-      ...quickMapped.map((hotline) => ({
-        id: hotline.id,
-        title: hotline.name,
-        number: hotline.number,
-        description: hotline.serviceDescription,
-        icon: <hotline.icon className="h-5 w-5" />,
-      })),
-    ];
-  }, []);
-
-  const filteredHotlines = useMemo(() => {
-    const normalizedQuery = normalizeSearchValue(searchQuery);
-
-    return EMERGENCY_HOTLINES.filter((hotline) => {
-      const matchesFilter =
-        activeFilter === "All" || hotline.filterTags.includes(activeFilter);
-
-      if (!matchesFilter) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const searchableValue = [
-        hotline.name,
-        hotline.number,
-        hotline.coverage,
-        hotline.category,
-        hotline.serviceDescription,
-        ...hotline.filterTags,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchableValue.includes(normalizedQuery);
-    });
-  }, [activeFilter, searchQuery]);
-
-  const groupedHotlines = useMemo(() => {
-    const categoryOrder: EmergencyHotline["category"][] = [
-      "Emergency Response",
-      "Flood & Weather Monitoring",
-      "Medical & Health",
-      "Maritime & Water Rescue",
-      "Local DRRM Offices",
-      "Traffic",
-      "Utilities",
-    ];
-
-    return categoryOrder
-      .map((category) => ({
-        category,
-        hotlines: filteredHotlines.filter((hotline) => hotline.category === category),
-      }))
-      .filter((group) => group.hotlines.length > 0);
-  }, [filteredHotlines]);
-
-  function handleCopy(hotline: EmergencyHotline) {
-    navigator.clipboard
-      .writeText(hotline.number)
-      .then(() => {
-        setCopiedId(hotline.id);
-        window.setTimeout(() => setCopiedId(null), 1800);
-      })
-      .catch(() => undefined);
-  }
-
-  function handleShare(hotline: EmergencyHotline) {
-    const text = `${hotline.name} - ${hotline.number}`;
-
-    if (navigator.share) {
-      navigator.share({
-        title: hotline.name,
-        text,
-      }).catch(() => undefined);
-      return;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (selected && dialog && !dialog.open) {
+      dialog.showModal();
+      closeRef.current?.focus();
     }
+  }, [selected]);
 
-    navigator.clipboard.writeText(text).catch(() => undefined);
+  function openDetails(id: string, trigger: HTMLButtonElement) {
+    triggerRef.current = trigger;
+    setSelectedId(id);
   }
 
-  return (
-    <div className="h-full min-h-0 overflow-y-auto bg-[var(--color-background)]">
-      <div className="mx-auto flex min-h-full w-full max-w-[1320px] flex-col gap-6 px-4 py-5 md:px-7 md:py-7 xl:px-10">
-        <section className="border-b border-[var(--color-border)] pb-5">
-          <h1 className="text-[2.1rem] font-semibold tracking-[-0.04em] text-[var(--color-foreground)]">
-            Emergency Contacts & Assistance
-          </h1>
-          <p className="mt-1.5 max-w-[760px] text-[1rem] text-[var(--color-muted-foreground)]">
-            Quick access to emergency response, rescue, medical, flood, and weather
-            agencies across the Philippines.
-          </p>
-        </section>
+  const card = (group: ContactGroup) => <ContactCard key={group.id} group={group} onDetails={(trigger) => openDetails(group.id, trigger)} />;
 
-        <section className="rounded-[22px] border border-[var(--color-danger-border)] bg-[color:color-mix(in_srgb,var(--color-danger)_6%,var(--color-surface))] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex items-center gap-2 text-[0.82rem] font-semibold tracking-[0.06em] text-[var(--color-danger)]">
-            <ShieldAlert className="h-4 w-4" />
-            <span>Quick Emergency Contacts</span>
-          </div>
+  return <main className="mx-auto w-full max-w-6xl space-y-7 px-4 py-6 pb-24 md:px-8 md:py-8">
+    <header>
+      <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Emergency Contacts</h1>
+      <p className="mt-2 text-lg leading-relaxed">Find emergency help in Bulacan.</p>
+    </header>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {quickContacts.map((contact) => (
-              <QuickContactCard
-                key={contact.id}
-                title={contact.title}
-                number={contact.number}
-                description={contact.description}
-                icon={contact.icon}
-              />
-            ))}
-          </div>
-        </section>
+    {loading ? <p role="status" className="text-lg">Loading contacts…</p> : error ? <div role="alert" className="space-y-3 text-lg"><p>Unable to load contacts. Please try again.</p><button type="button" onClick={refresh} className={outlineButton}>Retry</button></div> : <>
+      <section aria-labelledby="emergency-help-heading" className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] p-4 sm:p-6">
+        <h2 id="emergency-help-heading" className="text-2xl font-bold">Emergency help</h2>
+        <p className="mt-2 text-lg">For immediate danger, use a preferred Bulacan-wide contact. Published numbers are not call-tested.</p>
+        {preferredProvincial.length ? <div className="mt-4 grid gap-4 lg:grid-cols-2">{preferredProvincial.map(card)}</div>
+          : <p className="mt-4 text-lg">No preferred provincial contact is listed. Check with your local DRRMO.</p>}
+      </section>
 
-        <section className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
-                Nearby Emergency Services
-              </h2>
-              <p className="mt-1 text-[0.9rem] text-[var(--color-muted-foreground)]">
-                Based on your location
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setLocationEnabled(true)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.9rem] font-medium text-[var(--color-foreground)]"
-            >
-              <LocateFixed className="h-4 w-4" />
-              <span>{locationEnabled ? "Location Enabled" : "Enable Location Services"}</span>
-            </button>
-          </div>
-
-          {locationEnabled ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {NEARBY_CONTACTS.map((service) => (
-                <div
-                  key={service.id}
-                  className="rounded-[18px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] p-4"
-                >
-                  <div className="flex items-center gap-2 text-[var(--color-primary)]">
-                    <MapPinned className="h-4 w-4" />
-                    <span className="text-[0.76rem] font-semibold tracking-[0.05em]">
-                      Nearby
-                    </span>
-                  </div>
-                  <div className="mt-3 text-[0.98rem] font-semibold text-[var(--color-foreground)]">
-                    {service.name}
-                  </div>
-                  <p className="mt-1 text-[0.84rem] leading-6 text-[var(--color-muted-foreground)]">
-                    {service.detail}
-                  </p>
-                  <div className="mt-3">
-                    <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--color-foreground)]">
-                      {service.coverage}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-4 rounded-[16px] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4 py-4 text-[0.9rem] text-[var(--color-muted-foreground)]">
-              Enable location services to view nearby emergency contacts.
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
-                Search and Filter Hotlines
-              </h2>
-              <p className="mt-1 text-[0.9rem] text-[var(--color-muted-foreground)]">
-                Search agency, hotline, city, or service category.
-              </p>
-            </div>
-
-            {copiedId ? (
-              <div className="rounded-full bg-[var(--color-success-surface)] px-3 py-1.5 text-[0.76rem] font-semibold text-[var(--color-success-text)]">
-                Number copied to clipboard
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-4">
-            <label className="flex min-h-12 items-center gap-3 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_84%,transparent)] px-4">
-              <Phone className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search agency, hotline, city, or service..."
-                className="w-full bg-transparent py-3 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
-              />
-            </label>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {HOTLINE_FILTERS.map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setActiveFilter(filter)}
-                className={cn(
-                  "rounded-full px-3.5 py-2 text-[0.8rem] font-semibold transition",
-                  activeFilter === filter
-                    ? "bg-[var(--color-primary)] text-white"
-                    : "border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
-                )}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-5">
-          {groupedHotlines.map((group) => {
-            const meta = CATEGORY_META[group.category];
-
-            return (
-              <div
-                key={group.category}
-                className="rounded-[22px] border border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-5 shadow-[var(--shadow-soft)]"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={cn("flex items-center gap-2", meta.accentClassName)}>
-                    {meta.icon}
-                    <span className="text-[1.05rem] font-semibold text-[var(--color-foreground)]">
-                      {meta.title}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  {group.hotlines.map((hotline) => (
-                    <HotlineCard
-                      key={hotline.id}
-                      hotline={hotline}
-                      onCopy={handleCopy}
-                      onShare={handleShare}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </section>
-
-        <section className="rounded-[22px] border border-[var(--color-info-border)] bg-[color:color-mix(in_srgb,var(--color-info)_8%,var(--color-surface))] p-5 shadow-[var(--shadow-soft)]">
-          <div className="flex items-center gap-2 text-[var(--color-primary)]">
-            <CloudRain className="h-5 w-5" />
-            <h2 className="text-[1.12rem] font-semibold text-[var(--color-foreground)]">
-              Flood Safety Tips
-            </h2>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {[
-              "Move to higher ground immediately",
-              "Avoid walking or driving through floodwaters",
-              "Monitor official weather advisories",
-              "Prepare an emergency go-bag",
-              "Keep emergency numbers accessible",
-            ].map((tip) => (
-              <div
-                key={tip}
-                className="flex items-start gap-2 rounded-[16px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 py-3 text-[0.9rem] text-[var(--color-foreground)]"
-              >
-                <span className="mt-0.5 text-[var(--color-success)]">✓</span>
-                <span>{tip}</span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className="mt-4 inline-flex h-11 items-center justify-center rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-4 text-[0.92rem] font-semibold text-[var(--color-foreground)]"
-          >
-            View Full Safety Guide
-          </button>
-        </section>
+      <div className="grid gap-5 md:grid-cols-2">
+        <label className="grid gap-2 text-lg font-semibold">Municipality or city
+          <select value={municipality} onChange={(event) => setMunicipality(event.target.value)} className={inputClass}>
+            <option value="">All municipalities</option>
+            {BULACAN_LOCALITIES.map((locality) => <option key={locality.code} value={locality.name}>{locality.name}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-2 text-lg font-semibold">Search agency or service
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} className={inputClass} />
+        </label>
       </div>
-    </div>
-  );
+
+      <details className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <summary className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">More filters<ChevronDown aria-hidden="true" className="ml-auto h-5 w-5" /></summary>
+        <div className="border-t border-[var(--color-border)] p-4"><label className="grid gap-2 text-lg font-medium">Service category
+          <select value={category} onChange={(event) => setCategory(event.target.value)} className={inputClass}><option value="">All services</option>{categories.map((value) => <option key={value} value={value}>{serviceLabel(value)}</option>)}</select>
+        </label></div>
+      </details>
+      {hasFilters ? <button type="button" onClick={() => { setMunicipality(""); setCategory(""); setQuery(""); }} className={outlineButton}>Clear filters</button> : null}
+
+      <section aria-labelledby="local-contacts-heading">
+        <h2 id="local-contacts-heading" className="text-2xl font-bold">{municipality || "Local contacts"}</h2>
+        {local.length ? <div className="mt-4 grid gap-4 lg:grid-cols-2">{local.map(card)}</div>
+          : <p className="mt-4 rounded-xl border border-dashed border-[var(--color-border)] p-5 text-lg">No local contacts match. Try another municipality or clear the filters.</p>}
+      </section>
+
+      <section aria-labelledby="provincial-contacts-heading">
+        <h2 id="provincial-contacts-heading" className="text-2xl font-bold">Other Bulacan-wide contacts</h2>
+        {otherProvincial.length ? <div className="mt-4 grid gap-4 lg:grid-cols-2">{otherProvincial.map(card)}</div>
+          : <p className="mt-4 text-lg">No other Bulacan-wide contacts match.</p>}
+      </section>
+
+      <section aria-labelledby="national-contacts-heading">
+        <h2 id="national-contacts-heading" className="text-2xl font-bold">National emergency contacts</h2>
+        {national.length ? <div className="mt-4 grid gap-4 lg:grid-cols-2">{national.map(card)}</div>
+          : <p className="mt-4 text-lg">No national contact matches or is currently listed.</p>}
+      </section>
+      <button type="button" onClick={refresh} className={outlineButton}>Refresh contacts</button>
+    </>}
+
+    {selected ? <dialog ref={dialogRef} aria-labelledby="contact-detail-title" onClose={() => { setSelectedId(null); triggerRef.current?.focus(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-foreground)] shadow-2xl backdrop:bg-slate-950/70">
+      <div className="p-5 sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <h2 id="contact-detail-title" className="text-2xl font-bold leading-snug wrap-break-word">{selected.primary.agencyName}</h2>
+          <button ref={closeRef} type="button" onClick={() => dialogRef.current?.close()} aria-label="Close details" className="inline-flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="h-6 w-6" /></button>
+        </div>
+        <p className="mt-3 text-lg">{serviceLabel(selected.primary.category)} · {coverage(selected)}</p>
+        {selected.primary.description ? <p className="mt-3 text-lg">{selected.primary.description}</p> : null}
+        <h3 className="mt-6 text-xl font-bold">Published numbers</h3>
+        {selected.numbers.length ? <div className="mt-3 space-y-3">{selected.numbers.map((phone) => <div key={`${phone.from.id}-${phone.raw}`} className="rounded-xl border border-[var(--color-border)] p-4">
+          <p className="text-xl font-bold break-all select-text">{phone.raw}</p>
+          {phone.from.id !== selected.primary.id || phone.from.sourceFreshness === "undated_directory" ? <p className="mt-1 text-base">{phone.from.sourceFreshness === "undated_directory" ? "Older published listing — this number may need updating." : `Also published for ${phone.from.agencyName}. Number not call-tested.`}</p> : null}
+          <div className="mt-3"><PhoneAction phone={phone} agency={phone.from.agencyName} /></div>
+        </div>)}</div> : <p className="mt-2 text-lg">No published number available.</p>}
+        {[...new Set(selected.records.flatMap((record) => record.emails))].map((email) => <p key={email} className="mt-5 text-lg break-all"><span className="font-semibold">Public email:</span> <a href={`mailto:${email}`} className="inline-flex min-h-12 items-center text-[var(--color-primary)] underline">{email}</a></p>)}
+        {[...new Set(selected.records.map((record) => record.sourceNotes).filter((note): note is string => Boolean(note)))].map((note) => <p key={note} className="mt-5 text-lg leading-relaxed">{note}</p>)}
+        <details className="mt-6 border-t border-[var(--color-border)] pt-3">
+          <summary className="flex min-h-12 cursor-pointer items-center text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Sources and updates</summary>
+          <div className="space-y-3 pb-3 text-base leading-relaxed">
+            <p>These are published contacts, not confirmed live phone lines. Source research dates do not confirm a number is reachable.</p>
+            {selected.records.map((record) => <div key={record.id} className="space-y-2 border-t border-[var(--color-border)] pt-3">
+              <p className="font-semibold">{record.agencyName}{record.sourceFreshness === "undated_directory" ? " — older directory" : ""}</p>
+              {record.isStale ? <p>This published number may need updating.</p> : null}
+              {record.lastSourceCheckedAt ? <p>Source researched {formatLastVerified(record.lastSourceCheckedAt)}.</p> : <p>Source date unavailable.</p>}
+              {record.sourceLinks.length ? <ul className="space-y-2">{record.sourceLinks.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center text-[var(--color-primary)] underline underline-offset-2">{source.title}{source.publishedAt ? ` (${source.publishedAt})` : ""}</a></li>)}</ul>
+                : record.sourceUrl ? <a href={record.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center text-[var(--color-primary)] underline">Published source</a> : null}
+            </div>)}
+          </div>
+        </details>
+      </div>
+    </dialog> : null}
+  </main>;
 }

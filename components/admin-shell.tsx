@@ -14,7 +14,7 @@ type NavGroup = readonly [label: string, items: readonly NavItem[]];
 const groups: readonly NavGroup[] = [
   ["COMMAND", [["Overview", "/admin", LayoutDashboard], ["Live Operations Map", "/admin/map", Map]]],
   ["MONITORING", [["Flood Reports", "/admin/reports", FileText], ["Rescue Requests", "/admin/rescue-requests", LifeBuoy]]],
-  ["DATA MANAGEMENT", [["Evacuation Centers", "/admin/data", Building2], ["Covered Areas", "/admin/covered-areas", MapPinned], ["Users & Roles", "/admin/users", Users]]],
+  ["DATA MANAGEMENT", [["Evacuation Centers", "/admin/data", Building2], ["Emergency Contacts", "/admin/emergency-contacts", LifeBuoy], ["Covered Areas", "/admin/covered-areas", MapPinned], ["Users & Roles", "/admin/users", Users]]],
   ["INTELLIGENCE", [["Analytics", "/admin/analytics", BarChart3]]],
   ["SYSTEM", [["Notifications", "/admin/notifications", Radio], ["Audit Logs", "/admin/audit-logs", ScrollText], ["Settings", "/admin/settings", Settings]]],
 ];
