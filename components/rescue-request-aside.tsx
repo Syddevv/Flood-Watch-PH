@@ -1,8 +1,10 @@
+"use client";
+
 import { Phone, ShieldCheck, Waves } from "lucide-react";
 
+import { useEmergencyContacts } from "@/components/use-emergency-contacts";
 import {
   RESCUE_DISCLAIMER,
-  RESCUE_HOTLINES,
   RESCUE_HOTLINE_NOTICE,
   RESCUE_WAIT_TIPS,
 } from "@/lib/rescue-request-data";
@@ -13,6 +15,8 @@ import {
  * screens and stacked underneath the request list on small ones.
  */
 export function RescueRequestAside() {
+  const { contacts, loading, error } = useEmergencyContacts();
+  const hotlines = [...contacts.filter((contact) => !contact.isNational).slice(0, 3), ...contacts.filter((contact) => contact.isNational).slice(0, 1)];
   return (
     <div className="flex flex-col gap-4">
       <section className="rounded-[var(--radius-card)] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] p-4 shadow-[var(--shadow-soft)]">
@@ -40,22 +44,25 @@ export function RescueRequestAside() {
         </h2>
 
         <ul className="mt-3 flex flex-col gap-2">
-          {RESCUE_HOTLINES.map((hotline) => (
+          {hotlines.map((hotline) => (
             <li key={hotline.id}>
               <a
-                href={hotline.href}
+                href={hotline.callHref}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_74%,transparent)] px-3 py-2.5 transition hover:border-[var(--color-danger-border)]"
               >
                 <span className="text-[0.84rem] text-[var(--color-foreground)]">
-                  {hotline.label}
+                  {hotline.agencyName}
                 </span>
                 <span className="text-[0.86rem] font-semibold tabular-nums text-[var(--color-foreground)]">
-                  {hotline.number}
+                  {hotline.contactNumber}
                 </span>
               </a>
+              <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">Source checked {hotline.lastSourceCheckedAt ? new Date(hotline.lastSourceCheckedAt).toLocaleDateString("en-PH") : "unknown"} · {hotline.isStale ? "needs rechecking" : "verified"} · <a href={hotline.sourceUrl ?? undefined} target="_blank" rel="noopener noreferrer" className="underline">Source</a></div>
             </li>
           ))}
         </ul>
+
+        {loading ? <p role="status" className="mt-3 text-sm">Loading verified numbers…</p> : error ? <p role="alert" className="mt-3 text-sm">{error}</p> : hotlines.length === 0 ? <p className="mt-3 text-sm">No verified contact numbers are available here right now.</p> : null}
 
         <p className="mt-3 text-[0.78rem] leading-5 text-[var(--color-danger)]">
           {RESCUE_HOTLINE_NOTICE}

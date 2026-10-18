@@ -157,6 +157,21 @@ export type PublicEvacuationCenter = EvacuationCenterResource & {
   availabilityConfirmedAt: string | null;
 };
 
+export type PublicEmergencyContact = {
+  id: string;
+  agencyName: string;
+  contactNumber: string;
+  callHref: string;
+  category: string;
+  description: string | null;
+  city: string | null;
+  province: string | null;
+  isNational: boolean;
+  sourceUrl: string | null;
+  lastSourceCheckedAt: string | null;
+  isStale: boolean;
+};
+
 export type EmergencyHotline = {
   id: string;
   name: string;

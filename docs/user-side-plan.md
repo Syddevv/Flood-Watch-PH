@@ -121,9 +121,9 @@ The sequence is interleaved: **U5 must follow A0**, and the user rescue journey 
 
 **Tasks**
 - [ ] Consume **A2-owned** canonical public center API/backfill; remove `NEARBY_EVACUATION_CENTERS` as coverage gate from lists, map, cards, detail, featured, and filters. Use nearest distance only for ordering from the viewer’s point, with a municipality/city selector and explicit no-records gaps.
-- [ ] Show source URL, verified date, verification state, archived/stale state policy, and “availability unknown” distinctly from operationally confirmed availability; never infer occupancy from estimated capacity.
+- [x] Show source URL, verified date, verification state, archived/stale state policy, and “availability unknown” distinctly from operationally confirmed availability; never infer occupancy from estimated capacity.
 - [ ] Own contact-data audit and delivery: inventory `EmergencyContact` database rows plus `lib/constants.ts`, `components/emergency-hotlines-content.tsx` quick contacts, `components/rescue-request-aside.tsx`, dashboard panels, and seed/fallback arrays. Import only verified Bulacan provincial/LGU/PDRRMO/MDRRMO/CDRRMO contacts with source URLs and verification dates; deduplicate and remove demo/out-of-province entries. Decide whether applicable national numbers remain in a clearly separate fallback group.
-- [ ] Expose a bounded public `GET /api/emergency-contacts` and admin-maintained/controlled import path for verified updates; show last-checked dates and unknown/missing contacts rather than inventing values.
+- [x] Expose a bounded public `GET /api/emergency-contacts` and admin-maintained/controlled import path for verified updates; show last-checked dates and unknown/missing contacts rather than inventing values.
 
 **Files.** Existing: `components/evacuation-centers-content.tsx`, `components/evacuation-center-card.tsx`, `components/flood-map-client.tsx`, `components/dashboard-shell.tsx`, `components/emergency-hotlines-content.tsx`, `components/rescue-request-aside.tsx`, `lib/constants.ts`, `lib/evacuation-center-scope.ts`, `data/evacuation-centers.ts`, `prisma/seed.ts`, `prisma/schema.prisma`. Proposed: `app/api/emergency-contacts/route.ts`, `lib/emergency-contact-policy.ts`, audited contact import script and migration for contact provenance/verification fields. Center schema/API/import are owned by A2.
 

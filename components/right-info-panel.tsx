@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Check, Clock3, Info, ShieldCheck, ThumbsUp } from "lucide-react";
 
-import { EmergencyHotlineCard } from "@/components/emergency-hotline-card";
+import { PublicEmergencyContactCard } from "@/components/public-emergency-contact-card";
 import { EvacuationCenterCard } from "@/components/evacuation-center-card";
 import { WeatherOverview } from "@/components/weather-overview";
 import { WeatherAlertIcon } from "@/components/weather-alert-icon";
@@ -25,8 +25,8 @@ import {
   getReportTrustSummary,
 } from "@/lib/report-trust";
 import type {
-  EmergencyHotline,
-  EvacuationCenter,
+  PublicEmergencyContact,
+  PublicEvacuationCenter,
   FloodAlert,
   IncidentReport,
   WeatherOverviewData,
@@ -40,8 +40,12 @@ type RightInfoPanelProps = {
   weatherError?: string | null;
   alertsLoading?: boolean;
   alertsError?: string | null;
-  centers: EvacuationCenter[];
-  hotlines: EmergencyHotline[];
+  centers: PublicEvacuationCenter[];
+  centersLoading?: boolean;
+  centersError?: boolean;
+  hotlines: PublicEmergencyContact[];
+  contactsLoading?: boolean;
+  contactsError?: string | null;
   hotlineNotice: string;
   timestamp: string;
   officialAlertsTitle?: string;
@@ -307,7 +311,11 @@ export function RightInfoPanel({
   alerts,
   weather,
   centers,
+  centersLoading = false,
+  centersError = false,
   hotlines,
+  contactsLoading = false,
+  contactsError = null,
   hotlineNotice,
   timestamp,
   officialAlertsTitle = "Active flood alerts",
@@ -397,20 +405,22 @@ export function RightInfoPanel({
 
         <PanelSection
           title="Bulacan evacuation centers"
-          description="Static shelter references only. Confirm availability with your LGU or barangay."
+          description="Sourced location references only. Confirm availability with your LGU or barangay."
         >
           <div className="space-y-2">
             {centers.map((center) => (
               <EvacuationCenterCard key={center.id} center={center} />
             ))}
+            {centersLoading ? <SidebarEmptyState>Loading published centers…</SidebarEmptyState> : centersError ? <SidebarEmptyState>Center records are temporarily unavailable.</SidebarEmptyState> : centers.length === 0 ? <SidebarEmptyState>No sourced Bulacan center is currently published.</SidebarEmptyState> : null}
           </div>
         </PanelSection>
 
         <PanelSection title="Emergency hotlines">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-2">
             {hotlines.map((hotline) => (
-              <EmergencyHotlineCard key={hotline.id} hotline={hotline} />
+              <PublicEmergencyContactCard key={hotline.id} contact={hotline} />
             ))}
+            {contactsLoading ? <p role="status" className="text-sm">Loading verified contacts…</p> : contactsError ? <p role="alert" className="text-sm">Emergency contacts are temporarily unavailable.</p> : hotlines.length === 0 ? <p className="text-sm">No verified contact number is currently published.</p> : null}
           </div>
 
           <div className="mt-3 rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_72%,transparent)] px-3.5 py-3">

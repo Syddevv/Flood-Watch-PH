@@ -1,6 +1,6 @@
 import { CheckCircle2, MapPinned } from "lucide-react";
 
-import type { EvacuationCenter } from "@/lib/types";
+import type { PublicEvacuationCenter } from "@/lib/types";
 import {
   buildEvacuationCenterLocationLabel,
   EVACUATION_STATUS_META,
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export function EvacuationCenterCard({
   center,
 }: {
-  center: EvacuationCenter;
+  center: PublicEvacuationCenter;
 }) {
   const statusMeta = EVACUATION_STATUS_META[center.status];
 
@@ -36,16 +36,17 @@ export function EvacuationCenterCard({
             statusMeta.badgeClassName,
           )}
         >
-          {statusMeta.label}
+          {center.availability === "unknown" ? "Availability unknown" : statusMeta.label}
         </span>
       </div>
 
       {center.lastVerifiedAt ? (
         <div className="mt-1.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--color-muted-foreground)]">
           <CheckCircle2 className="h-3.25 w-3.25 text-[var(--color-success)]" />
-          <span>Last verified {formatLastVerified(center.lastVerifiedAt)}</span>
+          <span>{center.verificationStatus === "outdated" ? "Reference needs rechecking" : "Source checked"} {formatLastVerified(center.lastVerifiedAt)}</span>
         </div>
       ) : null}
+      {center.sourceUrl ? <a href={center.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block text-[0.68rem] text-[var(--color-primary)] underline">Official source</a> : null}
     </article>
   );
 }

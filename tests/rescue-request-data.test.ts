@@ -3,7 +3,6 @@ import test from "node:test";
 
 import {
   RESCUE_ASSISTANCE_TAGS,
-  RESCUE_HOTLINES,
   RESCUE_NO_ASSISTANCE_TAG_ID,
   RESCUE_TIMELINE_STAGES,
   RESCUE_WAIT_TIPS,
@@ -84,16 +83,6 @@ test("a freshly submitted request only has its first stage filled in", () => {
   assert.equal(timeline[0].time, "4:10 PM");
   assert.ok(timeline.slice(1).every((entry) => entry.time === null));
   assert.ok(timeline.slice(1).every((entry) => entry.detail === null));
-});
-
-test("hotline rows expose a dialable href", () => {
-  assert.ok(RESCUE_HOTLINES.length >= 3);
-
-  for (const hotline of RESCUE_HOTLINES) {
-    assert.ok(hotline.href.startsWith("tel:"), `${hotline.id} is not dialable`);
-    assert.ok(hotline.label.trim().length > 0);
-    assert.ok(hotline.number.trim().length > 0);
-  }
 });
 
 test("wait tips are non-empty guidance strings", () => {
