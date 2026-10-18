@@ -1,21 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function signIn(page: Page) {
+  await page.route("**/api/auth/session", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { user: { id: "test-user", email: "test@example.com", displayName: "Test", role: "user" } } }) }));
+  await page.route("**/api/rescue-requests?**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { requests: [], nextCursor: null } }) }));
   await page.goto("/rescue-request");
-  const origin = new URL(page.url()).origin;
-  const response = await page.request.post("/api/auth/register", {
-    headers: { Origin: origin, "Content-Type": "application/json" },
-    data: JSON.stringify({
-      email: `rescue-request-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`,
-      password: "correct-horse-battery",
-    }),
-  });
-  expect(response.status()).toBe(201);
-  await page.reload();
 }
 
 test.describe("Request Rescue page", () => {
-  test("renders the form, sample requests, and the support aside", async ({
+  test("renders the form, empty history, and the support aside", async ({
     page,
   }) => {
     await page.goto("/rescue-request");
@@ -27,7 +19,7 @@ test.describe("Request Rescue page", () => {
     await expect(
       page.getByRole("heading", { name: "My Rescue Requests" }),
     ).toBeVisible();
-    await expect(page.getByTestId("rescue-request-count")).toHaveText("2 requests");
+    await expect(page.getByTestId("rescue-request-count")).toHaveText("0 requests");
 
     // The aside is page-owned, not the shared right info panel.
     await expect(page.getByRole("heading", { name: "While you wait" })).toBeVisible();
@@ -35,12 +27,7 @@ test.describe("Request Rescue page", () => {
       page.getByRole("heading", { name: "Emergency hotlines" }),
     ).toBeVisible();
 
-    // Sample data must stay scoped to Calumpit. The team name legitimately
-    // appears twice by design (the card's assigned-team badge, and its own
-    // "Team Dispatched" timeline note), so this locator is disambiguated with
-    // .first() rather than loosened - it still asserts the text is visible.
-    await expect(page.getByText("Calumpit Rescue 4").first()).toBeVisible();
-    await expect(page.getByText(/Marikina/i)).toHaveCount(0);
+    await expect(page.getByText("Calumpit Rescue 4")).toHaveCount(0);
   });
 
   test("the sidebar marks Request Rescue as the active section", async ({ page }) => {
@@ -104,7 +91,7 @@ test.describe("Request Rescue page", () => {
     await expect(page.getByTestId("rescue-submit")).toBeDisabled();
   });
 
-  test("a signed-in visitor submitting an unpinned form gets a clear error", async ({
+  test("manual location is allowed but contact is required", async ({
     page,
   }) => {
     await signIn(page);
@@ -113,14 +100,39 @@ test.describe("Request Rescue page", () => {
     await expect(page.getByTestId("rescue-submit")).toBeEnabled();
 
     await page.getByTestId("rescue-location-name").fill("Brgy. Meysulao");
+    await page.getByTestId("rescue-locality").selectOption("0301407000");
+    await page.getByTestId("rescue-barangay").fill("Meysulao");
     await page
       .getByTestId("rescue-situation")
       .fill("Water is chest deep and still rising outside.");
     await page.getByTestId("rescue-submit").click();
 
     await expect(page.getByTestId("rescue-form-error")).toContainText(
-      "Pin your location",
+      "contact number",
     );
+  });
+
+  test("a failed submission keeps inputs and retries with one idempotency key", async ({ page }) => {
+    await signIn(page);
+    const keys: string[] = [];
+    await page.route("**/api/rescue-requests", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      keys.push(route.request().headers()["idempotency-key"]);
+      if (keys.length === 1) return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Temporarily unavailable" }) });
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ data: { request: { id: "test-request", reference: "RR-TEST123", status: "received", priority: "routine", version: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), forWhom: "self", primaryContact: "09171234567", alternateContact: null, peopleCount: 1, vulnerabilityTags: [], description: "Water is rising quickly", locationName: "Meysulao", locationUncertainty: "manual", localityCode: "0301407000", barangay: "Meysulao", linkedReportId: null }, replayed: false, nearDuplicate: false } }) });
+    });
+    await page.getByTestId("rescue-location-name").fill("Meysulao");
+    await page.getByTestId("rescue-locality").selectOption("0301407000");
+    await page.getByTestId("rescue-barangay").fill("Meysulao");
+    await page.getByTestId("rescue-situation").fill("Water is rising quickly");
+    await page.getByTestId("rescue-contact").fill("09171234567");
+    await page.getByTestId("rescue-submit").click();
+    await expect(page.getByTestId("rescue-form-error")).toContainText("Temporarily unavailable");
+    await expect(page.getByTestId("rescue-location-name")).toHaveValue("Meysulao");
+    await page.getByTestId("rescue-submit").click();
+    await expect(page.getByTestId("rescue-success")).toContainText("not that a team was dispatched");
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(keys[1]);
   });
 
   test("the layout has no horizontal overflow on a phone viewport", async ({

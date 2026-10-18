@@ -5,11 +5,9 @@ import {
   RESCUE_ASSISTANCE_TAGS,
   RESCUE_HOTLINES,
   RESCUE_NO_ASSISTANCE_TAG_ID,
-  RESCUE_TIMELINE_STAGES,
   RESCUE_WAIT_TIPS,
-  SAMPLE_RESCUE_REQUESTS,
-  buildPendingTimeline,
 } from "@/lib/rescue-request-data";
+import { isTerminalRescue, rescueStatusLabel, shouldPollRescue } from "@/lib/rescue-request-client";
 
 test("assistance tags are unique and include the opt-out tag", () => {
   const ids = RESCUE_ASSISTANCE_TAGS.map((tag) => tag.id);
@@ -25,65 +23,16 @@ test("every assistance tag carries display copy", () => {
   }
 });
 
-test("sample requests reference Calumpit, never the reference mock's Marikina", () => {
-  assert.ok(SAMPLE_RESCUE_REQUESTS.length > 0);
-
-  for (const request of SAMPLE_RESCUE_REQUESTS) {
-    const haystack = `${request.locationName} ${request.assignedTeam ?? ""} ${request.description}`;
-    assert.ok(
-      /calumpit/i.test(request.locationName),
-      `${request.id} is not located in Calumpit`,
-    );
-    assert.ok(!/marikina/i.test(haystack), `${request.id} still mentions Marikina`);
-  }
+test("statuses only claim dispatch after an en-route event", () => {
+  assert.equal(rescueStatusLabel("received"), "Request received");
+  assert.equal(rescueStatusLabel("assigned"), "Coordinator assigned");
+  assert.equal(rescueStatusLabel("en_route"), "Team en route");
 });
 
-test("sample request timelines cover every stage in order", () => {
-  for (const request of SAMPLE_RESCUE_REQUESTS) {
-    assert.deepEqual(
-      request.timeline.map((entry) => entry.stage),
-      [...RESCUE_TIMELINE_STAGES],
-      `${request.id} has an unexpected timeline`,
-    );
-  }
-});
-
-test("sample request timelines never resume after a pending stage", () => {
-  for (const request of SAMPLE_RESCUE_REQUESTS) {
-    const firstPendingIndex = request.timeline.findIndex((entry) => entry.time === null);
-
-    if (firstPendingIndex === -1) {
-      continue;
-    }
-
-    const tail = request.timeline.slice(firstPendingIndex);
-    assert.ok(
-      tail.every((entry) => entry.time === null),
-      `${request.id} has a completed stage after a pending one`,
-    );
-  }
-});
-
-test("sample assistance tag ids all resolve to a defined tag", () => {
-  const known = new Set(RESCUE_ASSISTANCE_TAGS.map((tag) => tag.id));
-
-  for (const request of SAMPLE_RESCUE_REQUESTS) {
-    for (const tagId of request.assistanceTagIds) {
-      assert.ok(known.has(tagId), `${request.id} references unknown tag ${tagId}`);
-    }
-  }
-});
-
-test("a freshly submitted request only has its first stage filled in", () => {
-  const timeline = buildPendingTimeline("4:10 PM");
-
-  assert.deepEqual(
-    timeline.map((entry) => entry.stage),
-    [...RESCUE_TIMELINE_STAGES],
-  );
-  assert.equal(timeline[0].time, "4:10 PM");
-  assert.ok(timeline.slice(1).every((entry) => entry.time === null));
-  assert.ok(timeline.slice(1).every((entry) => entry.detail === null));
+test("polling stops once every request is terminal", () => {
+  assert.equal(isTerminalRescue("completed"), true);
+  assert.equal(shouldPollRescue([{ status: "completed" }, { status: "cancelled" }]), false);
+  assert.equal(shouldPollRescue([{ status: "completed" }, { status: "triaged" }]), true);
 });
 
 test("hotline rows expose a dialable href", () => {

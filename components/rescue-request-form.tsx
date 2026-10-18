@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Accessibility,
   Baby,
-  Camera,
   CircleSlash,
-  CloudUpload,
   HeartPulse,
   LifeBuoy,
   LoaderCircle,
@@ -19,18 +17,13 @@ import {
   Smartphone,
   Stethoscope,
   TriangleAlert,
-  X,
   type LucideIcon,
 } from "lucide-react";
 
 import { IncidentLocationPicker } from "@/components/incident-location-picker";
-import { ReportCameraCapture } from "@/components/report-camera-capture";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { buildCoordinateFallbackLabel } from "@/lib/geo-format";
-import {
-  getReportImageAcceptValue,
-  validateReportImageFile,
-} from "@/lib/report-image-validation";
 import { resolveReportLocationName } from "@/lib/report-location-client";
 import type { ReportLocationSource } from "@/lib/report-location-metadata";
 import {
@@ -70,6 +63,12 @@ const EMPTY_FIELDS = {
   longitude: "",
   situation: "",
   contactNumber: "",
+  alternateContact: "",
+  assistedPersonName: "",
+  relationship: "",
+  localityCode: "",
+  barangay: "",
+  linkedReportId: "",
 };
 
 export function RescueRequestForm({
@@ -77,9 +76,8 @@ export function RescueRequestForm({
   authLoading,
   onSubmit,
 }: RescueRequestFormProps) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [fields, setFields] = useState(EMPTY_FIELDS);
+  const [forWhom, setForWhom] = useState<"self" | "other">("self");
   const [locationSource, setLocationSource] =
     useState<ReportLocationSource>("manual");
   const [gpsAccuracyMeters, setGpsAccuracyMeters] = useState<number | null>(null);
@@ -87,23 +85,10 @@ export function RescueRequestForm({
   const [assistanceTagIds, setAssistanceTagIds] = useState<RescueAssistanceTagId[]>(
     [],
   );
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoCapturedAt, setPhotoCapturedAt] = useState<Date | null>(null);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
-
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState(false);
   const [locatingUser, setLocatingUser] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (photoPreviewUrl) {
-        URL.revokeObjectURL(photoPreviewUrl);
-      }
-    };
-  }, [photoPreviewUrl]);
 
   const submitDisabled = submitting || locatingUser || !signedIn;
 
@@ -112,55 +97,13 @@ export function RescueRequestForm({
     setFields((current) => ({ ...current, [key]: value }));
   }
 
-  function attachPhoto(file: File, capturedAt: Date | null) {
-    const validationError = validateReportImageFile({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
-    if (validationError) {
-      setErrorMessage(validationError);
-      return;
-    }
-
-    // Revoke the previous object URL before replacing it, or the browser holds
-    // the discarded blob for the lifetime of the page.
-    setPhotoPreviewUrl((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-
-      return URL.createObjectURL(file);
-    });
-    setPhoto(file);
-    setPhotoCapturedAt(capturedAt);
-    setErrorMessage(null);
-  }
-
-  function clearPhoto() {
-    setPhotoPreviewUrl((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
-
-      return null;
-    });
-    setPhoto(null);
-    setPhotoCapturedAt(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }
-
   function resetForm() {
     setFields(EMPTY_FIELDS);
+    setForWhom("self");
     setLocationSource("manual");
     setGpsAccuracyMeters(null);
     setPeopleCount(1);
     setAssistanceTagIds([]);
-    clearPhoto();
   }
 
   function handleUseCurrentLocation() {
@@ -217,7 +160,7 @@ export function RescueRequestForm({
       () => {
         setLocatingUser(false);
         setErrorMessage(
-          "Location sharing was blocked. Choose your spot on the map instead.",
+          "Location sharing was blocked. Choose a map pin or describe the place manually.",
         );
       },
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
@@ -236,10 +179,17 @@ export function RescueRequestForm({
       latitude: fields.latitude,
       longitude: fields.longitude,
       situation: fields.situation,
+      allowManual: true,
     });
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    const detailsError = !fields.localityCode ? "Select a Bulacan city or municipality."
+      : !fields.barangay.trim() ? "Enter the barangay."
+      : !fields.contactNumber.trim() ? "Enter a contact number."
+      : forWhom === "other" && !fields.relationship.trim() ? "Describe your relationship to the person needing help."
+      : null;
+
+    if (validationError || detailsError) {
+      setErrorMessage(validationError ?? detailsError);
       return;
     }
 
@@ -248,6 +198,13 @@ export function RescueRequestForm({
 
     try {
       const accepted = await onSubmit({
+        forWhom,
+        assistedPersonName: fields.assistedPersonName,
+        relationship: fields.relationship,
+        alternateContact: fields.alternateContact,
+        localityCode: fields.localityCode,
+        barangay: fields.barangay,
+        linkedReportId: fields.linkedReportId,
         locationName: fields.locationName.trim(),
         latitude: fields.latitude,
         longitude: fields.longitude,
@@ -257,8 +214,6 @@ export function RescueRequestForm({
         assistanceTagIds,
         situation: fields.situation,
         contactNumber: fields.contactNumber,
-        photo,
-        photoCapturedAt,
       });
 
       if (accepted) {
@@ -288,7 +243,7 @@ export function RescueRequestForm({
             <strong className="font-semibold text-[var(--color-danger)]">
               If life is in immediate danger, call 911 now.
             </strong>{" "}
-            Use this form when it is safe to wait for a coordinated rescue team.
+            Submitting this form records a request; it does not guarantee dispatch or a response.
           </span>
         </p>
 
@@ -297,7 +252,7 @@ export function RescueRequestForm({
             Where do you need help?
           </h2>
           <p className="mt-0.5 text-[0.8rem] text-[var(--color-muted-foreground)]">
-            Pin your exact location so responders can reach you quickly.
+            Use GPS, choose on the map, or describe the place if location sharing fails.
           </p>
 
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
@@ -343,6 +298,32 @@ export function RescueRequestForm({
               className="w-full rounded-[var(--radius-control)] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_58%,transparent)] px-3 py-2.5 text-[0.86rem] text-[var(--color-foreground)] outline-none transition placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)]"
             />
           </label>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-medium">City or municipality
+              <select value={fields.localityCode} onChange={(event) => updateField("localityCode", event.target.value)} required data-testid="rescue-locality" className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
+                <option value="">Select location</option>
+                {BULACAN_LOCALITIES.map((place) => <option key={place.code} value={place.code}>{place.name}</option>)}
+              </select>
+            </label>
+            <label className="block text-sm font-medium">Barangay
+              <input value={fields.barangay} onChange={(event) => updateField("barangay", event.target.value)} required maxLength={120} data-testid="rescue-barangay" className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5" />
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">{locationSource === "gps" ? "GPS location provided" : fields.latitude && fields.longitude ? "Map location provided; check the pin" : "Location described manually; exact coordinates unknown"}</p>
+        </section>
+
+        <hr className="my-5 border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)]" />
+
+        <section className="space-y-3">
+          <h2 className="text-[0.95rem] font-semibold">Who needs help?</h2>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <label><input type="radio" name="rescue-for-whom" checked={forWhom === "self"} onChange={() => setForWhom("self")} /> Myself</label>
+            <label><input type="radio" name="rescue-for-whom" checked={forWhom === "other"} onChange={() => setForWhom("other")} /> Someone else</label>
+          </div>
+          {forWhom === "other" ? <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm">Person&apos;s name (if known)<input value={fields.assistedPersonName} onChange={(event) => updateField("assistedPersonName", event.target.value)} maxLength={120} className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5" /></label>
+            <label className="text-sm">Your relationship<input value={fields.relationship} onChange={(event) => updateField("relationship", event.target.value)} required maxLength={80} className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5" /></label>
+          </div> : null}
         </section>
 
         <hr className="my-5 border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)]" />
@@ -483,71 +464,14 @@ export function RescueRequestForm({
           </span>
         </label>
 
-        <section className="mt-4">
-          <h2 className="text-[0.95rem] font-semibold text-[var(--color-foreground)]">
-            Add a photo (optional)
-          </h2>
+        <label className="mt-4 block text-sm font-medium">Alternate contact (optional)
+          <input value={fields.alternateContact} onChange={(event) => updateField("alternateContact", event.target.value)} type="tel" maxLength={RESCUE_MAX_CONTACT_LENGTH} className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5" />
+        </label>
+        <label className="mt-4 block text-sm font-medium">Related flood report ID (optional)
+          <input value={fields.linkedReportId} onChange={(event) => updateField("linkedReportId", event.target.value)} maxLength={100} placeholder="Only a report you submitted" className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5" />
+        </label>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={getReportImageAcceptValue()}
-            className="hidden"
-            data-testid="rescue-photo-input"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-
-              if (file) {
-                attachPhoto(file, null);
-              }
-            }}
-          />
-
-          {photo && photoPreviewUrl ? (
-            <div className="mt-2 flex items-center gap-3 rounded-[var(--radius-control)] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_58%,transparent)] p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photoPreviewUrl}
-                alt="Attached photo preview"
-                className="h-16 w-16 shrink-0 rounded-[10px] object-cover"
-              />
-              <span className="min-w-0 flex-1 truncate text-[0.82rem] text-[var(--color-foreground)]">
-                {photo.name}
-              </span>
-              <button
-                type="button"
-                onClick={clearPhoto}
-                aria-label="Remove photo"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[color:color-mix(in_srgb,var(--color-border)_74%,transparent)] text-[var(--color-muted-foreground)] transition hover:text-[var(--color-danger)]"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 flex flex-col items-center gap-2 rounded-[var(--radius-control)] border border-dashed border-[color:color-mix(in_srgb,var(--color-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_44%,transparent)] px-4 py-6 text-center">
-              <CloudUpload className="h-5 w-5 text-[var(--color-muted-foreground)]" />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                data-testid="rescue-photo-upload"
-                className="text-[0.86rem] font-semibold text-[var(--color-foreground)] underline-offset-4 hover:underline"
-              >
-                Tap to add a photo
-              </button>
-              <p className="text-[0.74rem] text-[var(--color-muted-foreground)]">
-                Helps responders assess the scene
-              </p>
-              <button
-                type="button"
-                onClick={() => setCameraOpen(true)}
-                className="mt-1 inline-flex items-center gap-1.5 text-[0.78rem] font-medium text-[var(--color-primary)]"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                <span>Take a photo instead</span>
-              </button>
-            </div>
-          )}
-        </section>
+        <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">Photo attachments are not available in this private rescue flow yet. A photo is not required.</p>
 
         {errorMessage ? (
           <p
@@ -571,7 +495,7 @@ export function RescueRequestForm({
             >
               Sign in
             </Link>{" "}
-            to send a rescue request so responders can follow up with you safely.
+            to record a rescue request so an operator can review it.
           </p>
         ) : null}
 
@@ -596,19 +520,6 @@ export function RescueRequestForm({
           real rescues.
         </p>
       </form>
-
-      <ReportCameraCapture
-        open={cameraOpen}
-        onClose={() => setCameraOpen(false)}
-        onCapture={(file, capturedAt) => {
-          attachPhoto(file, capturedAt);
-          setCameraOpen(false);
-        }}
-        onUploadInstead={() => {
-          setCameraOpen(false);
-          fileInputRef.current?.click();
-        }}
-      />
 
       {locationPickerOpen ? (
         <IncidentLocationPicker
