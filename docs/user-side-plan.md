@@ -140,11 +140,11 @@ The sequence is interleaved: **U5 must follow A0**, and the user rescue journey 
 **Goal.** Connect the existing discoverable `/rescue-request` form and “My Rescue Requests” view to A0’s protected rescue API and A4’s operations timeline.
 
 **Tasks**
-- [ ] Replace `POST /api/reports` and local random RR IDs with A0 `POST /api/rescue-requests`; preserve form values on recoverable failure and send an idempotency key to prevent duplicate submissions.
-- [ ] Capture requester/contact details, people count, vulnerability needs, situation, precise incident location plus municipality/barangay, whether the request is for self or another person, and optional linked flood report. Verify any linked report is readable by the requester or explicitly allowed.
-- [ ] Keep rescue photos optional and emergency location behavior separate from U2 onsite rules; allow map/manual place description when GPS/camera fails, with clear uncertainty shown to admin. Explain that submission creates a request, not guaranteed dispatch.
-- [ ] Replace sample cards/timeline with owner-only paginated `GET /api/rescue-requests` and detail; show server reference ID, acknowledgment, status/event timestamps, safe requester corrections, and cancellation rules from A0. Use bounded polling with focus/reconnect refresh and stale-state indicator for Vercel; stop polling after terminal state.
-- [ ] Remove wording implying automatic routing to the nearest available team, preexisting dispatch, or a guaranteed response.
+- [x] Replace `POST /api/reports` and local random RR IDs with A0 `POST /api/rescue-requests`; preserve form values on recoverable failure and send an idempotency key to prevent duplicate submissions.
+- [x] Capture requester/contact details, people count, vulnerability needs, situation, precise incident location plus municipality/barangay, whether the request is for self or another person, and optional linked flood report. Verify any linked report is readable by the requester or explicitly allowed.
+- [ ] Keep rescue photos optional and emergency location behavior separate from U2 onsite rules; allow map/manual place description when GPS/camera fails, with clear uncertainty shown to admin. Explain that submission creates a request, not guaranteed dispatch. **Remaining:** the A0 contract has no private photo storage, so the old public-URL photo control is disabled until secure owner/admin-only storage is available.
+- [x] Replace sample cards/timeline with owner-only paginated `GET /api/rescue-requests` and detail; show server reference ID, acknowledgment, status/event timestamps, safe requester corrections, and cancellation rules from A0. Use bounded polling with focus/reconnect refresh and stale-state indicator for Vercel; stop polling after terminal state.
+- [x] Remove wording implying automatic routing to the nearest available team, preexisting dispatch, or a guaranteed response.
 
 **Files.** Existing: `components/rescue-request-content.tsx`, `components/rescue-request-form.tsx`, `components/rescue-request-card.tsx`, `components/rescue-request-aside.tsx`, `lib/rescue-request-data.ts`, `lib/rescue-request-form.ts`, `app/rescue-request/page.tsx`. Proposed: `app/rescue-request/[id]/page.tsx` and client fetch/poll helper under `lib/`. A0 owns schema, migration, validation, and rescue endpoints; U5 changes public UI only.
 

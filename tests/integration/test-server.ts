@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
+import { resolve } from "node:path";
 import test from "node:test";
 
 export const testDatabaseUrl = process.env.TEST_DATABASE_URL;
@@ -107,11 +108,8 @@ async function waitForServer(server: ChildProcess, baseUrl: string) {
 }
 
 /**
- * Kills the full process tree spawned for a test server, not just the
- * immediate `npm` child. `npm run dev` on Linux typically spawns a shell
- * that spawns `next dev`, which itself may spawn Turbopack workers;
- * signaling only the top `npm` PID does not reliably reach those
- * descendants in time. Left-behind descendants keep holding Next's
+ * Kills the full process tree spawned for a test server, including Next's
+ * Turbopack workers. Left-behind descendants can keep holding Next's
  * per-project dev-server lock in `.next/`, causing the *next* `next dev`
  * invocation from the same working directory to immediately exit instead
  * of starting (surfaced as "Next.js test server exited with code 1").
@@ -164,8 +162,8 @@ export async function startTestServer(
   const baseUrl = `http://127.0.0.1:${port}`;
   const output: string[] = [];
   const server = spawn(
-    process.platform === "win32" ? "npm.cmd" : "npm",
-    ["run", "dev", "--", "--hostname", "127.0.0.1", "--port", String(port)],
+    process.execPath,
+    [resolve(process.cwd(), "node_modules", "next", "dist", "bin", "next"), "dev", "--hostname", "127.0.0.1", "--port", String(port)],
     {
       cwd: process.cwd(),
       env: {
@@ -194,8 +192,7 @@ export async function startTestServer(
         TRUSTED_PROXY_CLIENT_IP_HEADER: "x-forwarded-for",
         ...envOverrides,
       },
-      // Own process group on POSIX so stopServer() can signal the whole
-      // tree (npm -> shell -> next dev -> Turbopack workers), not just npm.
+      // Own process group on POSIX so stopServer() can signal Next and its workers.
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
