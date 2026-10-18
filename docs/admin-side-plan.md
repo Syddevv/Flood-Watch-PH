@@ -142,10 +142,10 @@ For MVP, `caseOwnerUserId` refers to an existing administrator coordinator; it d
 **Goal.** Replace all hardcoded operational numbers, chart points, and CSV with auditable aggregates over real Bulacan records.
 
 **Tasks**
-- [ ] Define protected `GET /api/admin/analytics?from&to&localityId&grain` and matching export endpoint with validated ranges/localities, bounded rows, query/index plan, freshness timestamp, and no public cache.
-- [ ] Use the same query/filter policy for cards, charts, and CSV; compute `Asia/Manila` bucket boundaries in a documented way, with range metrics separate from current-state snapshots.
-- [ ] Replace static `volumeByRange`, `barangays`, `severity`, `metrics`, and `downloadCsv` in `components/admin-analytics.tsx`. Use dynamic axes, zero/partial data states, accessible keyboard tooltips, and responsive charts; remove demo fallback figures from production views.
-- [ ] CSV-quote commas/quotes/newlines and neutralize spreadsheet formula prefixes; export only authorized operational aggregates or approved row fields, never routine contact, precise rescue location, or medical/vulnerability data.
+- [x] Define protected `GET /api/admin/analytics?from&to&localityId&grain` and matching export endpoint with validated ranges/localities, bounded rows, query/index plan, freshness timestamp, and no public cache.
+- [x] Use the same query/filter policy for cards, charts, and CSV; compute `Asia/Manila` bucket boundaries in a documented way, with range metrics separate from current-state snapshots.
+- [x] Replace static `volumeByRange`, `barangays`, `severity`, `metrics`, and `downloadCsv` in `components/admin-analytics.tsx`. Use dynamic axes, zero/partial data states, accessible keyboard tooltips, and responsive charts; remove demo fallback figures from production views.
+- [x] CSV-quote commas/quotes/newlines and neutralize spreadsheet formula prefixes; export only authorized operational aggregates or approved row fields, never routine contact, precise rescue location, or medical/vulnerability data.
 
 **Metric contract**
 
