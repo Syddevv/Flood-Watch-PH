@@ -6,7 +6,7 @@ import { trimText } from "@/lib/report-api";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 import { recordAdminAudit } from "@/lib/admin-audit";
-import { canUserAuthenticate } from "@/lib/email-verification-token";
+import { canAccountAuthenticate } from "@/lib/email-verification-token";
 
 type LoginPayload = {
   email?: unknown;
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       return errorResponse(INVALID_CREDENTIALS_MESSAGE, 401);
     }
 
-    if (!canUserAuthenticate(user.emailVerificationStatus)) {
+    if (!canAccountAuthenticate(user)) {
       return Response.json(
         {
           error: "Verify your email before signing in.",

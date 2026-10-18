@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   EMAIL_VERIFICATION_MAX_ATTEMPTS,
+  canAccountAuthenticate,
   canUserAuthenticate,
   generateEmailVerificationCode,
   getEmailVerificationKeys,
@@ -104,4 +105,16 @@ test("only verified and explicit legacy-grace accounts can authenticate", () => 
   assert.equal(canUserAuthenticate("legacy_grace", "2020-01-01T00:00:00.000Z"), false);
   assert.equal(canUserAuthenticate("legacy_grace", ""), false);
   assert.equal(canUserAuthenticate("pending"), false);
+});
+
+test("temporary email bypass is restricted to the named administrator and expires", () => {
+  const beforeExpiry = Date.parse("2026-10-31T00:00:00.000Z");
+  const afterExpiry = Date.parse("2026-11-01T00:00:00.000Z");
+  const admin = { email: "admin@example.com", role: "admin", emailVerificationStatus: "pending" };
+  assert.equal(canAccountAuthenticate(admin, "", beforeExpiry), true);
+  assert.equal(canAccountAuthenticate({ ...admin, role: "user" }, "", beforeExpiry), false);
+  assert.equal(canAccountAuthenticate({ ...admin, email: "other@example.com" }, "", beforeExpiry), false);
+  assert.equal(canAccountAuthenticate({ ...admin, emailVerificationStatus: "unreviewed" }, "", beforeExpiry), false);
+  assert.equal(canAccountAuthenticate(admin, "", afterExpiry), false);
+  assert.equal(canAccountAuthenticate({ ...admin, emailVerificationStatus: "verified" }, "", afterExpiry), true);
 });
