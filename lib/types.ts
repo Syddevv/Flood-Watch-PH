@@ -108,6 +108,7 @@ export type EvacuationCenterStatus =
 
 export type EvacuationCenterVerificationStatus =
   | "verified"
+  | "official_publication_found"
   | "needs_verification"
   | "sample_demo"
   | "outdated";
@@ -115,6 +116,7 @@ export type EvacuationCenterVerificationStatus =
 export type EvacuationCenterSourceType =
   | "official_dswd"
   | "official_lgu"
+  | "official_government"
   | "openstreetmap"
   | "community_reference"
   | "sample_demo";
@@ -146,22 +148,36 @@ export type EvacuationCenterResource = {
   sourceName?: string;
   sourceUrl?: string;
   lastVerifiedAt?: string;
+  locationProvenance?: string | null;
+  sourceLinks?: { title: string; url: string; publishedAt: string | null }[];
+  facilityType?: string | null;
   notes?: string;
   isSample?: boolean;
 };
 
 export type EvacuationCenter = EvacuationCenterResource;
 
-export type PublicEvacuationCenter = EvacuationCenterResource & {
+export type PublicEvacuationCenter = Omit<EvacuationCenterResource, "latitude" | "longitude"> & {
+  latitude: number | null;
+  longitude: number | null;
   availability: "unknown" | "confirmed_available" | "confirmed_unavailable";
   availabilityConfirmedAt: string | null;
+  facilityType: string | null;
+  permanent: boolean | null;
+  capacityFamilies: number | null;
+  sourceCheckedAt: string | null;
+  lastDocumentedEventDate: string | null;
+  sourceLinks: { title: string; url: string; publishedAt: string | null }[];
+  sourceNotes: string | null;
+  locationProvenance: string | null;
 };
 
 export type PublicEmergencyContact = {
   id: string;
   agencyName: string;
   contactNumber: string;
-  callHref: string;
+  callHref: string | null;
+  phones: { raw: string; telUri: string | null }[];
   category: string;
   description: string | null;
   city: string | null;
@@ -170,6 +186,10 @@ export type PublicEmergencyContact = {
   sourceUrl: string | null;
   lastSourceCheckedAt: string | null;
   isStale: boolean;
+  sourceFreshness: string | null;
+  preferred: boolean;
+  sourceLinks: { title: string; url: string; publishedAt: string | null }[];
+  sourceNotes: string | null;
 };
 
 export type EmergencyHotline = {

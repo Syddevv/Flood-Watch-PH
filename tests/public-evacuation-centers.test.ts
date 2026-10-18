@@ -16,6 +16,10 @@ const validCenter = {
   barangay: null, description: null, scopeVersion: "osm-1504656-2026-10-14",
   contactNumber: null, region: "Region III", notes: null,
   archivedAt: null, archivedByUserId: null, updatedByUserId: null,
+  externalKey: null, sourceSnapshot: null, sourceCheckedAt: null,
+  facilityType: null, permanent: null, capacityFamilies: null,
+  lastDocumentedEventDate: null, currentOccupancy: null, currentCapacity: null,
+  adminEvidenceUrl: null, duplicateReviewNotes: null,
   createdAt: recent, updatedAt: recent,
 } satisfies EvacuationCenter;
 
@@ -42,7 +46,19 @@ test("estimated capacity never creates an occupancy or availability claim", () =
   assert.equal("occupancyCount" in publicCenter, false);
   const stale = toPublicCenter({ ...validCenter, lastVerifiedAt: new Date("2020-01-01") });
   assert.equal(stale.verificationStatus, "outdated");
-  assert.equal(stale.availability, "unknown");
+  assert.equal(stale.availability, "confirmed_available");
+});
+
+test("a sourced facility without coordinates stays public but has no invented map point", () => {
+  const center = { ...validCenter, latitude: null, longitude: null,
+    verificationStatus: "official_publication_found", sourceCheckedAt: recent,
+    status: "needs_verification", availabilityConfirmedAt: null };
+  assert.equal(isPublishableCenter(center), true);
+  const publicCenter = toPublicCenter(center);
+  assert.equal(publicCenter.latitude, null);
+  assert.equal(publicCenter.longitude, null);
+  assert.equal(publicCenter.availability, "unknown");
+  assert.equal(publicCenter.status, "needs_verification");
 });
 
 test("admin center input rejects out-of-province, bad capacity, and unsourced verification", () => {

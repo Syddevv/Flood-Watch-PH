@@ -29,6 +29,7 @@ export function EvacuationCenterCard({
           <div className="mt-0.5 truncate text-[0.68rem] text-[var(--color-muted-foreground)]">
             {buildEvacuationCenterLocationLabel(center)}
           </div>
+          {center.facilityType ? <div className="mt-0.5 text-[0.68rem] text-[var(--color-muted-foreground)]">{center.facilityType.replaceAll("_", " ")}</div> : null}
         </div>
         <span
           className={cn(
@@ -36,7 +37,7 @@ export function EvacuationCenterCard({
             statusMeta.badgeClassName,
           )}
         >
-          {center.availability === "unknown" ? "Availability unknown" : statusMeta.label}
+          {center.availability === "unknown" ? "Opening unconfirmed" : statusMeta.label}
         </span>
       </div>
 
@@ -47,6 +48,7 @@ export function EvacuationCenterCard({
         </div>
       ) : null}
       {center.sourceUrl ? <a href={center.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block text-[0.68rem] text-[var(--color-primary)] underline">Official source</a> : null}
+      {center.latitude === null ? <p className="mt-1 text-[0.68rem] text-[var(--color-muted-foreground)]">Exact location unavailable</p> : null}
     </article>
   );
 }

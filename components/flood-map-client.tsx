@@ -30,6 +30,7 @@ import {
 import {
   buildCenterDetailsHref,
   buildDirectionsUrl,
+  CENTER_OPENING_UNKNOWN,
   EVACUATION_STATUS_META,
   summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
@@ -594,8 +595,11 @@ function CenterPopupContent({ marker }: { marker: EvacuationCenterMapMarker }) {
           {marker.center.address}
         </div>
         <div className="mt-1 text-[0.75rem] font-medium text-slate-500">
-          {EVACUATION_STATUS_META[marker.center.status].label}
+            {marker.center.status === "needs_verification" ? CENTER_OPENING_UNKNOWN : EVACUATION_STATUS_META[marker.center.status].label}
         </div>
+        <p className="text-[0.72rem] text-slate-500">{marker.center.facilityType?.replaceAll("_", " ") ?? "Facility type not recorded"} · {marker.center.locationProvenance ?? "Location reference; confirm locally"}</p>
+        <p className="text-[0.72rem] text-slate-500">Source researched {marker.center.lastVerifiedAt ? new Date(marker.center.lastVerifiedAt).toLocaleDateString("en-PH") : "date unavailable"}. Route safety unknown.</p>
+        {marker.center.sourceUrl ? <a href={marker.center.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[0.72rem] text-blue-700 underline">Official source</a> : null}
       </div>
 
       <div className="flex flex-wrap gap-1.5">

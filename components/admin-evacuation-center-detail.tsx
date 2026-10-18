@@ -14,6 +14,9 @@ type Draft = {
   facilities: string[]; status: string; verificationStatus: string;
   sourceType: string; sourceName: string; sourceUrl: string;
   lastVerifiedAt: string; notes: string; estimatedCapacity: string;
+  sourceCheckedAt: string; facilityType: string; permanent: string;
+  currentCapacity: string; currentOccupancy: string; adminEvidenceUrl: string;
+  duplicateReviewNotes: string;
   confirmAvailability: boolean;
 };
 
@@ -23,19 +26,24 @@ const emptyDraft: Draft = {
   status: "needs_verification", verificationStatus: "needs_verification",
   sourceType: "official_lgu", sourceName: "", sourceUrl: "",
   lastVerifiedAt: "", notes: "", estimatedCapacity: "", confirmAvailability: false,
+  sourceCheckedAt: "", facilityType: "", permanent: "", currentCapacity: "", currentOccupancy: "", adminEvidenceUrl: "", duplicateReviewNotes: "",
 };
 
 function fromCenter(center: AdminCenter): Draft {
   return {
     name: center.name, description: center.description ?? "", address: center.address,
     barangay: center.barangay ?? "", city: center.city,
-    latitude: String(center.latitude), longitude: String(center.longitude),
+    latitude: center.latitude?.toString() ?? "", longitude: center.longitude?.toString() ?? "",
     contactNumber: center.contactNumber ?? "", facilities: center.facilities,
     status: center.status, verificationStatus: center.verificationStatus,
     sourceType: center.sourceType, sourceName: center.sourceName ?? "",
     sourceUrl: center.sourceUrl ?? "",
     lastVerifiedAt: center.lastVerifiedAt?.slice(0, 10) ?? "",
     notes: center.notes ?? "", estimatedCapacity: center.estimatedCapacity == null ? "" : String(center.estimatedCapacity),
+    sourceCheckedAt: center.sourceCheckedAt?.slice(0, 10) ?? "", facilityType: center.facilityType ?? "",
+    permanent: center.permanent == null ? "" : String(center.permanent),
+    currentCapacity: center.currentCapacity?.toString() ?? "", currentOccupancy: center.currentOccupancy?.toString() ?? "",
+    adminEvidenceUrl: center.adminEvidenceUrl ?? "", duplicateReviewNotes: center.duplicateReviewNotes ?? "",
     confirmAvailability: false,
   };
 }
@@ -88,8 +96,12 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...draft, province: "Bulacan", region: "Region III",
-          latitude: Number(draft.latitude), longitude: Number(draft.longitude),
+          latitude: draft.latitude ? Number(draft.latitude) : null, longitude: draft.longitude ? Number(draft.longitude) : null,
           estimatedCapacity: draft.estimatedCapacity === "" ? null : Number(draft.estimatedCapacity),
+          currentCapacity: draft.currentCapacity === "" ? null : Number(draft.currentCapacity),
+          currentOccupancy: draft.currentOccupancy === "" ? null : Number(draft.currentOccupancy),
+          permanent: draft.permanent === "" ? null : draft.permanent === "true",
+          sourceCheckedAt: draft.sourceCheckedAt ? new Date(`${draft.sourceCheckedAt}T00:00:00+08:00`).toISOString() : null,
           lastVerifiedAt: draft.lastVerifiedAt ? new Date(`${draft.lastVerifiedAt}T00:00:00+08:00`).toISOString() : null,
           expectedUpdatedAt: center?.updatedAt,
         }),
@@ -130,6 +142,9 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
     <Link href="/admin/data" className="text-sm text-[var(--color-primary)]">← Back to centers</Link>
     <h1 className="text-2xl font-semibold">{center ? `Edit ${center.name}` : "Add evacuation center"}</h1>
     <p className="text-sm text-[var(--color-muted-foreground)]">Only sourced and dated official records become public. Estimated capacity is planning data, not current occupancy.</p>
+    {center?.externalKey ? <p className="text-sm">Imported record: {center.externalKey}. Edits below override source values and survive reimport.</p> : null}
+    {center?.duplicateReviewNotes ? <p className="text-sm text-[var(--color-warning)]">Potential duplicate: {center.duplicateReviewNotes}</p> : null}
+    {center?.sourceSnapshot ? <details className="rounded-lg border border-[var(--color-border)] p-3 text-sm"><summary>View original source values and references</summary><pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(center.sourceSnapshot, null, 2)}</pre></details> : null}
     {error ? <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-red-400">{error}</p> : null}
     {notice ? <p role="status" className="rounded-lg border border-green-500/30 p-3">{notice}</p> : null}
     <form onSubmit={save} className="grid gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:grid-cols-2">
@@ -137,13 +152,18 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
       {select("Municipality or city", "city", BULACAN_LOCALITIES.map((locality) => locality.name))}
       {field("Barangay", "barangay")}
       {field("Latitude", "latitude", "number")}{field("Longitude", "longitude", "number")}
+      <p className="text-xs text-[var(--color-muted-foreground)] md:col-span-2">Leave both coordinates blank when the source does not publish an exact location. Never enter a barangay centroid.</p>
       {field("Contact number", "contactNumber", "tel")}{field("Estimated planning capacity", "estimatedCapacity", "number")}
+      {field("Facility type", "facilityType")}{select("Permanent facility?", "permanent", ["true", "false"])}
+      {field("Current capacity (confirmed)", "currentCapacity", "number")}{field("Current occupancy (confirmed)", "currentOccupancy", "number")}
       {select("Identity verification", "verificationStatus", CENTER_VERIFICATION_STATUSES)}
       {select("Current operational status", "status", CENTER_STATUSES)}
       {select("Source type", "sourceType", CENTER_SOURCE_TYPES)}
       {field("Source name", "sourceName")}{field("Official source URL", "sourceUrl", "url")}
       {field("Last checked date", "lastVerifiedAt", "date")}
+      {field("Source researched date", "sourceCheckedAt", "date")}
       {field("Description", "description")}{field("Internal note", "notes")}
+      {field("Correction evidence URL", "adminEvidenceUrl", "url")}{field("Duplicate review notes", "duplicateReviewNotes")}
       <fieldset className="md:col-span-2"><legend className="text-sm">Facilities</legend><div className="mt-2 flex flex-wrap gap-3">
         {CENTER_FACILITIES.map((facility) => <label key={facility} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={draft.facilities.includes(facility)} onChange={(event) => set("facilities", event.target.checked ? [...draft.facilities, facility] : draft.facilities.filter((item) => item !== facility))} />{facility.replaceAll("_", " ")}</label>)}
       </div></fieldset>

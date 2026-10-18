@@ -60,6 +60,10 @@ export const EVACUATION_VERIFICATION_META: Record<
     badgeClassName:
       "border-[rgba(34,197,94,0.22)] bg-[rgba(34,197,94,0.08)] text-[var(--color-success)]",
   },
+  official_publication_found: {
+    label: "Official publication found; opening unconfirmed",
+    badgeClassName: "border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.08)] text-[#93c5fd]",
+  },
   needs_verification: {
     label: "Needs verification",
     badgeClassName:
@@ -89,6 +93,7 @@ export const EVACUATION_SOURCE_META: Record<
   official_lgu: {
     label: "Official LGU Reference",
   },
+  official_government: { label: "Official government publication" },
   openstreetmap: {
     label: "OpenStreetMap Reference",
   },
@@ -178,7 +183,7 @@ export function formatEvacuationVerificationLabel(
   return EVACUATION_VERIFICATION_META[verificationStatus].label;
 }
 
-export function buildEvacuationCenterLocationLabel(center: EvacuationCenterResource) {
+export function buildEvacuationCenterLocationLabel(center: Pick<EvacuationCenterResource, "barangay" | "city" | "province">) {
   return [center.barangay, center.city, center.province].filter(Boolean).join(", ");
 }
 
@@ -222,6 +227,15 @@ export function buildDirectionsUrl(
   }
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
+}
+
+export const CENTER_OPENING_UNKNOWN = "Opening status unconfirmed — contact the local DRRMO.";
+
+export function hasCenterCoordinates<T extends { latitude: number | null; longitude: number | null }>(
+  center: T,
+): center is T & { latitude: number; longitude: number } {
+  return center.latitude !== null && center.longitude !== null &&
+    Number.isFinite(center.latitude) && Number.isFinite(center.longitude);
 }
 
 export function buildCenterMapHref(centerId: string) {

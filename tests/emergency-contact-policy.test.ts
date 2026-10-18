@@ -11,6 +11,8 @@ const contact = {
   lastSourceCheckedAt: checkedAt, verificationStatus: "verified", isArchived: false,
   category: "Disaster Coordination", region: "Region III", province: "Bulacan", city: null,
   description: null, isNational: false, createdAt: checkedAt, updatedAt: checkedAt,
+  sourceSnapshot: null, phones: null, sourceFreshness: null, preferred: false,
+  updatedByUserId: null, adminEvidenceUrl: null, notes: null, duplicateReviewNotes: null,
 } satisfies EmergencyContact;
 
 test("only sourced, dated, verified Bulacan or national contacts are public", () => {
@@ -27,7 +29,7 @@ test("only sourced, dated, verified Bulacan or national contacts are public", ()
 
 test("public contact omits internal fields and flags stale sources", () => {
   const result = toPublicContact(contact, new Date("2027-02-01"));
-  assert.equal(result.callHref, "tel:+639053333319");
+  assert.equal(result.callHref, null);
   assert.equal(result.isStale, true);
   assert.equal("sourceKey" in result, false);
   assert.equal("verificationStatus" in result, false);
@@ -36,4 +38,16 @@ test("public contact omits internal fields and flags stale sources", () => {
 test("deduplication normalizes local and international phone formats", () => {
   const rows = [contact, { ...contact, id: "duplicate", contactNumber: "+63 905 333 3319" }];
   assert.deepEqual(dedupePublicContacts(rows).map((row) => row.id), ["contact-1"]);
+});
+
+test("only supplied phone URIs become dial links; raw legacy numbers remain copyable", () => {
+  const result = toPublicContact({ ...contact, phones: [
+    { raw: "(044) 123-4567", tel_uri: null },
+    { raw: "0917 123 4567", tel_uri: "tel:+639171234567" },
+  ] });
+  assert.deepEqual(result.phones, [
+    { raw: "(044) 123-4567", telUri: null },
+    { raw: "0917 123 4567", telUri: "tel:+639171234567" },
+  ]);
+  assert.equal(result.callHref, null);
 });

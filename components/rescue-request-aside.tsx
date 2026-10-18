@@ -3,6 +3,7 @@
 import { Phone, ShieldCheck, Waves } from "lucide-react";
 
 import { useEmergencyContacts } from "@/components/use-emergency-contacts";
+import { PublicEmergencyContactCard } from "@/components/public-emergency-contact-card";
 import {
   RESCUE_DISCLAIMER,
   RESCUE_HOTLINE_NOTICE,
@@ -43,24 +44,7 @@ export function RescueRequestAside() {
           <span>Emergency hotlines</span>
         </h2>
 
-        <ul className="mt-3 flex flex-col gap-2">
-          {hotlines.map((hotline) => (
-            <li key={hotline.id}>
-              <a
-                href={hotline.callHref}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-panel)_74%,transparent)] px-3 py-2.5 transition hover:border-[var(--color-danger-border)]"
-              >
-                <span className="text-[0.84rem] text-[var(--color-foreground)]">
-                  {hotline.agencyName}
-                </span>
-                <span className="text-[0.86rem] font-semibold tabular-nums text-[var(--color-foreground)]">
-                  {hotline.contactNumber}
-                </span>
-              </a>
-              <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">Source checked {hotline.lastSourceCheckedAt ? new Date(hotline.lastSourceCheckedAt).toLocaleDateString("en-PH") : "unknown"} · {hotline.isStale ? "needs rechecking" : "verified"} · <a href={hotline.sourceUrl ?? undefined} target="_blank" rel="noopener noreferrer" className="underline">Source</a></div>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-3 flex flex-col gap-2">{hotlines.map((hotline) => <PublicEmergencyContactCard key={hotline.id} contact={hotline} />)}</div>
 
         {loading ? <p role="status" className="mt-3 text-sm">Loading verified numbers…</p> : error ? <p role="alert" className="mt-3 text-sm">{error}</p> : hotlines.length === 0 ? <p className="mt-3 text-sm">No verified contact numbers are available here right now.</p> : null}
 

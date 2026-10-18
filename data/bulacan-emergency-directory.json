@@ -1,0 +1,4099 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "flood-watch-bulacan-official-source-directory",
+  "title": "Bulacan emergency contacts and evacuation facilities — sourced starter directory",
+  "compiled_at": "2026-10-18",
+  "timezone": "Asia/Manila",
+  "country": "PH",
+  "province": "Bulacan",
+  "complete_provincewide_registry": false,
+  "verification_policy": {
+    "meaning": "official_publication_found means a government source names the contact or facility. It does not mean a phone is reachable, a shelter is safe/open, or a location was field-verified.",
+    "source_checked_at_meaning": "Date the publication was researched; never substitute for status_checked_at.",
+    "phone_call_testing_performed": false,
+    "live_evacuation_activation_verified": false,
+    "geocoding_policy": "No inferred coordinates or barangay-centroid pins. Only the supplied Malolos plan coordinates were converted from DMS.",
+    "capacity_policy": "Plan figures are historical estimates, not available beds. Never subtract unknown occupancy from these figures.",
+    "completeness": "Emergency directory covers 24 LGUs; named shelter coverage is partial. This research does not establish all facilities or all official sources."
+  },
+  "summary": {
+    "evacuation_center_records": 43,
+    "emergency_contact_records": 81,
+    "phone_entries": 97,
+    "lgu_contact_coverage": 24,
+    "lgu_evacuation_coverage": 14,
+    "centers_with_source_coordinates": 10,
+    "source_records": 24
+  },
+  "import_guidance": {
+    "format": "One JSON object; import evacuation_centers and emergency_contacts as separate collections. Resolve each source_ids value against sources[].id.",
+    "stable_key": "id",
+    "seed_behavior": "Idempotent upsert by id; preserve admin-created records and admin overrides. Store source data separately from live operational data.",
+    "field_mapping": {
+      "name": "display name",
+      "municipality": "canonical LGU name",
+      "barangay": "nullable subdivision",
+      "latitude": "nullable decimal WGS84 latitude",
+      "longitude": "nullable decimal WGS84 longitude",
+      "capacity_individuals": "nullable historical total from plan",
+      "operational_status": "unknown on initial seed"
+    },
+    "required_status_support": [
+      "unknown",
+      "open",
+      "closed",
+      "full"
+    ],
+    "unknown_status_display": "Opening status unconfirmed — contact the local DRRMO.",
+    "missing_coordinates": "Show in directory; omit map marker and navigation until exact location is confirmed. Never coerce null to zero.",
+    "conflicts": "Prefer dated local authority updates over undated provincial-directory listings, preserving both provenance and superseded values.",
+    "hotline_display": "Label undated contacts as needing reconfirmation. Do not call every number verified active. Click-to-call only when tel_uri is present.",
+    "refresh": "Record future source refreshes and activation updates with separate timestamps. A static seed cannot automatically keep service status current.",
+    "deduplication": "Review Angat San Roque barangay site versus Municipal Evacuation Center compound. Do not merge facilities merely because coordinates or barangay match.",
+    "scope": "Do not broaden scope beyond Bulacan; 911 is retained because Bulacan PDRRMO itself publishes it.",
+    "repo_integration": "Inspect the current Flood Watch schema and UI before writing a migration. No compatibility with an unseen schema is claimed."
+  },
+  "coverage_by_municipality": [
+    {
+      "municipality": "Angat",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 7,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Balagtas",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Baliwag",
+      "emergency_contact_record_count": 6,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Bocaue",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Bulakan",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Bustos",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Calumpit",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 5,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Doña Remedios Trinidad",
+      "emergency_contact_record_count": 1,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Guiguinto",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 2,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Hagonoy",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Malolos",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 12,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Marilao",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 2,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Meycauayan",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Norzagaray",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Obando",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 2,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Pandi",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Paombong",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Plaridel",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "Pulilan",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "San Ildefonso",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 2,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "San Miguel",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "San Rafael",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 0,
+      "evacuation_coverage": "not_established_from_retrieved_sources"
+    },
+    {
+      "municipality": "San Jose del Monte",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 1,
+      "evacuation_coverage": "partial"
+    },
+    {
+      "municipality": "Santa Maria",
+      "emergency_contact_record_count": 3,
+      "evacuation_center_record_count": 5,
+      "evacuation_coverage": "partial"
+    }
+  ],
+  "evacuation_centers": [
+    {
+      "id": "evac-malolos-regional-evacuation-center",
+      "name": "Regional Evacuation Center",
+      "municipality": "Malolos",
+      "barangay": "Bulihan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "New City Hall of Malolos, Bulihan, Malolos, Bulacan",
+      "facility_type": "dedicated_evacuation_center",
+      "permanent": true,
+      "latitude": 14.8611111,
+      "longitude": 120.8105556,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 250,
+      "capacity_families": 60,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-malolos-sport-convention-center",
+      "name": "Malolos Sport Convention Center",
+      "municipality": "Malolos",
+      "barangay": "Bulihan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "New City Hall of Malolos, Bulihan, Malolos, Bulacan",
+      "facility_type": "sports_facility",
+      "permanent": false,
+      "latitude": 14.8608333,
+      "longitude": 120.8094444,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 480,
+      "capacity_families": 120,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-marcelo-h-del-pilar-highschool",
+      "name": "Marcelo H. Del Pilar Highschool",
+      "municipality": "Malolos",
+      "barangay": "Sta. Isabel",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sta. Isabel, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8475,
+      "longitude": 120.8283333,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 1500,
+      "capacity_families": null,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-malolos-city-highschool-stma-trinidad",
+      "name": "Malolos City Highschool (Stma. Trinidad)",
+      "municipality": "Malolos",
+      "barangay": "Stma. Trinidad",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Stma. Trinidad, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8761111,
+      "longitude": 120.8255556,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 20,
+      "capacity_families": null,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-malolos-marine-fishery-school-and-laboratory",
+      "name": "Malolos Marine Fishery School and Laboratory",
+      "municipality": "Malolos",
+      "barangay": "Balite",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Balite, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8269444,
+      "longitude": 120.8352778,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 130,
+      "capacity_families": 26,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-pamarawan-highschool",
+      "name": "Pamarawan Highschool",
+      "municipality": "Malolos",
+      "barangay": "Pamarawan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Pamarawan, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.7591667,
+      "longitude": 120.8141667,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 20,
+      "capacity_families": null,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-sta-isabel-elementary-school",
+      "name": "Sta. Isabel Elementary School",
+      "municipality": "Malolos",
+      "barangay": "Sta. Isabel",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sta. Isabel, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8408333,
+      "longitude": 120.835,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 400,
+      "capacity_families": null,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-city-of-malolos-integrated-school-sto-rosario",
+      "name": "City of Malolos Integrated School - Sto. Rosario",
+      "municipality": "Malolos",
+      "barangay": "Sto. Rosario",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sto. Rosario, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.84,
+      "longitude": 120.8141667,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 800,
+      "capacity_families": null,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-caingin-elementary-school",
+      "name": "Caingin Elementary School",
+      "municipality": "Malolos",
+      "barangay": "Caingin",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Caingin, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8433333,
+      "longitude": 120.8069444,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 50,
+      "capacity_families": 10,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-malolos-bulihan-elementary-school",
+      "name": "Bulihan Elementary School",
+      "municipality": "Malolos",
+      "barangay": "Bulihan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Bulihan, Malolos, Bulacan",
+      "facility_type": "school",
+      "permanent": false,
+      "latitude": 14.8563889,
+      "longitude": 120.8116667,
+      "coordinate_method": "source_dms_converted_to_decimal",
+      "coordinate_precision": "source_published_not_field_checked",
+      "capacity_individuals": 150,
+      "capacity_families": 50,
+      "capacity_basis": "historical_plan_not_live_availability",
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "source_pin_with_unconfirmed_label",
+      "facility_phone": null,
+      "notes": "Capacity and coordinates reproduced from the 2022–2026 plan; current suitability and total capacity require reconfirmation. Source spellings retained."
+    },
+    {
+      "id": "evac-angat-sta-cruz-barangay-evacuation-center",
+      "name": "Sta. Cruz Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "Sta. Cruz",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sta. Cruz, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-sto-cristo-barangay-evacuation-center",
+      "name": "Sto. Cristo Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "Sto. Cristo",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sto. Cristo, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-san-roque-barangay-evacuation-center",
+      "name": "San Roque Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "San Roque",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "San Roque, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-niugan-barangay-evacuation-center",
+      "name": "Niugan Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "Niugan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Niugan, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-banaban-barangay-evacuation-center",
+      "name": "Banaban Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "Banaban",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Banaban, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-laog-barangay-evacuation-center",
+      "name": "Laog Barangay Evacuation Center",
+      "municipality": "Angat",
+      "barangay": "Laog",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Laog, Angat, Bulacan",
+      "facility_type": "barangay_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2025-11-09",
+      "source_ids": [
+        "angat-2025"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+    },
+    {
+      "id": "evac-angat-municipal-evacuation-center-compound",
+      "name": "Municipal Evacuation Center Compound",
+      "municipality": "Angat",
+      "barangay": "San Roque",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "San Roque, Angat, Bulacan",
+      "facility_type": "evacuation_center_compound",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_location_mention",
+      "last_documented_event_date": "2023-05-29",
+      "source_ids": [
+        "angat-compound"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Potentially overlaps the San Roque barangay entry; retain separately pending facility-identity confirmation."
+    },
+    {
+      "id": "evac-guiguinto-gmacc-evacuation-center-a",
+      "name": "GMACC (Evacuation Center A)",
+      "municipality": "Guiguinto",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Guiguinto, Bulacan",
+      "facility_type": "designated_evacuation_facility",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "guiguinto-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available."
+    },
+    {
+      "id": "evac-guiguinto-kanlungan-ng-bayan-evacuation-center-b",
+      "name": "Kanlungan ng Bayan (Evacuation Center B)",
+      "municipality": "Guiguinto",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Guiguinto, Bulacan",
+      "facility_type": "designated_evacuation_facility",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_plan",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "guiguinto-plan"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available."
+    },
+    {
+      "id": "evac-pandi-pandi-village-i-barangay-outpost-and-evacuation-center",
+      "name": "Pandi Village I Barangay Outpost and Evacuation Center",
+      "municipality": "Pandi",
+      "barangay": "Siling Bata",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Siling Bata, Pandi, Bulacan",
+      "facility_type": "multipurpose_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "inauguration",
+      "last_documented_event_date": "2019-03-06",
+      "source_ids": [
+        "pandi"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Located in Pandi Village I."
+    },
+    {
+      "id": "evac-san-jose-del-monte-pagcor-multi-purpose-evacuation-center",
+      "name": "PAGCOR Multi-Purpose Evacuation Center",
+      "municipality": "San Jose del Monte",
+      "barangay": "Minuyan Proper",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Minuyan Proper, San Jose del Monte, Bulacan",
+      "facility_type": "multipurpose_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "inauguration",
+      "last_documented_event_date": "2022-06-20",
+      "source_ids": [
+        "sjdm-pagcor"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": null
+    },
+    {
+      "id": "evac-obando-obando-national-high-school",
+      "name": "Obando National High School",
+      "municipality": "Obando",
+      "barangay": "Paliwas",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Paliwas, Obando, Bulacan",
+      "facility_type": "school",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-04-15",
+      "source_ids": [
+        "obando-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Documented shelter for landfill-smoke evacuees; suitability for flooding must be checked separately."
+    },
+    {
+      "id": "evac-santa-maria-santa-maria-national-high-school",
+      "name": "Santa Maria National High School",
+      "municipality": "Santa Maria",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Santa Maria, Bulacan",
+      "facility_type": "school",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-08-11",
+      "source_ids": [
+        "santa-maria-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": null
+    },
+    {
+      "id": "evac-santa-maria-san-gabriel-municipal-evacuation-center",
+      "name": "San Gabriel Municipal Evacuation Center",
+      "municipality": "Santa Maria",
+      "barangay": "San Gabriel",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "San Gabriel, Santa Maria, Bulacan",
+      "facility_type": "municipal_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-08-11",
+      "source_ids": [
+        "santa-maria-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Source calls it San Gabriel Municipal Evacuation; label expanded descriptively."
+    },
+    {
+      "id": "evac-santa-maria-tumana-evacuation-site",
+      "name": "Tumana evacuation site",
+      "municipality": "Santa Maria",
+      "barangay": "Tumana",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Tumana, Santa Maria, Bulacan",
+      "facility_type": "unspecified",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-08-11",
+      "source_ids": [
+        "santa-maria-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+    },
+    {
+      "id": "evac-santa-maria-san-jose-patag-evacuation-site",
+      "name": "San Jose Patag evacuation site",
+      "municipality": "Santa Maria",
+      "barangay": "San Jose Patag",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "San Jose Patag, Santa Maria, Bulacan",
+      "facility_type": "unspecified",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-08-11",
+      "source_ids": [
+        "santa-maria-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+    },
+    {
+      "id": "evac-santa-maria-guyong-evacuation-site",
+      "name": "Guyong evacuation site",
+      "municipality": "Santa Maria",
+      "barangay": "Guyong",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Guyong, Santa Maria, Bulacan",
+      "facility_type": "unspecified",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2026-08-11",
+      "source_ids": [
+        "santa-maria-2026"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+    },
+    {
+      "id": "evac-marilao-pambayang-dalubhasaan-ng-marilao-pdm",
+      "name": "Pambayang Dalubhasaan ng Marilao (PDM)",
+      "municipality": "Marilao",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Marilao, Bulacan",
+      "facility_type": "school",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_designation",
+      "last_documented_event_date": "2026-02-26",
+      "source_ids": [
+        "marilao-orders",
+        "marilao-pdm-pdf"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "EO JS2026-54 designates this facility for disasters or as needed. Exact campus address still required."
+    },
+    {
+      "id": "evac-marilao-patubig-covered-court",
+      "name": "Patubig Covered Court",
+      "municipality": "Marilao",
+      "barangay": "Patubig",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Patubig, Marilao, Bulacan",
+      "facility_type": "covered_court",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "official_designation",
+      "last_documented_event_date": "2026-02-26",
+      "source_ids": [
+        "marilao-orders",
+        "marilao-patubig-pdf"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "EO JS2026-53."
+    },
+    {
+      "id": "evac-bocaue-new-municipal-hall-of-bocaue",
+      "name": "New Municipal Hall of Bocaue",
+      "municipality": "Bocaue",
+      "barangay": "Igulot",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Igulot, Bocaue, Bulacan",
+      "facility_type": "municipal_hall",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-02-13",
+      "source_ids": [
+        "bocaue-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical fire evacuation use; no current flood activation established."
+    },
+    {
+      "id": "evac-malolos-bulacan-capitol-gymnasium",
+      "name": "Bulacan Capitol Gymnasium",
+      "municipality": "Malolos",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Malolos, Bulacan",
+      "facility_type": "gymnasium",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2022-09-25",
+      "source_ids": [
+        "karding-2022"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": null
+    },
+    {
+      "id": "evac-malolos-bulacan-sports-complex",
+      "name": "Bulacan Sports Complex",
+      "municipality": "Malolos",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Malolos, Bulacan",
+      "facility_type": "sports_facility",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "paeng-2022"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical designated shelter, not evidence of present opening."
+    },
+    {
+      "id": "evac-calumpit-meysulao-evacuation-center",
+      "name": "Meysulao Evacuation Center",
+      "municipality": "Calumpit",
+      "barangay": "Meysulao",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Meysulao, Calumpit, Bulacan",
+      "facility_type": "dedicated_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-calumpit-gugo-barangay-outpost",
+      "name": "Gugo Barangay Outpost",
+      "municipality": "Calumpit",
+      "barangay": "Gugo",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Gugo, Calumpit, Bulacan",
+      "facility_type": "barangay_outpost",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-calumpit-san-miguel-donia-damiana-es",
+      "name": "San Miguel Donia Damiana ES",
+      "municipality": "Calumpit",
+      "barangay": "San Miguel",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "San Miguel, Calumpit, Bulacan",
+      "facility_type": "school",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-calumpit-sapang-bayan-bmltc-ec",
+      "name": "Sapang Bayan BMLTC EC",
+      "municipality": "Calumpit",
+      "barangay": "Sapang Bayan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Sapang Bayan, Calumpit, Bulacan",
+      "facility_type": "unspecified",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-calumpit-iba-oeste-nv9-ec",
+      "name": "Iba O’Este NV9 EC",
+      "municipality": "Calumpit",
+      "barangay": "Iba O’Este",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Iba O’Este, Calumpit, Bulacan",
+      "facility_type": "unspecified",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-obando-barangay-pag-asa-chapel",
+      "name": "Barangay Pag-asa Chapel",
+      "municipality": "Obando",
+      "barangay": "Pag-asa",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Pag-asa, Obando, Bulacan",
+      "facility_type": "chapel",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-pulilan-dampol-2nd-b-barangay-hall",
+      "name": "Dampol 2nd B Barangay Hall",
+      "municipality": "Pulilan",
+      "barangay": "Dampol 2nd B",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Dampol 2nd B, Pulilan, Bulacan",
+      "facility_type": "barangay_hall",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-san-ildefonso-garlang-barangay-hall",
+      "name": "Garlang Barangay Hall",
+      "municipality": "San Ildefonso",
+      "barangay": "Garlang",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Garlang, San Ildefonso, Bulacan",
+      "facility_type": "barangay_hall",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-san-ildefonso-anyatam-elementary-school",
+      "name": "Anyatam Elementary School",
+      "municipality": "San Ildefonso",
+      "barangay": "Anyatam",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Anyatam, San Ildefonso, Bulacan",
+      "facility_type": "school",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": "2020-11-11",
+      "source_ids": [
+        "rolly-2020"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+    },
+    {
+      "id": "evac-meycauayan-malhacan-barangay-hall",
+      "name": "Malhacan Barangay Hall",
+      "municipality": "Meycauayan",
+      "barangay": "Malhacan",
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Malhacan, Meycauayan, Bulacan",
+      "facility_type": "barangay_hall",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "historical_activation",
+      "last_documented_event_date": null,
+      "source_ids": [
+        "meycauayan-2018"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Historical 2018 use only; full source access restricted during research."
+    },
+    {
+      "id": "evac-balagtas-evacuation-center-and-barangay-outpost",
+      "name": "Evacuation Center and Barangay Outpost",
+      "municipality": "Balagtas",
+      "barangay": null,
+      "province": "Bulacan",
+      "country": "PH",
+      "address": "Balagtas, Bulacan",
+      "facility_type": "multipurpose_evacuation_center",
+      "permanent": null,
+      "latitude": null,
+      "longitude": null,
+      "coordinate_method": null,
+      "coordinate_precision": null,
+      "capacity_individuals": null,
+      "capacity_families": null,
+      "capacity_basis": null,
+      "current_occupancy": null,
+      "current_available_spaces": null,
+      "operational_status": "unknown",
+      "status_checked_at": null,
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "evidence_basis": "inauguration",
+      "last_documented_event_date": "2018-12-17",
+      "source_ids": [
+        "balagtas-2018"
+      ],
+      "public_display_recommendation": "directory_only_status_unknown",
+      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "facility_phone": null,
+      "notes": "Descriptive article label; exact barangay and building identity not established."
+    }
+  ],
+  "emergency_contacts": [
+    {
+      "id": "contact-angat-bureau-of-fire-protection",
+      "municipality": "Angat",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "671-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-angat-philippine-national-police",
+      "municipality": "Angat",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "671-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-angat-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Angat",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "671-7950",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-balagtas-bureau-of-fire-protection",
+      "municipality": "Balagtas",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "663-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-balagtas-philippine-national-police",
+      "municipality": "Balagtas",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "693-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-balagtas-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Balagtas",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "693-2243",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-baliwag-bureau-of-fire-protection",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "766-3250",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-baliwag-philippine-national-police",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "766-2328",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-baliwag-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "766-6055",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bocaue-bureau-of-fire-protection",
+      "municipality": "Bocaue",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "692-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bocaue-philippine-national-police",
+      "municipality": "Bocaue",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "692-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bocaue-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Bocaue",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "692-1234",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bulakan-bureau-of-fire-protection",
+      "municipality": "Bulakan",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "668-2831",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bulakan-philippine-national-police",
+      "municipality": "Bulakan",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "792-0300",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bulakan-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Bulakan",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "792-0767",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bustos-bureau-of-fire-protection",
+      "municipality": "Bustos",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "617-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bustos-philippine-national-police",
+      "municipality": "Bustos",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "617-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bustos-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Bustos",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "617-1417",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-calumpit-bureau-of-fire-protection",
+      "municipality": "Calumpit",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "675-2760",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-calumpit-philippine-national-police",
+      "municipality": "Calumpit",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "675-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-calumpit-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Calumpit",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "675-1892",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-dona-remedios-trinidad-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Doña Remedios Trinidad",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "0918-9081527",
+          "e164": "+639189081527",
+          "tel_uri": "tel:+639189081527"
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-guiguinto-bureau-of-fire-protection",
+      "municipality": "Guiguinto",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "690-7957",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-guiguinto-philippine-national-police",
+      "municipality": "Guiguinto",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "794-0033",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-guiguinto-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Guiguinto",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "794-1664",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-hagonoy-bureau-of-fire-protection",
+      "municipality": "Hagonoy",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "793-2018",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-hagonoy-philippine-national-police",
+      "municipality": "Hagonoy",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "793-0018",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-hagonoy-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Hagonoy",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "793-5378",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "793-5811",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-malolos-bureau-of-fire-protection",
+      "municipality": "Malolos",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "662-3472",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-malolos-philippine-national-police",
+      "municipality": "Malolos",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "791-0257",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-malolos-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Malolos",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "791-7332",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "790-6785",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-marilao-bureau-of-fire-protection",
+      "municipality": "Marilao",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "711-4838",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-marilao-philippine-national-police",
+      "municipality": "Marilao",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "711-0806",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-marilao-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Marilao",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "933-0206",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-meycauayan-bureau-of-fire-protection",
+      "municipality": "Meycauayan",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "840-7996",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "840-4554",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-meycauayan-philippine-national-police",
+      "municipality": "Meycauayan",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "840-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-meycauayan-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Meycauayan",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "840-4554",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-norzagaray-bureau-of-fire-protection",
+      "municipality": "Norzagaray",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "694-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-norzagaray-philippine-national-police",
+      "municipality": "Norzagaray",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "694-0578",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-norzagaray-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Norzagaray",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "694-1715",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-obando-bureau-of-fire-protection",
+      "municipality": "Obando",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "02-299-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Legacy 02 landline format; do not guess the additional digit. Confirm current number before enabling click-to-call."
+    },
+    {
+      "id": "contact-obando-philippine-national-police",
+      "municipality": "Obando",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "02-292-2043",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Legacy 02 landline format; do not guess the additional digit. Confirm current number before enabling click-to-call."
+    },
+    {
+      "id": "contact-obando-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Obando",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "02-292-2043",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Legacy 02 landline format; do not guess the additional digit. Confirm current number before enabling click-to-call."
+    },
+    {
+      "id": "contact-pandi-bureau-of-fire-protection",
+      "municipality": "Pandi",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "661-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-pandi-philippine-national-police",
+      "municipality": "Pandi",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "661-2190",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-pandi-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Pandi",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "914-0066",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-paombong-bureau-of-fire-protection",
+      "municipality": "Paombong",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "665-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-paombong-philippine-national-police",
+      "municipality": "Paombong",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "665-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-paombong-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Paombong",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "665-1522",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-plaridel-bureau-of-fire-protection",
+      "municipality": "Plaridel",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "670-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-plaridel-philippine-national-police",
+      "municipality": "Plaridel",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "795-0057",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-plaridel-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Plaridel",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "670-2673",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-pulilan-bureau-of-fire-protection",
+      "municipality": "Pulilan",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "676-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-pulilan-philippine-national-police",
+      "municipality": "Pulilan",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "769-1204",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-pulilan-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Pulilan",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "676-1126",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-ildefonso-bureau-of-fire-protection",
+      "municipality": "San Ildefonso",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "677-1790",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-ildefonso-philippine-national-police",
+      "municipality": "San Ildefonso",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "677-1928",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-ildefonso-cdcc-mdcc-legacy-directory-label",
+      "municipality": "San Ildefonso",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "677-0548",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-miguel-bureau-of-fire-protection",
+      "municipality": "San Miguel",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "678-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-miguel-philippine-national-police",
+      "municipality": "San Miguel",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "678-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-miguel-cdcc-mdcc-legacy-directory-label",
+      "municipality": "San Miguel",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "678-2452",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-rafael-bureau-of-fire-protection",
+      "municipality": "San Rafael",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "761-5562",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-rafael-philippine-national-police",
+      "municipality": "San Rafael",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "902-0185",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-rafael-cdcc-mdcc-legacy-directory-label",
+      "municipality": "San Rafael",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "902-0075",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-jose-del-monte-bureau-of-fire-protection",
+      "municipality": "San Jose del Monte",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "691-7996",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "691-6017",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-jose-del-monte-philippine-national-police",
+      "municipality": "San Jose del Monte",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "691-7977",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "691-2970",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-san-jose-del-monte-cdcc-mdcc-legacy-directory-label",
+      "municipality": "San Jose del Monte",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "691-6562",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-santa-maria-bureau-of-fire-protection",
+      "municipality": "Santa Maria",
+      "province": "Bulacan",
+      "agency": "Bureau of Fire Protection",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "641-7996",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-santa-maria-philippine-national-police",
+      "municipality": "Santa Maria",
+      "province": "Bulacan",
+      "agency": "Philippine National Police",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "641-7998",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-santa-maria-cdcc-mdcc-legacy-directory-label",
+      "municipality": "Santa Maria",
+      "province": "Bulacan",
+      "agency": "CDCC/MDCC (legacy directory label)",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "641-4783",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "641-5186",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Local landline area code not explicitly given in source; do not invent a dial URI."
+    },
+    {
+      "id": "contact-bulacan-bulacan-pdrrmo-bulacan-rescue",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "Bulacan PDRRMO / Bulacan Rescue",
+      "category": "rescue",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "911",
+          "e164": null,
+          "tel_uri": "tel:911"
+        },
+        {
+          "raw": "(044) 791-0566",
+          "e164": "+63447910566",
+          "tel_uri": "tel:+63447910566"
+        },
+        {
+          "raw": "0905-333-3319",
+          "e164": "+639053333319",
+          "tel_uri": "tel:+639053333319"
+        },
+        {
+          "raw": "0942-367-1455",
+          "e164": "+639423671455",
+          "tel_uri": "tel:+639423671455"
+        }
+      ],
+      "source_ids": [
+        "pdrrmo",
+        "province-2025"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "dated_advisory_or_agency_page",
+      "preferred": true,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "044 prefix corroborated by province-2025. Source publication verified; no live call or service-uptime check.",
+      "emails": [
+        "pdrrmo@bulacan.gov.ph",
+        "bulacanpdrrmo911@gmail.com"
+      ]
+    },
+    {
+      "id": "contact-bulacan-bfp-bulacan",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "BFP Bulacan",
+      "category": "fire",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "796-2900",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-pnp-bulacan",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "PNP Bulacan",
+      "category": "police",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "662-0273",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-red-cross-bulacan",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "Red Cross Bulacan",
+      "category": "medical_assistance",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "896-0568",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "662-5922",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-dswd-bulacan-directory-label",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "DSWD Bulacan (directory label)",
+      "category": "social_welfare",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "662-1828",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-camp-alejo",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "Camp Alejo",
+      "category": "police",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "796-2087",
+          "e164": null,
+          "tel_uri": null
+        },
+        {
+          "raw": "662-0273",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-bulacan-medical-center-emergency",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "Bulacan Medical Center Emergency",
+      "category": "hospital",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "794-1526",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-bulacan-rescue-117-organization-label",
+      "municipality": null,
+      "province": "Bulacan",
+      "agency": "Rescue 117 (organization label)",
+      "category": "rescue",
+      "scope": "province_service",
+      "phones": [
+        {
+          "raw": "760-7049",
+          "e164": null,
+          "tel_uri": null
+        }
+      ],
+      "source_ids": [
+        "province-directory"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "undated_directory",
+      "preferred": false,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Undated provincial listing. Organization label is reproduced as published; not independently confirmed current."
+    },
+    {
+      "id": "contact-baliwag-baliwag-city-emergency-hotlines",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "Baliwag City emergency hotlines",
+      "category": "disaster_response",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "0917-505-7827",
+          "e164": "+639175057827",
+          "tel_uri": "tel:+639175057827"
+        },
+        {
+          "raw": "0939-999-7827",
+          "e164": "+639399997827",
+          "tel_uri": "tel:+639399997827"
+        }
+      ],
+      "source_ids": [
+        "baliwag-2026"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "dated_advisory_or_agency_page",
+      "preferred": true,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Prefer this dated LGU advisory over conflicting undated provincial-directory entries for the same service."
+    },
+    {
+      "id": "contact-baliwag-baliwag-city-pnp",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "Baliwag City PNP",
+      "category": "police",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "(044) 766-2328",
+          "e164": "+63447662328",
+          "tel_uri": "tel:+63447662328"
+        },
+        {
+          "raw": "0933-876-5386",
+          "e164": "+639338765386",
+          "tel_uri": "tel:+639338765386"
+        },
+        {
+          "raw": "0998-589-5375",
+          "e164": "+639985895375",
+          "tel_uri": "tel:+639985895375"
+        }
+      ],
+      "source_ids": [
+        "baliwag-2026"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "dated_advisory_or_agency_page",
+      "preferred": true,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Prefer this dated LGU advisory over conflicting undated provincial-directory entries for the same service."
+    },
+    {
+      "id": "contact-baliwag-baliwag-city-bfp",
+      "municipality": "Baliwag",
+      "province": "Bulacan",
+      "agency": "Baliwag City BFP",
+      "category": "fire",
+      "scope": "municipal",
+      "phones": [
+        {
+          "raw": "(044) 764-7658",
+          "e164": "+63447647658",
+          "tel_uri": "tel:+63447647658"
+        },
+        {
+          "raw": "0942-352-7440",
+          "e164": "+639423527440",
+          "tel_uri": "tel:+639423527440"
+        },
+        {
+          "raw": "0963-303-5238",
+          "e164": "+639633035238",
+          "tel_uri": "tel:+639633035238"
+        }
+      ],
+      "source_ids": [
+        "baliwag-2026"
+      ],
+      "source_checked_at": "2026-10-18",
+      "verification_status": "official_publication_found",
+      "call_tested": false,
+      "operational_status": "unknown",
+      "source_freshness": "dated_advisory_or_agency_page",
+      "preferred": true,
+      "public_display_recommendation": "show_with_source_and_freshness_label",
+      "notes": "Prefer this dated LGU advisory over conflicting undated provincial-directory entries for the same service."
+    }
+  ],
+  "sources": [
+    {
+      "id": "province-directory",
+      "title": "Provincial Government Offices — Emergency Numbers",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/government/offices/",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Undated directory; retains legacy CDCC/MDCC terminology and old-format Obando numbers. Publication verification only; not call-tested."
+    },
+    {
+      "id": "pdrrmo",
+      "title": "Contact Us",
+      "publisher": "Bulacan PDRRMO",
+      "url": "https://pdrrmo.bulacan.gov.ph/contact-us/",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "province-2025",
+      "title": "Bulacan expedites disaster response to flood-affected municipalities",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/bulacan-expedites-disaster-response-to-flood-affected-municipalities/",
+      "published_at": "2025-07-24",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "baliwag-2026",
+      "title": "Forced evacuation advisory and emergency hotlines",
+      "publisher": "City Government of Baliwag",
+      "url": "https://www.baliwag.gov.ph/news/post/528",
+      "published_at": "2026-08-09",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "malolos-plan",
+      "title": "City of Malolos DRRM Plan 2022–2026 — primary evacuation centers",
+      "publisher": "City Government of Malolos",
+      "url": "https://maloloscity.gov.ph/wp-content/uploads/2023/05/City-of-Malolos-DRRM-Plan-2022-2026.pdf",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_plan",
+      "note": "Indexed table retrieved; full PDF could not be reliably rendered. Coordinates are transcribed source coordinates, not independently surveyed. Plan period 2022–2026; upload path May 2023. Conflicting Teodulo Natividad capacity rows omitted."
+    },
+    {
+      "id": "angat-2025",
+      "title": "Barangay evacuation centers during Uwan",
+      "publisher": "Municipality of Angat",
+      "url": "https://www.angatgov.ph/post/mayor-jowar-umiikot-sa-mga-evacuation-center-sa-kasagsagan-ng-bagyong-uwanph",
+      "published_at": "2025-11-09",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "angat-compound",
+      "title": "DPWH, Angat LGU hold groundbreaking ceremony for new MDRRMO building",
+      "publisher": "Philippine Information Agency",
+      "url": "https://pia.gov.ph/news/dpwh-angat-lgu-hold-groundbreaking-ceremony-for-new-mdrrmo-building/",
+      "published_at": "2023-05-29",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Identifies the existing evacuation-center compound; does not establish completion of the new MDRRMO building."
+    },
+    {
+      "id": "guiguinto-plan",
+      "title": "Contingency Plan for Hydromet 2023–2025",
+      "publisher": "Municipality of Guiguinto",
+      "url": "https://www.guiguinto.gov.ph/wp-content/uploads/2025/08/Contingency-Plan-Hydromet-2023-2025-with-EREID-Gto.pdf",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_plan",
+      "note": "PDF page 71 (zero-based page 70), Figure 22, identifies GMACC and Kanlungan ng Bayan. Exact street addresses not recovered."
+    },
+    {
+      "id": "pandi",
+      "title": "Pandi Evacuation",
+      "publisher": "DILG Region III",
+      "url": "https://region3.dilg.gov.ph/v2/index.php/news-events/1619-pandi-evacuation",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Reports inauguration on 2019-03-06."
+    },
+    {
+      "id": "sjdm-pagcor",
+      "title": "First PAGCOR-funded evacuation facility in Bulacan inaugurated",
+      "publisher": "PAGCOR",
+      "url": "https://www.pagcor.ph/press-releases/first-pagcor-funded-evacuation-facility-in-bulacan-inaugurated.php",
+      "published_at": "2022-06-21",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "obando-2026",
+      "title": "115 Obandenyo families affected by smog receive aid",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/115-obandenyo-families-affected-by-smog-from-navotas-landfill-fire-receive-aid-from-pgb/",
+      "published_at": "2026-04-15",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "santa-maria-2026",
+      "title": "DSWD Sec. Gatchalian sa mga social workers: Tiyaking naaalagaan ang mga pamilyang inililikas",
+      "publisher": "Philippine Information Agency",
+      "url": "https://pia.gov.ph/news/luzon/cl/dswd-sec-gatchalian-sa-mga-social-workers-tiyaking-naaalagaan-ang-mga-pamilyang-inililikas/",
+      "published_at": "2026-08-11",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "marilao-orders",
+      "title": "Executive Orders JS2026-53 and JS2026-54",
+      "publisher": "Municipality of Marilao",
+      "url": "https://marilao.gov.ph/executive-order/",
+      "published_at": "2026-02-26",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Date applies to the two executive orders, not to the directory webpage. Designates Patubig Covered Court and PDM."
+    },
+    {
+      "id": "marilao-pdm-pdf",
+      "title": "EO JS2026-54",
+      "publisher": "Municipality of Marilao",
+      "url": "https://marilao.gov.ph/wp-content/uploads/2026/03/EO-NO-JS2026-54.pdf",
+      "published_at": "2026-02-26",
+      "checked_at": "2026-10-18",
+      "kind": "official_order",
+      "note": null
+    },
+    {
+      "id": "marilao-patubig-pdf",
+      "title": "EO JS2026-53",
+      "publisher": "Municipality of Marilao",
+      "url": "https://marilao.gov.ph/wp-content/uploads/2026/03/EO-NO-JS2026-53.pdf",
+      "published_at": "2026-02-26",
+      "checked_at": "2026-10-18",
+      "kind": "official_order",
+      "note": null
+    },
+    {
+      "id": "bocaue-2020",
+      "title": "More than 300 fire victims in Bocaue town receive support",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/more-than-300-fire-victims-in-bocaue-town-receives-support-from-pgb/",
+      "published_at": "2020-02-13",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "karding-2022",
+      "title": "Bulacan readies evacuation centers for Karding",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/bulacan-readies-evacuation-centers-emergency-kits-for-onslaught-of-super-ty-karding/",
+      "published_at": "2022-09-25",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": null
+    },
+    {
+      "id": "paeng-2022",
+      "title": "Bulacan prepares for Tropical Storm Paeng",
+      "publisher": "Provincial Government of Bulacan",
+      "url": "https://bulacan.gov.ph/bulacan-prepares-for-tropical-storm-paeng/",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "2022 event report; identifies Bulacan Sports Complex."
+    },
+    {
+      "id": "rolly-2020",
+      "title": "SitRep No.12 re STY Rolly, 11 November 2020",
+      "publisher": "NDRRMC",
+      "url": "https://ndrrmc.gov.ph/attachments/article/4135/SitRep_no_12_re_STY_ROLLY_as_of_11NOV2020.pdf",
+      "published_at": "2020-11-11",
+      "checked_at": "2026-10-18",
+      "kind": "official_situation_report",
+      "note": "Named sites extracted from indexed table. Historical incident locations, not a present activation list."
+    },
+    {
+      "id": "meycauayan-2018",
+      "title": "Bulacan dams open spill gates",
+      "publisher": "Philippine News Agency",
+      "url": "https://www.pna.gov.ph/articles/1044587",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_news",
+      "note": "Indexed report identifies Malhacan Barangay Hall. Full page access denied; exact publication date not recovered, report is from 2018."
+    },
+    {
+      "id": "balagtas-2018",
+      "title": "Balagtas inaugurates Evacuation Center and Barangay Outpost",
+      "publisher": "DILG Region III",
+      "url": "https://region3.dilg.gov.ph/v2/index.php/news-events/1439-balagtas-bulacan-inaugurates-evacuation-center-and-barangay-outpost",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Reports inauguration 2018-12-17; exact facility address not established."
+    },
+    {
+      "id": "hagonoy-2022",
+      "title": "Inspection of local access roads and re-established evacuation center",
+      "publisher": "DILG Bulacan",
+      "url": "https://region3.dilg.gov.ph/bulacan/index.php/home-2/2-uncategorised/1136-2022-05-16-08-14-41",
+      "published_at": "2022-05-16",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Sagrada Familia facility was inspected for COVID-19 isolation; keep out of public flood-shelter list pending confirmation."
+    },
+    {
+      "id": "foi-registry-gap",
+      "title": "Updated list of permanent evacuation centers in Bulacan",
+      "publisher": "DSWD / eFOI",
+      "url": "https://www.foi.gov.ph/requests/updated-list-of-permanent-evacuation-centers-in-bulacan/",
+      "published_at": "2021-07-02",
+      "checked_at": "2026-10-18",
+      "kind": "official_webpage",
+      "note": "Approved response says partial data sent privately by email; no public center-level attachment retrieved."
+    },
+    {
+      "id": "pdrrmo-outage-lead",
+      "title": "PDRRMO hotline technical-difficulties post",
+      "publisher": "Bulacan PDRRMO Facebook",
+      "url": "https://www.facebook.com/BulacanPDRRMO/posts/attentionwe-would-like-to-inform-everyone-that-bulacan-911-emergency-hotline-is-/122197108760094143/",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "kind": "unresolved_official_social_post",
+      "note": "Search indexed an outage advisory, but post could not be opened or dated. Do not infer a current outage or import its alternate numbers as current contacts."
+    }
+  ],
+  "excluded_or_unresolved": [
+    {
+      "name": "Sagrada Familia re-established evacuation center",
+      "municipality": "Hagonoy",
+      "source_ids": [
+        "hagonoy-2022"
+      ],
+      "reason": "Source identifies COVID-19 isolation use; present flood-shelter role not established.",
+      "import_as_public_flood_shelter": false
+    },
+    {
+      "name": "Complete Bulacan registry from DSWD FOI",
+      "source_ids": [
+        "foi-registry-gap"
+      ],
+      "reason": "Data sent privately to requester; not available in retrieved public response."
+    },
+    {
+      "name": "PDRRMO alternate numbers in technical-difficulties post",
+      "source_ids": [
+        "pdrrmo-outage-lead"
+      ],
+      "reason": "Post date and continued applicability could not be verified; excluded from contact records."
+    },
+    {
+      "name": "Malolos Teodulo Natividad school capacity",
+      "source_ids": [
+        "malolos-plan"
+      ],
+      "reason": "Indexed rows disagree on name/capacity (80 vs 400); omitted pending source-table confirmation."
+    }
+  ],
+  "known_limitations": [
+    "No current activation, occupancy, road access, structural safety, disability access or pet policy was verified.",
+    "Several reports identify only barangays; descriptive names are explicitly marked in notes.",
+    "Some government pages publish legacy numbers. No missing landline digits or prefixes were guessed.",
+    "Exact addresses are incomplete outside the source-published Malolos locations.",
+    "Construction budgets and proposed projects were not treated as completed evacuation centers."
+  ]
+}

@@ -45,6 +45,7 @@ import {
   mapReportToIncident,
 } from "@/lib/report-ui";
 import { copyPublicReportUrl } from "@/lib/report-share";
+import { hasCenterCoordinates } from "@/lib/emergency-resources";
 import {
   compareReportsByPriority,
   getReportFreshnessBadge,
@@ -740,7 +741,7 @@ export function DashboardShell({
 
   const floodMapEvacuationCenterMarkers = useMemo<EvacuationCenterMapMarker[]>(
     () =>
-      publicCenters.map((center) => ({
+      publicCenters.filter(hasCenterCoordinates).map((center) => ({
         id: `center-marker-${center.id}`,
         label: "E",
         category: "center",
