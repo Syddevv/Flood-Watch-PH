@@ -195,6 +195,7 @@ export type PublicEmergencyContact = {
   preferred: boolean;
   sourceLinks: { title: string; url: string; publishedAt: string | null }[];
   sourceNotes: string | null;
+  emails: string[];
 };
 
 export type EmergencyHotline = {

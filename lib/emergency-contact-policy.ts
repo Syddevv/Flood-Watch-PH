@@ -26,8 +26,10 @@ export function toPublicContact(contact: EmergencyContact, now = new Date()) {
     .map((phone) => ({ raw: phone.raw, telUri: phone.tel_uri })) : [];
   const publicPhones = phones.length ? phones : [{ raw: contact.contactNumber, telUri: null }];
   const snapshot = contact.sourceSnapshot && typeof contact.sourceSnapshot === "object" && !Array.isArray(contact.sourceSnapshot)
-    ? contact.sourceSnapshot as { record?: { notes?: string | null }; sources?: Array<{ title: string; url: string; published_at: string | null }> }
+    ? contact.sourceSnapshot as { record?: { notes?: string | null; email?: string | null; emails?: string[] }; sources?: Array<{ title: string; url: string; published_at: string | null }> }
     : null;
+  const publicEmails = [snapshot?.record?.email, ...(Array.isArray(snapshot?.record?.emails) ? snapshot.record.emails : [])]
+    .filter((value): value is string => typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
   return {
     id: contact.id,
     agencyName: contact.agencyName,
@@ -46,6 +48,7 @@ export function toPublicContact(contact: EmergencyContact, now = new Date()) {
     preferred: contact.preferred,
     sourceLinks: snapshot?.sources?.filter((source) => { try { return new URL(source.url).protocol === "https:"; } catch { return false; } }).map((source) => ({ title: source.title, url: source.url, publishedAt: source.published_at })) ?? [],
     sourceNotes: snapshot?.record?.notes ?? null,
+    emails: [...new Set(publicEmails)],
   };
 }
 

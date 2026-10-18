@@ -51,3 +51,11 @@ test("only supplied phone URIs become dial links; raw legacy numbers remain copy
   ]);
   assert.equal(result.callHref, null);
 });
+
+test("only public source email fields are exposed", () => {
+  const result = toPublicContact({ ...contact, sourceSnapshot: { record: {
+    email: "help@bulacan.gov.ph", emails: ["other@bulacan.gov.ph", "not-an-email"], notes: "Public note",
+  } } });
+  assert.deepEqual(result.emails, ["help@bulacan.gov.ph", "other@bulacan.gov.ph"]);
+  assert.equal(result.sourceNotes, "Public note");
+});
