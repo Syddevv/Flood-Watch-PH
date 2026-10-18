@@ -4,7 +4,6 @@ import {
 } from "@/lib/bulacan-scope";
 import type { ReportLocationSource } from "@/lib/report-location-metadata";
 import {
-  RESCUE_ASSISTANCE_TAGS,
   RESCUE_NO_ASSISTANCE_TAG_ID,
   type RescueAssistanceTagId,
 } from "@/lib/rescue-request-data";
@@ -12,11 +11,7 @@ import {
 export const RESCUE_MIN_PEOPLE = 1;
 export const RESCUE_MAX_PEOPLE = 50;
 export const RESCUE_MIN_SITUATION_LENGTH = 10;
-/**
- * The report API caps descriptions at 1000 characters, and the assembled
- * description adds a header plus up to three metadata lines on top of the
- * situation text. 700 leaves comfortable headroom.
- */
+/** Short emergency description, with room for clear details on a phone. */
 export const RESCUE_MAX_SITUATION_LENGTH = 700;
 export const RESCUE_MAX_LOCATION_NAME_LENGTH = 160;
 export const RESCUE_MAX_CONTACT_LENGTH = 40;
@@ -90,40 +85,6 @@ export function toggleRescueAssistanceTag(
   }
 
   return [...selected.filter((id) => id !== RESCUE_NO_ASSISTANCE_TAG_ID), tagId];
-}
-
-/** Renders selected tags in their defined order, not click order. */
-export function describeRescueAssistanceTags(ids: RescueAssistanceTagId[]): string {
-  return RESCUE_ASSISTANCE_TAGS.filter((tag) => ids.includes(tag.id))
-    .map((tag) => tag.label)
-    .join(", ");
-}
-
-export type RescueDescriptionInput = {
-  situation: string;
-  peopleCount: number;
-  assistanceTagIds: RescueAssistanceTagId[];
-  contactNumber: string;
-};
-
-export function buildRescueRequestDescription({
-  situation,
-  peopleCount,
-  assistanceTagIds,
-  contactNumber,
-}: RescueDescriptionInput): string {
-  const assistance = describeRescueAssistanceTags(assistanceTagIds);
-  const contact = contactNumber.trim();
-
-  return [
-    "RESCUE REQUEST",
-    situation.trim(),
-    `People needing assistance: ${peopleCount}`,
-    assistance ? `Special assistance: ${assistance}` : "",
-    contact ? `Contact number: ${contact}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
 }
 
 export type RescueValidationInput = {

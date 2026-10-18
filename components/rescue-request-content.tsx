@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LifeBuoy } from "lucide-react";
-import { useAuthSession } from "@/components/auth-session-provider";
+import { useAuthSession, type AuthUser } from "@/components/auth-session-provider";
 import { RescueRequestAside } from "@/components/rescue-request-aside";
 import { RescueRequestCard } from "@/components/rescue-request-card";
 import { RescueRequestForm } from "@/components/rescue-request-form";
@@ -14,6 +14,10 @@ type CreateResult = { request: RescueRecord; replayed: boolean; nearDuplicate: b
 
 export function RescueRequestContent() {
   const { user, isLoading: authLoading } = useAuthSession();
+  return <RescueRequestContentForSession key={user?.id ?? "guest"} user={user} authLoading={authLoading} />;
+}
+
+function RescueRequestContentForSession({ user, authLoading }: { user: AuthUser; authLoading: boolean }) {
   const [requests, setRequests] = useState<RescueRecord[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,9 +36,7 @@ export function RescueRequestContent() {
     try {
       const cursor = append ? nextCursorRef.current : null;
       const data = await rescueApi<ListResult>(`/api/rescue-requests?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`);
-      setRequests((current) => append ? [...current, ...data.requests.filter((item) => !current.some((known) => known.id === item.id))] : [
-        ...data.requests, ...current.filter((item) => !data.requests.some((fresh) => fresh.id === item.id)),
-      ]);
+      setRequests((current) => append ? [...current, ...data.requests.filter((item) => !current.some((known) => known.id === item.id))] : data.requests);
       setNextCursor(data.nextCursor);
       nextCursorRef.current = data.nextCursor;
       setLastChecked(new Date());
@@ -53,13 +55,13 @@ export function RescueRequestContent() {
   }, [user, refresh]);
 
   useEffect(() => {
-    if (!user || !shouldPollRescue(requests)) return;
-    const timer = window.setInterval(() => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(); }, 30_000);
+    if (!user) return;
+    const timer = shouldPollRescue(requests) ? window.setInterval(() => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(); }, 30_000) : null;
     const onResume = () => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(); };
     window.addEventListener("focus", onResume);
     window.addEventListener("online", onResume);
     document.addEventListener("visibilitychange", onResume);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", onResume); window.removeEventListener("online", onResume); document.removeEventListener("visibilitychange", onResume); };
+    return () => { if (timer !== null) window.clearInterval(timer); window.removeEventListener("focus", onResume); window.removeEventListener("online", onResume); document.removeEventListener("visibilitychange", onResume); };
   }, [user, requests, refresh]);
 
   async function handleSubmit(submission: RescueRequestSubmission) {
@@ -72,7 +74,6 @@ export function RescueRequestContent() {
     retryRef.current = null;
     setSuccess(`${result.request.reference} received. This confirms a request was recorded, not that a team was dispatched.${result.nearDuplicate ? " A similar recent request may exist; check your history." : ""}`);
     setRequests((current) => [result.request, ...current.filter((item) => item.id !== result.request.id)]);
-    void refresh();
     return true;
   }
 

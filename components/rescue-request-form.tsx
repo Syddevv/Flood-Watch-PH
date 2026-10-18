@@ -290,7 +290,8 @@ export function RescueRequestForm({
               value={fields.locationName}
               onChange={(event) => {
                 setLocationSource("manual");
-                updateField("locationName", event.target.value);
+                setErrorMessage(null);
+                setFields((current) => ({ ...current, locationName: event.target.value, latitude: "", longitude: "" }));
               }}
               maxLength={RESCUE_MAX_LOCATION_NAME_LENGTH}
               placeholder="Street, barangay, city or coordinates"

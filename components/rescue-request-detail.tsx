@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useAuthSession } from "@/components/auth-session-provider";
-import { isTerminalRescue, rescueApi, rescueStatusLabel, type RescueRecord } from "@/lib/rescue-request-client";
+import { useAuthSession, type AuthUser } from "@/components/auth-session-provider";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { isTerminalRescue, rescueApi, rescueEventLabel, rescueStatusLabel, type RescueRecord } from "@/lib/rescue-request-client";
 
 export function RescueRequestDetail({ id }: { id: string }) {
   const { user, isLoading: authLoading } = useAuthSession();
+  return <RescueRequestDetailForSession key={`${user?.id ?? "guest"}:${id}`} id={id} user={user} authLoading={authLoading} />;
+}
+
+function RescueRequestDetailForSession({ id, user, authLoading }: { id: string; user: AuthUser; authLoading: boolean }) {
   const [record, setRecord] = useState<RescueRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
@@ -15,6 +20,9 @@ export function RescueRequestDetail({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [contact, setContact] = useState("");
   const [description, setDescription] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [localityCode, setLocalityCode] = useState("");
+  const [barangay, setBarangay] = useState("");
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -76,15 +84,19 @@ export function RescueRequestDetail({ id }: { id: string }) {
       </section>
       <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h2 className="text-lg font-semibold">Updates</h2>
-        <ol className="mt-3 space-y-3">{record.events?.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-semibold">{event.nextStatus ? rescueStatusLabel(event.nextStatus) : event.eventType === "cancellation_requested" ? "Cancellation requested" : "Details updated"}</p><p>{new Date(event.createdAt).toLocaleString("en-PH")}</p>{event.note ? <p className="mt-1">{event.note}</p> : null}</li>)}</ol>
+        <ol className="mt-3 space-y-3">{record.events?.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-semibold">{rescueEventLabel(event)}</p><p>{new Date(event.createdAt).toLocaleString("en-PH")}</p>{event.note ? <p className="mt-1">{event.note}</p> : null}</li>)}</ol>
       </section>
       {!isTerminalRescue(record.status) ? <section className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h2 className="text-lg font-semibold">Change this request</h2>
         {["received", "triaged"].includes(record.status) ? <>
-          <button type="button" onClick={() => { setContact(record.primaryContact); setDescription(record.description); setEditing(!editing); }} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm">Correct contact or situation</button>
-          {editing ? <form onSubmit={(event) => { event.preventDefault(); void update({ primaryContact: contact, description }); }} className="space-y-3">
+          <button type="button" onClick={() => { setContact(record.primaryContact); setDescription(record.description); setLocationName(record.locationName); setLocalityCode(record.localityCode); setBarangay(record.barangay); setEditing(!editing); }} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm">Correct request details</button>
+          {editing ? <form onSubmit={(event) => { event.preventDefault(); const locationChanged = locationName !== record.locationName || localityCode !== record.localityCode || barangay !== record.barangay; void update({ primaryContact: contact, description, ...(locationChanged ? { locationName, localityCode, barangay, latitude: null, longitude: null, locationUncertainty: "manual" } : {}) }); }} className="space-y-3">
             <label className="block text-sm">Contact<input value={contact} onChange={(event) => setContact(event.target.value)} required maxLength={120} className="mt-1 w-full rounded-lg border border-[var(--color-border)] p-2.5" /></label>
             <label className="block text-sm">Situation<textarea value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={3000} className="mt-1 w-full rounded-lg border border-[var(--color-border)] p-2.5" /></label>
+            <label className="block text-sm">Place description<input value={locationName} onChange={(event) => setLocationName(event.target.value)} required maxLength={240} className="mt-1 w-full rounded-lg border border-[var(--color-border)] p-2.5" /></label>
+            <label className="block text-sm">City or municipality<select value={localityCode} onChange={(event) => setLocalityCode(event.target.value)} required className="mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">{BULACAN_LOCALITIES.map((place) => <option key={place.code} value={place.code}>{place.name}</option>)}</select></label>
+            <label className="block text-sm">Barangay<input value={barangay} onChange={(event) => setBarangay(event.target.value)} required maxLength={120} className="mt-1 w-full rounded-lg border border-[var(--color-border)] p-2.5" /></label>
+            <p className="text-xs text-[var(--color-muted-foreground)]">Changing the place uses a manual description and clears the old pin. Contact an operator if a precise pin is needed.</p>
             <button type="submit" disabled={saving} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Save correction</button>
           </form> : null}
         </> : <p className="text-sm">After assignment, contact an operator to correct details.</p>}

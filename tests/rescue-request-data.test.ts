@@ -7,7 +7,7 @@ import {
   RESCUE_NO_ASSISTANCE_TAG_ID,
   RESCUE_WAIT_TIPS,
 } from "@/lib/rescue-request-data";
-import { isTerminalRescue, rescueStatusLabel, shouldPollRescue } from "@/lib/rescue-request-client";
+import { isTerminalRescue, rescueEventLabel, rescueStatusLabel, shouldPollRescue } from "@/lib/rescue-request-client";
 
 test("assistance tags are unique and include the opt-out tag", () => {
   const ids = RESCUE_ASSISTANCE_TAGS.map((tag) => tag.id);
@@ -27,6 +27,13 @@ test("statuses only claim dispatch after an en-route event", () => {
   assert.equal(rescueStatusLabel("received"), "Request received");
   assert.equal(rescueStatusLabel("assigned"), "Coordinator assigned");
   assert.equal(rescueStatusLabel("en_route"), "Team en route");
+});
+
+test("corrections and cancellation requests are not mislabeled as status changes", () => {
+  const event = { id: "event", nextStatus: "assigned", createdAt: "2026-10-18T03:00:00.000Z", note: null };
+  assert.equal(rescueEventLabel({ ...event, eventType: "requester_correction" }), "Details updated");
+  assert.equal(rescueEventLabel({ ...event, eventType: "cancellation_requested" }), "Cancellation requested");
+  assert.equal(rescueEventLabel({ ...event, eventType: "assign" }), "Coordinator assigned");
 });
 
 test("polling stops once every request is terminal", () => {

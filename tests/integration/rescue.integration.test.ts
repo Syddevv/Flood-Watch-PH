@@ -42,17 +42,24 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     const adminRead = await fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}`, { headers: { Cookie: cookies[2] } });
     assert.equal(adminRead.status, 200);
 
+    const correction = (body: unknown) => fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { method: "PATCH", headers: { Origin: baseUrl, Cookie: cookies[0], "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    assert.equal((await correction({ expectedVersion: 1, description: "Water rising at our door" })).status, 200);
+    assert.equal((await correction({ expectedVersion: 1, description: "Stale correction" })).status, 409);
+    const otherCorrection = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { method: "PATCH", headers: { Origin: baseUrl, Cookie: cookies[1], "Content-Type": "application/json" }, body: JSON.stringify({ expectedVersion: 2, description: "Unauthorized" }) });
+    assert.equal(otherCorrection.status, 404);
+
     const action = (body: unknown) => fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[2], "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    assert.equal((await action({ expectedVersion: 1, action: "transition", nextStatus: "en_route" })).status, 400);
-    assert.equal((await action({ expectedVersion: 1, action: "transition", nextStatus: "triaged" })).status, 200);
+    assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "en_route" })).status, 400);
+    assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "triaged" })).status, 200);
     assert.equal((await action({ expectedVersion: 1, action: "priority", priority: "critical" })).status, 409);
-    assert.equal((await action({ expectedVersion: 2, action: "assign", caseOwnerUserId: ids[2] })).status, 200);
-    assert.equal((await action({ expectedVersion: 3, action: "transition", nextStatus: "en_route" })).status, 400);
-    assert.equal((await action({ expectedVersion: 3, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1" })).status, 200);
+    assert.equal((await action({ expectedVersion: 3, action: "assign", caseOwnerUserId: ids[2] })).status, 200);
+    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route" })).status, 400);
+    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1" })).status, 200);
+    assert.equal((await correction({ expectedVersion: 5, action: "cancel" })).status, 200);
     const updated = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     assert.equal((await updated.json()).data.status, "en_route");
-    assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 4);
-    assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 4);
+    assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 6);
+    assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 6);
   } finally {
     if (server) await stopServer(server.server);
     if (requestId) {

@@ -114,6 +114,7 @@ test.describe("Request Rescue page", () => {
 
   test("a failed submission keeps inputs and retries with one idempotency key", async ({ page }) => {
     await signIn(page);
+    await expect(page.getByTestId("rescue-submit")).toBeEnabled();
     const keys: string[] = [];
     await page.route("**/api/rescue-requests", async (route) => {
       if (route.request().method() !== "POST") return route.continue();
@@ -126,6 +127,7 @@ test.describe("Request Rescue page", () => {
     await page.getByTestId("rescue-barangay").fill("Meysulao");
     await page.getByTestId("rescue-situation").fill("Water is rising quickly");
     await page.getByTestId("rescue-contact").fill("09171234567");
+    await expect(page.getByTestId("rescue-location-name")).toHaveValue("Meysulao");
     await page.getByTestId("rescue-submit").click();
     await expect(page.getByTestId("rescue-form-error")).toContainText("Temporarily unavailable");
     await expect(page.getByTestId("rescue-location-name")).toHaveValue("Meysulao");
@@ -133,6 +135,17 @@ test.describe("Request Rescue page", () => {
     await expect(page.getByTestId("rescue-success")).toContainText("not that a team was dispatched");
     expect(keys).toHaveLength(2);
     expect(keys[0]).toBe(keys[1]);
+  });
+
+  test("shows persisted event times and stops claiming dispatch for an assigned coordinator", async ({ page }) => {
+    await page.route("**/api/auth/session", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { user: { id: "test-user", email: "test@example.com", displayName: "Test", role: "user" } } }) }));
+    await page.route("**/api/rescue-requests/test-request", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { id: "test-request", reference: "RR-TEST123", status: "assigned", priority: "urgent", version: 3, createdAt: "2026-10-18T03:00:00.000Z", updatedAt: "2026-10-18T03:05:00.000Z", forWhom: "self", primaryContact: "09171234567", alternateContact: null, peopleCount: 1, vulnerabilityTags: [], description: "Water is rising quickly", locationName: "Meysulao", locationUncertainty: "manual", localityCode: "0301407000", barangay: "Meysulao", linkedReportId: null, events: [{ id: "e1", eventType: "received", nextStatus: "received", createdAt: "2026-10-18T03:00:00.000Z", note: "Request received. Dispatch is not yet confirmed." }, { id: "e2", eventType: "assign", nextStatus: "assigned", createdAt: "2026-10-18T03:05:00.000Z", note: null }] } }) }));
+    await page.goto("/rescue-request/test-request");
+    await expect(page.getByRole("heading", { name: "Coordinator assigned" })).toBeVisible();
+    await expect(page.getByText("A request receipt does not confirm that a team has been dispatched.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Updates" })).toBeVisible();
+    await expect(page.getByText("Request received", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Request cancellation" })).toBeVisible();
   });
 
   test("the layout has no horizontal overflow on a phone viewport", async ({

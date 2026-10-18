@@ -6,9 +6,7 @@ import {
   RESCUE_MAX_PEOPLE,
   RESCUE_MAX_SITUATION_LENGTH,
   RESCUE_MIN_PEOPLE,
-  buildRescueRequestDescription,
   clampRescuePeopleCount,
-  describeRescueAssistanceTags,
   formatRescuePeopleLabel,
   toggleRescueAssistanceTag,
   validateRescueRequestForm,
@@ -75,63 +73,6 @@ test("selecting a real need clears None", () => {
 
 test("None can be switched off like any other tag", () => {
   assert.deepEqual(toggleRescueAssistanceTag(["none"], "none"), []);
-});
-
-test("assistance tags are described in their defined order", () => {
-  assert.equal(
-    describeRescueAssistanceTags(["elderly", "children"]),
-    "Children, Elderly",
-  );
-  assert.equal(describeRescueAssistanceTags([]), "");
-  assert.equal(describeRescueAssistanceTags(["none"]), "None");
-});
-
-test("description carries the situation, headcount, needs, and contact", () => {
-  const description = buildRescueRequestDescription({
-    situation: "  Water is chest deep on the ground floor.  ",
-    peopleCount: 4,
-    assistanceTagIds: ["children", "elderly"],
-    contactNumber: " 0917 000 0000 ",
-  });
-
-  assert.ok(description.startsWith("RESCUE REQUEST"));
-  assert.ok(description.includes("Water is chest deep on the ground floor."));
-  assert.ok(description.includes("People needing assistance: 4"));
-  assert.ok(description.includes("Special assistance: Children, Elderly"));
-  assert.ok(description.includes("Contact number: 0917 000 0000"));
-});
-
-test("description omits optional lines that were left blank", () => {
-  const description = buildRescueRequestDescription({
-    situation: "Roof access only, water still rising.",
-    peopleCount: 1,
-    assistanceTagIds: [],
-    contactNumber: "",
-  });
-
-  assert.ok(!description.includes("Special assistance:"));
-  assert.ok(!description.includes("Contact number:"));
-  assert.ok(description.includes("People needing assistance: 1"));
-});
-
-test("description stays inside the report API's 1000 character limit", () => {
-  const description = buildRescueRequestDescription({
-    situation: "x".repeat(700),
-    peopleCount: RESCUE_MAX_PEOPLE,
-    assistanceTagIds: [
-      "children",
-      "elderly",
-      "pwd",
-      "pregnant",
-      "medical",
-    ],
-    contactNumber: "0917 000 0000",
-  });
-
-  assert.ok(
-    description.length <= 1000,
-    `description was ${description.length} characters`,
-  );
 });
 
 test("a fully filled Calumpit form validates", () => {

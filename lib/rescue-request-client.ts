@@ -40,6 +40,12 @@ export function rescueStatusLabel(status: string) {
   return RESCUE_STATUS_LABELS[status] ?? "Status unavailable";
 }
 
+export function rescueEventLabel(event: RescueEvent) {
+  if (event.eventType === "cancellation_requested") return "Cancellation requested";
+  if (event.eventType === "requester_correction") return "Details updated";
+  return event.nextStatus ? rescueStatusLabel(event.nextStatus) : "Request updated";
+}
+
 export function isTerminalRescue(status: string) {
   return TERMINAL_RESCUE_STATUSES.includes(status);
 }
