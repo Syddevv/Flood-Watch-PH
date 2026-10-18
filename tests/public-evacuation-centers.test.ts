@@ -73,6 +73,21 @@ test("descriptive barangay locations are listed as sites, not identified buildin
   assert.match(center.sourceNotes ?? "", /does not identify the exact building/);
 });
 
+test("online-mapped locations retain precision notes without promoting candidates to pins", () => {
+  const mapped = toPublicCenter({ ...validCenter, sourceSnapshot: { record: {
+    latitude: validCenter.latitude, longitude: validCenter.longitude,
+    coordinate_precision: "campus", location_verification_status: "online_identity_match_not_field_verified",
+    location_notes: "Campus grounds only; entrance not verified.",
+  }, sources: [{ title: "Campus map", url: "https://example.gov.ph/campus", published_at: null }] } });
+  assert.match(mapped.locationProvenance ?? "", /Online-mapped campus/);
+  assert.match(mapped.locationNotes ?? "", /entrance not verified/);
+  assert.equal(mapped.sourceLinks.length, 1);
+  const candidate = toPublicCenter({ ...validCenter, latitude: null, longitude: null,
+    sourceSnapshot: { record: { coordinate_candidate: { latitude: 14.9, longitude: 120.8 } } } });
+  assert.equal(candidate.latitude, null);
+  assert.equal(candidate.longitude, null);
+});
+
 test("new operational confirmations require a timestamp and their own evidence", () => {
   const base = { confirmAvailability: true, operationalConfirmedAt: recent.toISOString() };
   assert.match(parseOperationalConfirmation({}, "available").error ?? "", /Confirm/);

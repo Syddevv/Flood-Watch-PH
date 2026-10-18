@@ -195,6 +195,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
             {selectedCenter.lastDocumentedEventDate ? <p>Documented event: {formatLastVerified(selectedCenter.lastDocumentedEventDate)}.</p> : null}
             {selectedCenter.verificationStatus === "outdated" ? <p>Source needs rechecking.</p> : null}
             {selectedCenter.locationProvenance ? <p>{selectedCenter.locationProvenance}</p> : null}
+            {selectedCenter.locationNotes ? <p>{selectedCenter.locationNotes}</p> : null}
             {selectedCenter.sourceNotes ? <p>{selectedCenter.sourceNotes}</p> : null}
             {selectedCenter.sourceLinks.length ? <ul className="space-y-2">{selectedCenter.sourceLinks.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{source.title}{source.publishedAt ? ` (${source.publishedAt})` : ""}</a></li>)}</ul> : selectedCenter.sourceUrl ? <a href={selectedCenter.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2">Official source</a> : null}
           </div>

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "dataset_id": "flood-watch-bulacan-official-source-directory",
   "title": "Bulacan emergency contacts and evacuation facilities — sourced starter directory",
   "compiled_at": "2026-10-18",
@@ -12,7 +12,7 @@
     "source_checked_at_meaning": "Date the publication was researched; never substitute for status_checked_at.",
     "phone_call_testing_performed": false,
     "live_evacuation_activation_verified": false,
-    "geocoding_policy": "No inferred coordinates or barangay-centroid pins. Only the supplied Malolos plan coordinates were converted from DMS.",
+    "geocoding_policy": "No guessed or barangay-centroid pins. Ten original official-plan coordinates retained; nine additional public mapped facility/grounds positions matched to official designation/use. Public map coordinates are not an official location survey. Unresolved candidates must not be rendered.",
     "capacity_policy": "Plan figures are historical estimates, not available beds. Never subtract unknown occupancy from these figures.",
     "completeness": "Emergency directory covers 24 LGUs; named shelter coverage is partial. This research does not establish all facilities or all official sources."
   },
@@ -22,8 +22,10 @@
     "phone_entries": 97,
     "lgu_contact_coverage": 24,
     "lgu_evacuation_coverage": 14,
-    "centers_with_source_coordinates": 10,
-    "source_records": 24
+    "centers_with_source_coordinates": 19,
+    "source_records": 43,
+    "centers_with_official_plan_coordinates": 10,
+    "centers_with_online_mapped_locations": 9
   },
   "import_guidance": {
     "format": "One JSON object; import evacuation_centers and emergency_contacts as separate collections. Resolve each source_ids value against sources[].id.",
@@ -51,7 +53,9 @@
     "refresh": "Record future source refreshes and activation updates with separate timestamps. A static seed cannot automatically keep service status current.",
     "deduplication": "Review Angat San Roque barangay site versus Municipal Evacuation Center compound. Do not merge facilities merely because coordinates or barangay match.",
     "scope": "Do not broaden scope beyond Bulacan; 911 is retained because Bulacan PDRRMO itself publishes it.",
-    "repo_integration": "Inspect the current Flood Watch schema and UI before writing a migration. No compatibility with an unseen schema is claimed."
+    "repo_integration": "Inspect the current Flood Watch schema and UI before writing a migration. No compatibility with an unseen schema is claimed.",
+    "location_update": "Merge location fields for existing stable IDs; preserve newer admin locations and all operational statuses. Read location_source_ids and coordinate_precision. Never promote coordinate_candidate to a map pin automatically.",
+    "map_attribution": "For OSM-derived coordinates, preserve attribution: © OpenStreetMap contributors, https://www.openstreetmap.org/copyright (ODbL). Public-map source records identify Mapcarta as presentation source. Keep Waze attribution for the Patubig place-code source. Review applicable map-data terms for reuse."
   },
   "coverage_by_municipality": [
     {
@@ -561,7 +565,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-sto-cristo-barangay-evacuation-center",
@@ -594,7 +606,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-san-roque-barangay-evacuation-center",
@@ -627,7 +647,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-niugan-barangay-evacuation-center",
@@ -660,7 +688,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-banaban-barangay-evacuation-center",
@@ -693,7 +729,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-laog-barangay-evacuation-center",
@@ -726,7 +770,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound."
+      "notes": "Descriptive name generated from the barangay list; source does not identify the exact building. Do not geocode to a barangay centroid or infer it is the Municipal Evacuation Center compound.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      }
     },
     {
       "id": "evac-angat-municipal-evacuation-center-compound",
@@ -759,7 +811,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Potentially overlaps the San Roque barangay entry; retain separately pending facility-identity confirmation."
+      "notes": "Potentially overlaps the San Roque barangay entry; retain separately pending facility-identity confirmation.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-compound"
+        ]
+      }
     },
     {
       "id": "evac-guiguinto-gmacc-evacuation-center-a",
@@ -792,7 +852,26 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available."
+      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available.",
+      "coordinate_candidate": {
+        "latitude": 14.82683,
+        "longitude": 120.87889,
+        "status": "needs_review_do_not_render",
+        "source_ids": [
+          "loc-gmacc-candidate",
+          "loc-gmacc-identity"
+        ]
+      },
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "GMACC identity and Poblacion address found, but coordinate evidence is a community-directory candidate only; awaiting stronger location cross-check.",
+        "source_ids": [
+          "guiguinto-plan",
+          "loc-gmacc-candidate",
+          "loc-gmacc-identity"
+        ]
+      }
     },
     {
       "id": "evac-guiguinto-kanlungan-ng-bayan-evacuation-center-b",
@@ -825,7 +904,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available."
+      "notes": "Figure 22 on PDF page 71. Abbreviation and building identity require confirmation; no precise coordinates available.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "guiguinto-plan"
+        ]
+      }
     },
     {
       "id": "evac-pandi-pandi-village-i-barangay-outpost-and-evacuation-center",
@@ -858,7 +945,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Located in Pandi Village I."
+      "notes": "Located in Pandi Village I.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "pandi"
+        ]
+      }
     },
     {
       "id": "evac-san-jose-del-monte-pagcor-multi-purpose-evacuation-center",
@@ -891,7 +986,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": null
+      "notes": null,
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "sjdm-pagcor"
+        ]
+      }
     },
     {
       "id": "evac-obando-obando-national-high-school",
@@ -900,13 +1003,13 @@
       "barangay": "Paliwas",
       "province": "Bulacan",
       "country": "PH",
-      "address": "Paliwas, Obando, Bulacan",
+      "address": "Paliwas, De Ocampo Subdivision, Obando, Bulacan",
       "facility_type": "school",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.71245,
+      "longitude": 120.93324,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "campus",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -919,12 +1022,21 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2026-04-15",
       "source_ids": [
-        "obando-2026"
+        "obando-2026",
+        "loc-obando-school"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Documented shelter for landfill-smoke evacuees; suitability for flooding must be checked separately."
+      "notes": "Documented shelter for landfill-smoke evacuees; suitability for flooding must be checked separately.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-obando-school"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-santa-maria-santa-maria-national-high-school",
@@ -957,7 +1069,24 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": null
+      "notes": null,
+      "coordinate_candidate": {
+        "plus_code": "RX72+HJ2",
+        "locality": "Santa Maria, Bulacan",
+        "status": "needs_review_do_not_render",
+        "source_ids": [
+          "loc-smnhs-candidate"
+        ]
+      },
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Bunducan Street plus-code candidate found, but exact campus association not sufficiently corroborated; multiple same-name schools occur in search results.",
+        "source_ids": [
+          "santa-maria-2026",
+          "loc-smnhs-candidate"
+        ]
+      }
     },
     {
       "id": "evac-santa-maria-san-gabriel-municipal-evacuation-center",
@@ -990,7 +1119,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Source calls it San Gabriel Municipal Evacuation; label expanded descriptively."
+      "notes": "Source calls it San Gabriel Municipal Evacuation; label expanded descriptively.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      }
     },
     {
       "id": "evac-santa-maria-tumana-evacuation-site",
@@ -1023,7 +1160,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      }
     },
     {
       "id": "evac-santa-maria-san-jose-patag-evacuation-site",
@@ -1056,7 +1201,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      }
     },
     {
       "id": "evac-santa-maria-guyong-evacuation-site",
@@ -1089,7 +1242,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name."
+      "notes": "Source names the area but not the exact facility; descriptive label, not a verified building name.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      }
     },
     {
       "id": "evac-marilao-pambayang-dalubhasaan-ng-marilao-pdm",
@@ -1098,13 +1259,13 @@
       "barangay": null,
       "province": "Bulacan",
       "country": "PH",
-      "address": "Marilao, Bulacan",
+      "address": "MacArthur Highway, Abangan Norte, Marilao, Bulacan",
       "facility_type": "school",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.77019,
+      "longitude": 120.94,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "campus",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1118,12 +1279,23 @@
       "last_documented_event_date": "2026-02-26",
       "source_ids": [
         "marilao-orders",
-        "marilao-pdm-pdf"
+        "marilao-pdm-pdf",
+        "loc-pdm",
+        "loc-pdm-address"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "EO JS2026-54 designates this facility for disasters or as needed. Exact campus address still required."
+      "notes": "EO JS2026-54 designates this facility for disasters or as needed. Exact campus address still required.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-pdm",
+        "loc-pdm-address"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-marilao-patubig-covered-court",
@@ -1135,10 +1307,10 @@
       "address": "Patubig, Marilao, Bulacan",
       "facility_type": "covered_court",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.7756875,
+      "longitude": 120.96026563,
+      "coordinate_method": "public_place_plus_code_decoded",
+      "coordinate_precision": "mapped_place",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1152,12 +1324,21 @@
       "last_documented_event_date": "2026-02-26",
       "source_ids": [
         "marilao-orders",
-        "marilao-patubig-pdf"
+        "marilao-patubig-pdf",
+        "loc-patubig"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "EO JS2026-53."
+      "notes": "EO JS2026-53.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-patubig"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility location",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-bocaue-new-municipal-hall-of-bocaue",
@@ -1169,10 +1350,10 @@
       "address": "Igulot, Bocaue, Bulacan",
       "facility_type": "municipal_hall",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.79385,
+      "longitude": 120.94295,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "building",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1185,12 +1366,21 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2020-02-13",
       "source_ids": [
-        "bocaue-2020"
+        "bocaue-2020",
+        "loc-bocaue"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Historical fire evacuation use; no current flood activation established."
+      "notes": "Historical fire evacuation use; no current flood activation established.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-bocaue"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility location",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-malolos-bulacan-capitol-gymnasium",
@@ -1199,13 +1389,13 @@
       "barangay": null,
       "province": "Bulacan",
       "country": "PH",
-      "address": "Malolos, Bulacan",
+      "address": "Capitol Drive, Provincial Capitol Compound, Guinhawa, Malolos, Bulacan",
       "facility_type": "gymnasium",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.85633,
+      "longitude": 120.81499,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "building",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1218,12 +1408,21 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2022-09-25",
       "source_ids": [
-        "karding-2022"
+        "karding-2022",
+        "loc-capitol-gym"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": null
+      "notes": null,
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-capitol-gym"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility location",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-malolos-bulacan-sports-complex",
@@ -1232,13 +1431,13 @@
       "barangay": null,
       "province": "Bulacan",
       "country": "PH",
-      "address": "Malolos, Bulacan",
+      "address": "Bulacan Sports Complex, Malolos, Bulacan",
       "facility_type": "sports_facility",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.84333,
+      "longitude": 120.83824,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "complex",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1251,12 +1450,21 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": null,
       "source_ids": [
-        "paeng-2022"
+        "paeng-2022",
+        "loc-sports-complex"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Historical designated shelter, not evidence of present opening."
+      "notes": "Historical designated shelter, not evidence of present opening.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-sports-complex"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-calumpit-meysulao-evacuation-center",
@@ -1289,7 +1497,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Meysulao multipurpose shelter identity supported, but no defensible building coordinate retrieved. Nearby barangay hall and church are distinct facilities.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-calumpit-gugo-barangay-outpost",
@@ -1322,7 +1538,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-calumpit-san-miguel-donia-damiana-es",
@@ -1331,13 +1555,13 @@
       "barangay": "San Miguel",
       "province": "Bulacan",
       "country": "PH",
-      "address": "San Miguel, Calumpit, Bulacan",
+      "address": "Cabu, San Miguel, Calumpit, Bulacan",
       "facility_type": "school",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.91784,
+      "longitude": 120.74302,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "campus",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1350,12 +1574,23 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2020-11-11",
       "source_ids": [
-        "rolly-2020"
+        "rolly-2020",
+        "loc-damiana",
+        "loc-damiana-identity"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-damiana",
+        "loc-damiana-identity"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-calumpit-sapang-bayan-bmltc-ec",
@@ -1364,13 +1599,13 @@
       "barangay": "Sapang Bayan",
       "province": "Bulacan",
       "country": "PH",
-      "address": "Sapang Bayan, Calumpit, Bulacan",
+      "address": "Arce Street, Poblacion, Calumpit, Bulacan",
       "facility_type": "unspecified",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 14.91848,
+      "longitude": 120.76705,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "campus",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1383,12 +1618,26 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2020-11-11",
       "source_ids": [
-        "rolly-2020"
+        "rolly-2020",
+        "loc-bmltc",
+        "loc-bmltc-use",
+        "loc-bmltc-address"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-bmltc",
+        "loc-bmltc-use",
+        "loc-bmltc-address"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed. TESDA identifies the campus at Poblacion; Sapang Bayan may be the origin of evacuees. Original name and barangay retained for compatibility; use address for facility location.",
+      "address_review_required": true
     },
     {
       "id": "evac-calumpit-iba-oeste-nv9-ec",
@@ -1421,7 +1670,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Northville 9 school and multipurpose-hall references found; abbreviated historical record does not establish which building to pin.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-obando-barangay-pag-asa-chapel",
@@ -1454,7 +1711,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-pulilan-dampol-2nd-b-barangay-hall",
@@ -1487,7 +1752,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-san-ildefonso-garlang-barangay-hall",
@@ -1520,7 +1793,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Garlang/Nabaong Garlang naming ambiguity; no exact historic shelter building match established.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      }
     },
     {
       "id": "evac-san-ildefonso-anyatam-elementary-school",
@@ -1529,13 +1810,13 @@
       "barangay": "Anyatam",
       "province": "Bulacan",
       "country": "PH",
-      "address": "Anyatam, San Ildefonso, Bulacan",
+      "address": "Cagayan Valley Road, Anyatam, San Ildefonso, Bulacan",
       "facility_type": "school",
       "permanent": null,
-      "latitude": null,
-      "longitude": null,
-      "coordinate_method": null,
-      "coordinate_precision": null,
+      "latitude": 15.10089,
+      "longitude": 120.94047,
+      "coordinate_method": "public_mapped_facility_identity_matched",
+      "coordinate_precision": "campus",
       "capacity_individuals": null,
       "capacity_families": null,
       "capacity_basis": null,
@@ -1548,12 +1829,23 @@
       "evidence_basis": "historical_activation",
       "last_documented_event_date": "2020-11-11",
       "source_ids": [
-        "rolly-2020"
+        "rolly-2020",
+        "loc-anyatam",
+        "loc-anyatam-identity"
       ],
       "public_display_recommendation": "directory_only_status_unknown",
-      "map_display_recommendation": "hide_pin_until_exact_location_verified",
+      "map_display_recommendation": "show_with_location_precision_label",
       "facility_phone": null,
-      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees."
+      "notes": "Historical 2020 incident record. Confirm current facility name, flood suitability and activation before directing evacuees.",
+      "location_checked_at": "2026-10-18",
+      "location_source_ids": [
+        "loc-anyatam",
+        "loc-anyatam-identity"
+      ],
+      "location_verification_status": "online_identity_match_not_field_verified",
+      "entrance_verified": false,
+      "location_label": "Mapped facility grounds",
+      "location_notes": "Public map position cross-referenced with existing official facility designation or use. Not government-surveyed, field-verified, or proof of opening. Routing access and exact shelter entrance remain unconfirmed."
     },
     {
       "id": "evac-meycauayan-malhacan-barangay-hall",
@@ -1586,7 +1878,17 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Historical 2018 use only; full source access restricted during research."
+      "notes": "Historical 2018 use only; full source access restricted during research.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Two same-name mapped halls about 280m apart; historical shelter record does not disambiguate.",
+        "source_ids": [
+          "meycauayan-2018",
+          "loc-malhacan-conflict-a",
+          "loc-malhacan-conflict-b"
+        ]
+      }
     },
     {
       "id": "evac-balagtas-evacuation-center-and-barangay-outpost",
@@ -1619,7 +1921,15 @@
       "public_display_recommendation": "directory_only_status_unknown",
       "map_display_recommendation": "hide_pin_until_exact_location_verified",
       "facility_phone": null,
-      "notes": "Descriptive article label; exact barangay and building identity not established."
+      "notes": "Descriptive article label; exact barangay and building identity not established.",
+      "location_research": {
+        "checked_at": "2026-10-18",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "balagtas-2018"
+        ]
+      }
     }
   ],
   "emergency_contacts": [
@@ -4055,6 +4365,196 @@
       "checked_at": "2026-10-18",
       "kind": "unresolved_official_social_post",
       "note": "Search indexed an outage advisory, but post could not be opened or dated. Do not infer a current outage or import its alternate numbers as current contacts."
+    },
+    {
+      "id": "loc-obando-school",
+      "title": "Obando National High School — mapped campus",
+      "url": "https://mapcarta.com/W788328732",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 788328732. Address Paliwas, De Ocampo Subdivision matches provincial report. Campus position, not a shelter-room or entrance survey."
+    },
+    {
+      "id": "loc-pdm",
+      "title": "Municipal College of Marilao / Pambayang Dalubhasaan ng Marilao",
+      "url": "https://mapcarta.com/W1068372684",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 1068372684; MacArthur Highway campus. Public map coordinates; not government-surveyed."
+    },
+    {
+      "id": "loc-pdm-address",
+      "title": "CHED regional HEI report — PDM address",
+      "url": "https://chedro3.ched.gov.ph/wp-content/uploads/2021/11/CHEDRO-III-Version-III-Template-Report-Vaccination-25November.pdf",
+      "publisher": "CHED Regional Office III",
+      "kind": "official_report",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Row 137 identifies MacArthur Highway, Abangan Norte, Marilao. Identity/address evidence, not coordinate authority."
+    },
+    {
+      "id": "loc-patubig",
+      "title": "Barangay Patubig Covered Court — mapped place",
+      "url": "https://www.waze.com/live-map/directions/ph/central-luzon/marilao/barangay-patubig-covered-court?to=place.ChIJ2fsKfwCzlzMRh_Mn2CY0d-0",
+      "publisher": "Waze public place listing",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Published short plus code QXG6+74C, Patubig, Marilao. Full code 7Q62QXG6+74C recovered from the stated locality; pin is decoded place-code cell center, not a barangay centroid."
+    },
+    {
+      "id": "loc-bocaue",
+      "title": "Bocaue Municipal Hall — mapped building",
+      "url": "https://mapcarta.com/W303432155",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 303432155; municipal hall near Joni Villanueva General Hospital in Igulot. General opening hours are NOT imported as evacuation availability."
+    },
+    {
+      "id": "loc-anyatam",
+      "title": "Anyatam Elementary School — mapped campus",
+      "url": "https://mapcarta.com/W601164935",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 601164935; Cagayan Valley Road, San Ildefonso. Campus location, not exact evacuation classroom."
+    },
+    {
+      "id": "loc-anyatam-identity",
+      "title": "Anyatam Elementary School photograph and description",
+      "url": "https://commons.wikimedia.org/wiki/File:09730jfAnyatam,_San_Ildefonso,_Bulacan_Elementary_Schoolfvf_06.jpg",
+      "publisher": "Wikimedia Commons / Judgefloro",
+      "kind": "photographic_description",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "School identity and Anyatam address corroboration only. Camera coordinates were not used as facility coordinates."
+    },
+    {
+      "id": "loc-damiana",
+      "title": "Doña Damiana de Leon Memorial Elementary School — mapped campus",
+      "url": "https://mapcarta.com/W303716869",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 303716869, Cabu, Calumpit, alias San Miguel Elementary School."
+    },
+    {
+      "id": "loc-damiana-identity",
+      "title": "DepEd allocation list — school ID 104819",
+      "url": "https://www.deped.gov.ph/wp-content/uploads/Annex-C-Allocation-List-6.pdf",
+      "publisher": "Department of Education",
+      "kind": "official_report",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Links Doña Damiana De Leon Macam Memorial E/S and San Miguel E/S in Calumpit. Supports identity match to abbreviated incident record."
+    },
+    {
+      "id": "loc-bmltc",
+      "title": "TESDA Provincial Training Center Calumpit — mapped campus",
+      "url": "https://mapcarta.com/W844518408",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 844518408, Arce Street. Campus grounds, not the precise multipurpose hall."
+    },
+    {
+      "id": "loc-bmltc-use",
+      "title": "TESDA Calumpit and partners provide relief after Enteng",
+      "url": "https://bulacan.tesda3.com/tesda-calumpit-and-partners-provide-relief-to-families-affected-by-typhoon-enteng/",
+      "publisher": "TESDA3 Bulacan",
+      "kind": "agency_news",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Published 2024-10-28, updated 2024-11-23. Explicitly locates Sapang Bayan evacuees in the multipurpose building within PTC-Calumpit/BMLTC compound. Sapang Bayan in the seed may describe origin of evacuees rather than campus barangay."
+    },
+    {
+      "id": "loc-bmltc-address",
+      "title": "TESDA assessment-center list — Calumpit",
+      "url": "https://bulacan.tesda3.com/list-of-assessment-centers/",
+      "publisher": "TESDA3 Bulacan",
+      "kind": "agency_directory",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Lists PTC Bulacan-Calumpit at Arce St., Poblacion, Calumpit. Used for campus address, not historical phone imports."
+    },
+    {
+      "id": "loc-capitol-gym",
+      "title": "Bulacan Provincial Capitol Gymnasium — mapped building",
+      "url": "https://mapcarta.com/W528493180",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 528493180, Capitol Drive, Malolos. Building-level map position; not entrance verified."
+    },
+    {
+      "id": "loc-sports-complex",
+      "title": "Bulacan Sports Complex — mapped grounds",
+      "url": "https://mapcarta.com/W300880634",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "public_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "OSM way 300880634. Complex-level position; shelter building or gate unspecified."
+    },
+    {
+      "id": "loc-gmacc-candidate",
+      "title": "Guiguinto Municipal Athletic and Cultural Center — location candidate",
+      "url": "https://philippines.worldplaces.me/places-in-guiguinto/29325383-guiguinto-municipal-athletic-and-cultural-center.html",
+      "publisher": "WorldPlaces",
+      "kind": "unconfirmed_directory_candidate",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "14.82683,120.87889 matches Poblacion address but coordinate evidence limited to a community directory. Not promoted to live latitude/longitude."
+    },
+    {
+      "id": "loc-gmacc-identity",
+      "title": "COMELEC field-office address — Guiguinto",
+      "url": "https://www.comelec.gov.ph/?r=ContactInformation/FieldOffices/CityMunicipalOffices/region3offices",
+      "publisher": "COMELEC",
+      "kind": "official_directory",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Indexed address identifies GMACC, Municipal Compound, Poblacion, Guiguinto. No coordinates."
+    },
+    {
+      "id": "loc-smnhs-candidate",
+      "title": "Santa Maria National High School — location candidate",
+      "url": "https://www.bizippines.com/santa-maria-national-high-school_18f-044-641-3070",
+      "publisher": "Bizippines",
+      "kind": "unconfirmed_directory_candidate",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Indexed address RX72+HJ2, Bunducan Street, Santa Maria. Full page timed out. Not promoted to live coordinates."
+    },
+    {
+      "id": "loc-malhacan-conflict-a",
+      "title": "Malhacan Barangay Hall — conflicting point A",
+      "url": "https://mapcarta.com/N5750910318",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "conflicting_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "14.7462,120.97287; another same-name hall is mapped about 280m southwest. Cannot determine which was the historic shelter."
+    },
+    {
+      "id": "loc-malhacan-conflict-b",
+      "title": "Malhacan Barangay Hall — conflicting point B",
+      "url": "https://mapcarta.com/W300444887",
+      "publisher": "Mapcarta / OpenStreetMap contributors",
+      "kind": "conflicting_map_listing",
+      "published_at": null,
+      "checked_at": "2026-10-18",
+      "note": "Second same-name hall. Withheld both until facility identity is resolved."
     }
   ],
   "excluded_or_unresolved": [
@@ -4093,7 +4593,379 @@
     "No current activation, occupancy, road access, structural safety, disability access or pet policy was verified.",
     "Several reports identify only barangays; descriptive names are explicitly marked in notes.",
     "Some government pages publish legacy numbers. No missing landline digits or prefixes were guessed.",
-    "Exact addresses are incomplete outside the source-published Malolos locations.",
-    "Construction budgets and proposed projects were not treated as completed evacuation centers."
-  ]
+    "Construction budgets and proposed projects were not treated as completed evacuation centers.",
+    "24 facilities remain without coordinates. Two community-directory candidates are retained separately for review and must not be shown as pins.",
+    "Public mapped positions may be stale and identify grounds rather than exact evacuation buildings or entrances.",
+    "Original ten Malolos plan coordinates were preserved and were not re-surveyed in this update.",
+    "Sapang Bayan BMLTC incident label may name evacuee origin. TESDA identifies the facility campus at Arce Street, Poblacion."
+  ],
+  "location_update": {
+    "checked_at": "2026-10-18",
+    "previous_mapped_facilities": 10,
+    "coordinates_added": 9,
+    "mapped_facilities_after": 19,
+    "previously_unmapped_reviewed": 33,
+    "still_without_coordinates": 24,
+    "meaning": "Nine facility/grounds locations matched online. Public-map evidence is distinguished from official designation evidence; none are field verified or confirmed open.",
+    "audit": [
+      {
+        "id": "evac-angat-sta-cruz-barangay-evacuation-center",
+        "name": "Sta. Cruz Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-sto-cristo-barangay-evacuation-center",
+        "name": "Sto. Cristo Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-san-roque-barangay-evacuation-center",
+        "name": "San Roque Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-niugan-barangay-evacuation-center",
+        "name": "Niugan Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-banaban-barangay-evacuation-center",
+        "name": "Banaban Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-laog-barangay-evacuation-center",
+        "name": "Laog Barangay Evacuation Center",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-2025"
+        ]
+      },
+      {
+        "id": "evac-angat-municipal-evacuation-center-compound",
+        "name": "Municipal Evacuation Center Compound",
+        "municipality": "Angat",
+        "outcome": "unresolved",
+        "reason": "Source names barangay-level shelter or compound; precise shelter building/entrance not established. Barangay or municipal-hall centroid not used.",
+        "source_ids": [
+          "angat-compound"
+        ]
+      },
+      {
+        "id": "evac-guiguinto-gmacc-evacuation-center-a",
+        "name": "GMACC (Evacuation Center A)",
+        "municipality": "Guiguinto",
+        "outcome": "unresolved",
+        "reason": "GMACC identity and Poblacion address found, but coordinate evidence is a community-directory candidate only; awaiting stronger location cross-check.",
+        "source_ids": [
+          "guiguinto-plan",
+          "loc-gmacc-candidate",
+          "loc-gmacc-identity"
+        ]
+      },
+      {
+        "id": "evac-guiguinto-kanlungan-ng-bayan-evacuation-center-b",
+        "name": "Kanlungan ng Bayan (Evacuation Center B)",
+        "municipality": "Guiguinto",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "guiguinto-plan"
+        ]
+      },
+      {
+        "id": "evac-pandi-pandi-village-i-barangay-outpost-and-evacuation-center",
+        "name": "Pandi Village I Barangay Outpost and Evacuation Center",
+        "municipality": "Pandi",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "pandi"
+        ]
+      },
+      {
+        "id": "evac-san-jose-del-monte-pagcor-multi-purpose-evacuation-center",
+        "name": "PAGCOR Multi-Purpose Evacuation Center",
+        "municipality": "San Jose del Monte",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "sjdm-pagcor"
+        ]
+      },
+      {
+        "id": "evac-obando-obando-national-high-school",
+        "name": "Obando National High School",
+        "municipality": "Obando",
+        "outcome": "coordinates_added",
+        "latitude": 14.71245,
+        "longitude": 120.93324,
+        "precision": "campus",
+        "source_ids": [
+          "loc-obando-school"
+        ]
+      },
+      {
+        "id": "evac-santa-maria-santa-maria-national-high-school",
+        "name": "Santa Maria National High School",
+        "municipality": "Santa Maria",
+        "outcome": "unresolved",
+        "reason": "Bunducan Street plus-code candidate found, but exact campus association not sufficiently corroborated; multiple same-name schools occur in search results.",
+        "source_ids": [
+          "santa-maria-2026",
+          "loc-smnhs-candidate"
+        ]
+      },
+      {
+        "id": "evac-santa-maria-san-gabriel-municipal-evacuation-center",
+        "name": "San Gabriel Municipal Evacuation Center",
+        "municipality": "Santa Maria",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      },
+      {
+        "id": "evac-santa-maria-tumana-evacuation-site",
+        "name": "Tumana evacuation site",
+        "municipality": "Santa Maria",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      },
+      {
+        "id": "evac-santa-maria-san-jose-patag-evacuation-site",
+        "name": "San Jose Patag evacuation site",
+        "municipality": "Santa Maria",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      },
+      {
+        "id": "evac-santa-maria-guyong-evacuation-site",
+        "name": "Guyong evacuation site",
+        "municipality": "Santa Maria",
+        "outcome": "unresolved",
+        "reason": "Source identifies area of evacuation, not an exact named building. Do not substitute barangay hall or covered court.",
+        "source_ids": [
+          "santa-maria-2026"
+        ]
+      },
+      {
+        "id": "evac-marilao-pambayang-dalubhasaan-ng-marilao-pdm",
+        "name": "Pambayang Dalubhasaan ng Marilao (PDM)",
+        "municipality": "Marilao",
+        "outcome": "coordinates_added",
+        "latitude": 14.77019,
+        "longitude": 120.94,
+        "precision": "campus",
+        "source_ids": [
+          "loc-pdm",
+          "loc-pdm-address"
+        ]
+      },
+      {
+        "id": "evac-marilao-patubig-covered-court",
+        "name": "Patubig Covered Court",
+        "municipality": "Marilao",
+        "outcome": "coordinates_added",
+        "latitude": 14.7756875,
+        "longitude": 120.96026563,
+        "precision": "mapped_place",
+        "source_ids": [
+          "loc-patubig"
+        ]
+      },
+      {
+        "id": "evac-bocaue-new-municipal-hall-of-bocaue",
+        "name": "New Municipal Hall of Bocaue",
+        "municipality": "Bocaue",
+        "outcome": "coordinates_added",
+        "latitude": 14.79385,
+        "longitude": 120.94295,
+        "precision": "building",
+        "source_ids": [
+          "loc-bocaue"
+        ]
+      },
+      {
+        "id": "evac-malolos-bulacan-capitol-gymnasium",
+        "name": "Bulacan Capitol Gymnasium",
+        "municipality": "Malolos",
+        "outcome": "coordinates_added",
+        "latitude": 14.85633,
+        "longitude": 120.81499,
+        "precision": "building",
+        "source_ids": [
+          "loc-capitol-gym"
+        ]
+      },
+      {
+        "id": "evac-malolos-bulacan-sports-complex",
+        "name": "Bulacan Sports Complex",
+        "municipality": "Malolos",
+        "outcome": "coordinates_added",
+        "latitude": 14.84333,
+        "longitude": 120.83824,
+        "precision": "complex",
+        "source_ids": [
+          "loc-sports-complex"
+        ]
+      },
+      {
+        "id": "evac-calumpit-meysulao-evacuation-center",
+        "name": "Meysulao Evacuation Center",
+        "municipality": "Calumpit",
+        "outcome": "unresolved",
+        "reason": "Meysulao multipurpose shelter identity supported, but no defensible building coordinate retrieved. Nearby barangay hall and church are distinct facilities.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-calumpit-gugo-barangay-outpost",
+        "name": "Gugo Barangay Outpost",
+        "municipality": "Calumpit",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-calumpit-san-miguel-donia-damiana-es",
+        "name": "San Miguel Donia Damiana ES",
+        "municipality": "Calumpit",
+        "outcome": "coordinates_added",
+        "latitude": 14.91784,
+        "longitude": 120.74302,
+        "precision": "campus",
+        "source_ids": [
+          "loc-damiana",
+          "loc-damiana-identity"
+        ]
+      },
+      {
+        "id": "evac-calumpit-sapang-bayan-bmltc-ec",
+        "name": "Sapang Bayan BMLTC EC",
+        "municipality": "Calumpit",
+        "outcome": "coordinates_added",
+        "latitude": 14.91848,
+        "longitude": 120.76705,
+        "precision": "campus",
+        "source_ids": [
+          "loc-bmltc",
+          "loc-bmltc-use",
+          "loc-bmltc-address"
+        ]
+      },
+      {
+        "id": "evac-calumpit-iba-oeste-nv9-ec",
+        "name": "Iba O’Este NV9 EC",
+        "municipality": "Calumpit",
+        "outcome": "unresolved",
+        "reason": "Northville 9 school and multipurpose-hall references found; abbreviated historical record does not establish which building to pin.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-obando-barangay-pag-asa-chapel",
+        "name": "Barangay Pag-asa Chapel",
+        "municipality": "Obando",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-pulilan-dampol-2nd-b-barangay-hall",
+        "name": "Dampol 2nd B Barangay Hall",
+        "municipality": "Pulilan",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-san-ildefonso-garlang-barangay-hall",
+        "name": "Garlang Barangay Hall",
+        "municipality": "San Ildefonso",
+        "outcome": "unresolved",
+        "reason": "Garlang/Nabaong Garlang naming ambiguity; no exact historic shelter building match established.",
+        "source_ids": [
+          "rolly-2020"
+        ]
+      },
+      {
+        "id": "evac-san-ildefonso-anyatam-elementary-school",
+        "name": "Anyatam Elementary School",
+        "municipality": "San Ildefonso",
+        "outcome": "coordinates_added",
+        "latitude": 15.10089,
+        "longitude": 120.94047,
+        "precision": "campus",
+        "source_ids": [
+          "loc-anyatam",
+          "loc-anyatam-identity"
+        ]
+      },
+      {
+        "id": "evac-meycauayan-malhacan-barangay-hall",
+        "name": "Malhacan Barangay Hall",
+        "municipality": "Meycauayan",
+        "outcome": "unresolved",
+        "reason": "Two same-name mapped halls about 280m apart; historical shelter record does not disambiguate.",
+        "source_ids": [
+          "meycauayan-2018",
+          "loc-malhacan-conflict-a",
+          "loc-malhacan-conflict-b"
+        ]
+      },
+      {
+        "id": "evac-balagtas-evacuation-center-and-barangay-outpost",
+        "name": "Evacuation Center and Barangay Outpost",
+        "municipality": "Balagtas",
+        "outcome": "unresolved",
+        "reason": "Exact evacuation building could not be identified from retrieved public evidence; no substitute point assigned.",
+        "source_ids": [
+          "balagtas-2018"
+        ]
+      }
+    ]
+  }
 }

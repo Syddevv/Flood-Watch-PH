@@ -4,7 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 import dataset from "../data/bulacan-emergency-directory.json";
-import { canonicalDirectoryMunicipality, sourceRefreshData, validateBulacanDirectory } from "../lib/bulacan-directory";
+import { canonicalDirectoryMunicipality, sourceLocationRefreshData, sourceRefreshData, validateBulacanDirectory } from "../lib/bulacan-directory";
 import { BULACAN_SCOPE_VERSION } from "../lib/bulacan-scope";
 import { normalizedContactNumber } from "../lib/emergency-contact-policy";
 
@@ -54,7 +54,7 @@ async function main() {
   const run = async (tx: Prisma.TransactionClient) => {
     const centers = await tx.evacuationCenter.findMany({ select: {
       id: true, externalKey: true, name: true, city: true, barangay: true, latitude: true, longitude: true,
-      updatedByUserId: true,
+      updatedByUserId: true, sourceSnapshot: true,
     } });
     const contacts = await tx.emergencyContact.findMany({ select: {
       id: true, sourceKey: true, agencyName: true, city: true, contactNumber: true,
@@ -69,7 +69,7 @@ async function main() {
       if (duplicates.length) summary.potentialDuplicates.push(`facility ${record.id}: ${duplicates.map((row) => row.id).join(", ")}`);
       if (existing) {
         summary.updatedCenters++;
-        if (apply) await tx.evacuationCenter.update({ where: { id: existing.id }, data: sourceRefreshData(existing.updatedByUserId, values, sourceSnapshot(record)) });
+        if (apply) await tx.evacuationCenter.update({ where: { id: existing.id }, data: sourceLocationRefreshData(existing, values, sourceSnapshot(record)) });
       } else {
         summary.createdCenters++;
         const created = apply ? await tx.evacuationCenter.create({ data: {
@@ -78,7 +78,8 @@ async function main() {
           duplicateReviewNotes: duplicates.length ? `Potential match: ${duplicates.map((row) => row.id).join(", ")}` : null,
         } }) : null;
         centers.push({ id: created?.id ?? record.id, externalKey: record.id, name: values.name, city: values.city,
-          barangay: values.barangay, latitude: values.latitude, longitude: values.longitude, updatedByUserId: null });
+          barangay: values.barangay, latitude: values.latitude, longitude: values.longitude, updatedByUserId: null,
+          sourceSnapshot: sourceSnapshot(record) as Prisma.JsonValue });
       }
     }
     for (const record of directory.emergency_contacts) {

@@ -174,6 +174,7 @@ export type PublicEvacuationCenter = Omit<EvacuationCenterResource, "latitude" |
   sourceLinks: { title: string; url: string; publishedAt: string | null }[];
   sourceNotes: string | null;
   locationProvenance: string | null;
+  locationNotes: string | null;
 };
 
 export type PublicEmergencyContact = {

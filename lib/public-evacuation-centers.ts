@@ -42,8 +42,10 @@ export function toPublicCenter(center: EvacuationCenter) {
   const availability = openingStatus === "open" ? "confirmed_available"
     : openingStatus === "unknown" ? "unknown" : "confirmed_unavailable";
   const snapshot = center.sourceSnapshot && typeof center.sourceSnapshot === "object" && !Array.isArray(center.sourceSnapshot)
-    ? center.sourceSnapshot as { record?: { notes?: string | null; coordinate_precision?: string | null }; sources?: Array<{ title: string; url: string; published_at: string | null }> }
+    ? center.sourceSnapshot as { record?: { notes?: string | null; coordinate_precision?: string | null; location_label?: string | null; location_notes?: string | null; location_verification_status?: string | null; latitude?: number | null; longitude?: number | null }; sources?: Array<{ title: string; url: string; published_at: string | null }> }
     : null;
+  const sourceCoordinates = snapshot?.record?.latitude === center.latitude && snapshot?.record?.longitude === center.longitude;
+  const onlineMappedLocation = sourceCoordinates && snapshot?.record?.location_verification_status === "online_identity_match_not_field_verified";
   const sourceIdentifiesOnlyAnArea = /(?:does not identify the exact building|not the exact facility)/i.test(snapshot?.record?.notes ?? "");
   const officiallyListed = publicSources.has(center.sourceType) &&
     ["verified", "official_publication_found"].includes(center.verificationStatus) &&
@@ -78,7 +80,10 @@ export function toPublicCenter(center: EvacuationCenter) {
     lastDocumentedEventDate: center.lastDocumentedEventDate?.toISOString() ?? null,
     sourceLinks: snapshot?.sources?.filter((source) => isSafeCenterSourceUrl(source.url)).map((source) => ({ title: source.title, url: source.url, publishedAt: source.published_at })) ?? [],
     sourceNotes: snapshot?.record?.notes ?? null,
-    locationProvenance: center.latitude === null ? null : center.updatedByUserId ? "Admin-updated location; confirm locally" : snapshot?.record?.coordinate_precision ? "Source-published location; not field-confirmed" : null,
+    locationProvenance: center.latitude === null ? null : !sourceCoordinates && center.updatedByUserId ? "Admin-updated location; confirm locally"
+      : onlineMappedLocation ? `Online-mapped ${snapshot?.record?.coordinate_precision === "mapped_place" ? "place" : snapshot?.record?.coordinate_precision ?? "facility"} location; not field-confirmed`
+      : snapshot?.record?.coordinate_precision ? "Source-published location; not field-confirmed" : null,
+    locationNotes: onlineMappedLocation ? snapshot?.record?.location_notes ?? null : null,
   };
   return resource;
 }
