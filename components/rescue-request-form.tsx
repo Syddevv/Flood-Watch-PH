@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Accessibility,
   Baby,
@@ -52,8 +51,6 @@ const ASSISTANCE_TAG_ICONS: Record<RescueAssistanceTagId, LucideIcon> = {
 };
 
 type RescueRequestFormProps = {
-  signedIn: boolean;
-  authLoading: boolean;
   onSubmit: (submission: RescueRequestSubmission) => Promise<boolean>;
 };
 
@@ -72,8 +69,6 @@ const EMPTY_FIELDS = {
 };
 
 export function RescueRequestForm({
-  signedIn,
-  authLoading,
   onSubmit,
 }: RescueRequestFormProps) {
   const [fields, setFields] = useState(EMPTY_FIELDS);
@@ -90,7 +85,7 @@ export function RescueRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const submitDisabled = submitting || locatingUser || !signedIn;
+  const submitDisabled = submitting || locatingUser;
 
   function updateField(key: keyof typeof EMPTY_FIELDS, value: string) {
     setErrorMessage(null);
@@ -136,23 +131,25 @@ export function RescueRequestForm({
           ...current,
           latitude: String(latitude),
           longitude: String(longitude),
+          localityCode: "",
+          barangay: "",
         }));
 
         try {
-          const { locationName } = await resolveReportLocationName(
+          const { locationName, localityCode, barangay } = await resolveReportLocationName(
             latitude,
             longitude,
           );
-          setFields((current) => ({ ...current, locationName }));
+          setFields((current) => current.latitude === String(latitude) && current.longitude === String(longitude)
+            ? { ...current, locationName, ...(localityCode ? { localityCode } : {}), ...(barangay ? { barangay } : {}) }
+            : current);
         } catch {
-          setFields((current) => ({
-            ...current,
-            locationName: buildCoordinateFallbackLabel(
-              latitude,
-              longitude,
-              "Pinned location near",
-            ),
-          }));
+          setFields((current) => current.latitude === String(latitude) && current.longitude === String(longitude)
+            ? {
+                ...current,
+                locationName: buildCoordinateFallbackLabel(latitude, longitude, "Pinned location near"),
+              }
+            : current);
         } finally {
           setLocatingUser(false);
         }
@@ -482,21 +479,6 @@ export function RescueRequestForm({
           >
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{errorMessage}</span>
-          </p>
-        ) : null}
-
-        {!authLoading && !signedIn ? (
-          <p
-            data-testid="rescue-signin-notice"
-            className="mt-4 rounded-[var(--radius-panel)] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] p-3 text-[0.82rem] leading-6 text-[var(--color-foreground)]"
-          >
-            <Link
-              href="/login?next=/rescue-request"
-              className="font-semibold text-[var(--color-primary)] underline-offset-4 hover:underline"
-            >
-              Sign in
-            </Link>{" "}
-            to record a rescue request so an operator can review it.
           </p>
         ) : null}
 

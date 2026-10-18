@@ -27,6 +27,22 @@ test("returns the precise report address when the primary lookup succeeds", asyn
   });
 });
 
+test("passes through structured locality and barangay when available", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => jsonResponse({ data: {
+    locationName: "Bulihan Road, Bulihan, Plaridel, Bulacan",
+    formattedAddress: "Bulihan Road, Bulihan, Plaridel, Bulacan",
+    localityCode: "0301417000",
+    barangay: "Bulihan",
+  } }));
+
+  assert.deepEqual(await resolveReportLocationName(14.858, 120.857), {
+    locationName: "Bulihan Road, Bulihan, Plaridel, Bulacan",
+    localityCode: "0301417000",
+    barangay: "Bulihan",
+    precise: true,
+  });
+});
+
 test("falls back to the approximate weather-domain lookup when the primary lookup fails", async (t) => {
   t.mock.method(globalThis, "fetch", async (input: string | URL) => {
     const url = String(input);

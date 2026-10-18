@@ -12,6 +12,8 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
   const runId = randomUUID();
   let server: Awaited<ReturnType<typeof startTestServer>> | undefined;
   let requestId: string | undefined;
+  let adminRequestId: string | undefined;
+  let legacyAdminRequestId: string | undefined;
   try {
     for (const [index, id] of ids.entries()) {
       await db.user.create({ data: { id, email: `rescue-${index}-${runId}@example.com`, passwordHash: "unused", role: index === 2 ? "admin" : "user", emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
@@ -60,11 +62,47 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     assert.equal((await updated.json()).data.status, "en_route");
     assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 6);
     assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 6);
+
+    const assisted = { ...intake, intakeChannel: "admin_assisted", assistedIntakeMethod: "walk_in", priority: "critical", forWhom: "other", assistedPersonName: "Resident", relationship: "Neighbor" };
+    const assistedKey = randomUUID();
+    const assistedPost = (cookie: string) => fetch(`${baseUrl}/api/admin/rescue-requests`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookie, "Content-Type": "application/json", "Idempotency-Key": assistedKey }, body: JSON.stringify(assisted) });
+    assert.equal((await assistedPost(cookies[0])).status, 403);
+    const adminIntake = await assistedPost(cookies[2]);
+    assert.equal(adminIntake.status, 201);
+    const adminBody = await adminIntake.json();
+    adminRequestId = adminBody.data.request.id;
+    assert.equal(adminBody.data.request.priority, "critical");
+    assert.equal(adminBody.data.request.assistedIntakeMethod, "walk_in");
+    assert.equal((await assistedPost(cookies[2])).status, 200);
+    const stored = await db.rescueRequest.findUniqueOrThrow({ where: { id: adminRequestId } });
+    assert.equal(stored.creatorUserId, ids[2]);
+    assert.equal(stored.requesterUserId, null);
+    assert.equal(stored.intakeChannel, "admin_assisted");
+    assert.equal(stored.assistedIntakeMethod, "walk_in");
+    assert.equal(stored.priority, "critical");
+    assert.equal(await db.rescueRequestEvent.count({ where: { requestId: adminRequestId } }), 1);
+    assert.equal((await db.rescueRequestEvent.findFirst({ where: { requestId: adminRequestId } }))?.nextPriority, "critical");
+    assert.equal((await post({ ...intake, priority: "critical" }, randomUUID())).status, 400);
+
+    const legacyAdminIntake = await fetch(`${baseUrl}/api/admin/rescue-requests`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[2], "Content-Type": "application/json", "Idempotency-Key": randomUUID() }, body: JSON.stringify({ ...intake, intakeChannel: "admin_assisted" }) });
+    assert.equal(legacyAdminIntake.status, 201);
+    legacyAdminRequestId = (await legacyAdminIntake.json()).data.request.id;
+    const legacyStored = await db.rescueRequest.findUniqueOrThrow({ where: { id: legacyAdminRequestId } });
+    assert.equal(legacyStored.assistedIntakeMethod, null);
+    assert.equal(legacyStored.priority, "routine");
   } finally {
     if (server) await stopServer(server.server);
     if (requestId) {
       await db.rescueRequestEvent.deleteMany({ where: { requestId } });
       await db.rescueRequest.deleteMany({ where: { id: requestId } });
+    }
+    if (adminRequestId) {
+      await db.rescueRequestEvent.deleteMany({ where: { requestId: adminRequestId } });
+      await db.rescueRequest.deleteMany({ where: { id: adminRequestId } });
+    }
+    if (legacyAdminRequestId) {
+      await db.rescueRequestEvent.deleteMany({ where: { requestId: legacyAdminRequestId } });
+      await db.rescueRequest.deleteMany({ where: { id: legacyAdminRequestId } });
     }
     await db.session.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });

@@ -1,4 +1,5 @@
 import { fetchNominatimReverse } from "@/lib/nominatim";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 
 const PHILIPPINES_COUNTRY_CODE = "PH";
 
@@ -37,7 +38,28 @@ type NominatimReverseResponse = {
 export type ReportReverseGeocodeResult = {
   locationName: string | null;
   formattedAddress: string | null;
+  localityCode?: string | null;
+  barangay?: string | null;
 };
+
+function matchBulacanLocality(address: NominatimAddress | undefined) {
+  const normalize = (value: string) => value.trim().toLocaleLowerCase("en-PH")
+    .replace(/^city of\s+/, "").replace(/^municipality of\s+/, "");
+  for (const name of [address?.municipality, address?.city, address?.town]) {
+    if (!name) continue;
+    const match = BULACAN_LOCALITIES.find((locality) => normalize(locality.name) === normalize(name) ||
+      (normalize(locality.name) === "bulacan" && normalize(name) === "bulakan"));
+    if (match) return match.code;
+  }
+  return null;
+}
+
+export function extractBulacanAddressFields(address: NominatimAddress | undefined) {
+  return {
+    localityCode: matchBulacanLocality(address),
+    barangay: (address?.barangay || address?.village || address?.suburb)?.trim() || null,
+  };
+}
 
 function appendUnique(parts: string[], value: string | null | undefined) {
   const normalized = value?.trim();
@@ -127,7 +149,11 @@ async function reverseGeocodeAtZoom(
 
   return {
     payload,
-    result: { locationName: formattedAddress, formattedAddress },
+    result: {
+      locationName: formattedAddress,
+      formattedAddress,
+      ...extractBulacanAddressFields(payload.address),
+    },
   };
 }
 

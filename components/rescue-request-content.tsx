@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LifeBuoy } from "lucide-react";
+import { LogIn } from "lucide-react";
+import Link from "next/link";
 import { useAuthSession, type AuthUser } from "@/components/auth-session-provider";
 import { RescueRequestAside } from "@/components/rescue-request-aside";
 import { RescueRequestCard } from "@/components/rescue-request-card";
@@ -90,16 +92,27 @@ function RescueRequestContentForSession({ user, authLoading }: { user: AuthUser;
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <main className="min-w-0 space-y-6">
           {success ? <p role="status" data-testid="rescue-success" className="rounded-lg border border-[var(--color-success-border)] bg-[var(--color-success-surface)] p-3 text-sm">{success}</p> : null}
-          <RescueRequestForm signedIn={Boolean(user)} authLoading={authLoading} onSubmit={handleSubmit} />
-          <section aria-label="My rescue requests">
+          {authLoading ? <p role="status" className="text-sm">Checking your session…</p> : user ? (
+            <RescueRequestForm onSubmit={handleSubmit} />
+          ) : (
+            <section data-testid="rescue-signin-notice" className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-8 text-center shadow-[var(--shadow-soft)]">
+              <LogIn className="mx-auto h-8 w-8 text-[var(--color-primary)]" />
+              <h2 className="mt-3 text-lg font-semibold">Sign in to request rescue assistance</h2>
+              <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-[var(--color-muted-foreground)]">Sign in or create an account to record a request. If life is in immediate danger, call 911.</p>
+              <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                <Link href="/login?next=/rescue-request" className="rounded-[11px] bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white">Log in</Link>
+                <Link href="/register?next=/rescue-request" className="rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2.5 text-sm font-medium">Create account</Link>
+              </div>
+            </section>
+          )}
+          {user && <section aria-label="My rescue requests">
             <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-semibold">My Rescue Requests</h2><span data-testid="rescue-request-count" className="text-sm text-[var(--color-muted-foreground)]">{requests.length} requests</span></div>
             {stale ? <p role="status" className="mt-3 rounded-lg border border-[var(--color-warning)] p-3 text-sm">Could not refresh. Showing last known information{lastChecked ? ` from ${lastChecked.toLocaleString("en-PH")}` : ""}. <button type="button" onClick={() => void refresh()} className="underline">Try again</button></p> : null}
             {error && requests.length === 0 ? <p role="alert" className="mt-3 text-sm text-[var(--color-danger)]">{error}</p> : null}
-            {!user && !authLoading ? <p className="mt-3 text-sm">Sign in to see your requests.</p> : null}
             {user && !loading && !error && requests.length === 0 ? <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">No rescue requests yet.</p> : null}
             <div className="mt-3 space-y-3">{requests.map((request) => <RescueRequestCard key={request.id} request={request} />)}</div>
             {nextCursor ? <button type="button" disabled={loading} onClick={() => void refresh(true)} className="mt-4 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm">{loading ? "Loading…" : "Load more"}</button> : null}
-          </section>
+          </section>}
         </main>
         <aside className="min-w-0 lg:sticky lg:top-5"><RescueRequestAside /></aside>
       </div>

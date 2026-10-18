@@ -25,6 +25,15 @@ test("intake accepts a manual Bulacan place and rejects outside GPS", () => {
   assert.throws(() => parseRescueIntake({ ...valid, peopleCount: 0 }), /people count/);
 });
 
+test("assisted intake method and initial priority are allowlisted", () => {
+  const parsed = parseRescueIntake({ ...valid, assistedIntakeMethod: "phone", priority: "urgent" });
+  assert.equal(parsed.assistedIntakeMethod, "phone");
+  assert.equal(parsed.priority, "urgent");
+  assert.equal(parseRescueIntake(valid).priority, "routine");
+  assert.throws(() => parseRescueIntake({ ...valid, assistedIntakeMethod: "unknown" }), /intake method/);
+  assert.throws(() => parseRescueIntake({ ...valid, priority: "immediate" }), /initial priority/);
+});
+
 test("requester corrections are allowlisted and versioned", () => {
   assert.deepEqual(parseRescueCorrection({ expectedVersion: 3, action: "cancel" }), { expectedVersion: 3, action: "cancel" });
   assert.throws(() => parseRescueCorrection({ expectedVersion: 3, status: "completed" }), /Only contact/);
@@ -47,7 +56,7 @@ test("public DTO hides internal events, actors, assignment and private admin not
     latitude: null, longitude: null, locationUncertainty: "manual", localityCode: "0301407000",
     barangay: "Meysulao", linkedReportId: null, linkedReportConsentConfirmedAt: null, caseOwnerUserId: "admin1",
     confirmedTeamReference: null, outcome: null, requesterUserId: "user1", creatorUserId: "user1",
-    intakeChannel: "public", events: [
+    intakeChannel: "admin_assisted", assistedIntakeMethod: "phone", events: [
       { id: "e1", eventType: "triage", visibility: "public", reason: "private", note: "private", actorUserId: "admin1", createdAt: new Date() },
       { id: "e2", eventType: "note", visibility: "internal", reason: null, note: "phone number", actorUserId: "admin1", createdAt: new Date() },
     ],
@@ -58,5 +67,7 @@ test("public DTO hides internal events, actors, assignment and private admin not
   assert.equal(dto.events?.[0].reason, null);
   assert.equal(dto.caseOwnerUserId, undefined);
   assert.equal(dto.requesterUserId, undefined);
+  assert.equal(dto.assistedIntakeMethod, undefined);
+  assert.equal(toRescueDto(record, true).assistedIntakeMethod, "phone");
   assert.equal(toRescueDto(record, true).events?.length, 2);
 });

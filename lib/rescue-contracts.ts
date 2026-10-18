@@ -45,7 +45,7 @@ function object(value: unknown): Record<string, unknown> {
 
 export function parseRescueIntake(value: unknown) {
   const input = object(value);
-  const allowed = ["forWhom", "assistedPersonName", "relationship", "primaryContact", "alternateContact", "peopleCount", "vulnerabilityTags", "vulnerabilityNotes", "description", "locationName", "latitude", "longitude", "locationUncertainty", "localityCode", "barangay", "linkedReportId", "intakeChannel", "requesterUserId", "linkConsentConfirmed"];
+  const allowed = ["forWhom", "assistedPersonName", "relationship", "primaryContact", "alternateContact", "peopleCount", "vulnerabilityTags", "vulnerabilityNotes", "description", "locationName", "latitude", "longitude", "locationUncertainty", "localityCode", "barangay", "linkedReportId", "intakeChannel", "assistedIntakeMethod", "priority", "requesterUserId", "linkConsentConfirmed"];
   if (Object.keys(input).some((key) => !allowed.includes(key))) throw new RescueError("Invalid rescue intake fields.", 400);
   const localityCode = text(input.localityCode, 10, true)!;
   if (!BULACAN_LOCALITIES.some((locality) => locality.code === localityCode)) throw new RescueError("Select a Bulacan city or municipality.", 400);
@@ -63,6 +63,10 @@ export function parseRescueIntake(value: unknown) {
   const assistedPersonName = text(input.assistedPersonName, 120);
   const relationship = text(input.relationship, 80);
   if (forWhom === "other" && !relationship) throw new RescueError("Describe your relationship to the person needing help.", 400);
+  const assistedIntakeMethod = text(input.assistedIntakeMethod, 20);
+  if (assistedIntakeMethod && !["phone", "walk_in", "other"].includes(assistedIntakeMethod)) throw new RescueError("Choose a valid assisted intake method.", 400);
+  const priority = text(input.priority, 20) ?? "routine";
+  if (!["routine", "urgent", "critical"].includes(priority)) throw new RescueError("Choose a valid initial priority.", 400);
   return {
     forWhom, assistedPersonName, relationship,
     primaryContact: text(input.primaryContact, 120, true)!, alternateContact: text(input.alternateContact, 120),
@@ -70,6 +74,7 @@ export function parseRescueIntake(value: unknown) {
     vulnerabilityNotes: text(input.vulnerabilityNotes, 1000), description: text(input.description, 3000, true)!,
     locationName: text(input.locationName, 240, true)!, latitude, longitude, locationUncertainty,
     localityCode, barangay: text(input.barangay, 120, true)!, linkedReportId: text(input.linkedReportId, 100),
+    assistedIntakeMethod, priority,
   };
 }
 

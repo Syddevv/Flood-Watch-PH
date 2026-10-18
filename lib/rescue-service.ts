@@ -15,6 +15,7 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
   const channel = admin ? "admin_assisted" : "public";
   if (admin && body.intakeChannel !== "admin_assisted") throw new RescueError("Admin-assisted intake channel is required.", 400);
   if (!admin && "intakeChannel" in body) throw new RescueError("Intake channel is server-controlled.", 400);
+  if (!admin && ("assistedIntakeMethod" in body || "priority" in body)) throw new RescueError("Assisted intake and initial priority are administrator-controlled.", 400);
   if (!admin && "linkConsentConfirmed" in body) throw new RescueError("Linked-report review is administrator-controlled.", 400);
   const requesterUserId = admin ? (typeof body.requesterUserId === "string" ? body.requesterUserId : null) : actorId;
   if (!admin && "requesterUserId" in body) throw new RescueError("Requester identity is server-controlled.", 400);
@@ -27,7 +28,11 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
     const report = await prisma.floodReport.findUnique({ where: { id: input.linkedReportId }, select: { id: true, userId: true } });
     if (!report || (!admin && report.userId !== actorId)) throw new RescueError("Linked report is not available.", 404);
   }
-  const hash = createHash("sha256").update(JSON.stringify({ input, requesterUserId, channel, linkConsentConfirmed: admin && body.linkConsentConfirmed === true })).digest("hex");
+  // Keep old idempotency hashes stable when callers omit the additive A3 fields.
+  const hashInput = { ...input } as Record<string, unknown>;
+  if (!("assistedIntakeMethod" in body)) delete hashInput.assistedIntakeMethod;
+  if (!("priority" in body)) delete hashInput.priority;
+  const hash = createHash("sha256").update(JSON.stringify({ input: hashInput, requesterUserId, channel, linkConsentConfirmed: admin && body.linkConsentConfirmed === true })).digest("hex");
   const key = { creatorUserId: actorId, intakeChannel: channel, idempotencyKey };
   const existing = await prisma.rescueRequest.findUnique({ where: { creatorUserId_intakeChannel_idempotencyKey: key } });
   if (existing) {
@@ -48,7 +53,7 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
       } });
       await tx.rescueRequestEvent.create({ data: {
         requestId: request.id, actorUserId: actorId, eventType: "received",
-        nextStatus: "received", visibility: "public", note: "Request received. Dispatch is not yet confirmed.",
+        nextStatus: "received", nextPriority: input.priority, visibility: "public", note: "Request received. Dispatch is not yet confirmed.",
       } });
       return request;
     });
