@@ -115,7 +115,9 @@ async function waitForServer(server: ChildProcess, baseUrl: string) {
  * of starting (surfaced as "Next.js test server exited with code 1").
  */
 export async function stopServer(server: ChildProcess) {
+  const closePipes = () => { server.stdout?.destroy(); server.stderr?.destroy(); server.stdin?.destroy(); };
   if (server.exitCode !== null || server.pid === undefined) {
+    closePipes();
     return;
   }
 
@@ -139,6 +141,7 @@ export async function stopServer(server: ChildProcess) {
   ]);
 
   if (exitedInTime) {
+    closePipes();
     return;
   }
 
@@ -153,6 +156,7 @@ export async function stopServer(server: ChildProcess) {
   }
 
   await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 5_000))]);
+  closePipes();
 }
 
 export async function startTestServer(
@@ -208,7 +212,7 @@ export async function startTestServer(
     );
   }
 
-  return { baseUrl, server };
+  return { baseUrl, server, output };
 }
 
 export async function createAnonymousSession(baseUrl: string, clientAddress: string) {

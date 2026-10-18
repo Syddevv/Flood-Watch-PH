@@ -22,9 +22,23 @@ const groups: readonly NavGroup[] = [
 function activePath(pathname: string, href: string) { return href === "/admin" ? pathname === href : pathname.startsWith(href); }
 
 export function AdminLayout({ user, children }: { user: Exclude<AuthUser, null>; children: React.ReactNode }) {
-  const pathname = usePathname(); const router = useRouter(); const { refresh } = useAuthSession(); const [open, setOpen] = useState(false); const [collapsed, setCollapsed] = useState(false); const [profile, setProfile] = useState(false); const [theme, setTheme] = useState<"light" | "dark">("light"); const [notificationCount, setNotificationCount] = useState(3);
+  const pathname = usePathname(); const router = useRouter(); const { refresh } = useAuthSession(); const [open, setOpen] = useState(false); const [collapsed, setCollapsed] = useState(false); const [profile, setProfile] = useState(false); const [theme, setTheme] = useState<"light" | "dark">("light"); const [notificationCount, setNotificationCount] = useState(0);
   const title = groups.flatMap(([, items]) => items).find(([, href]) => activePath(pathname, href))?.[0] ?? "Overview";
   useEffect(() => { const updateCount = (event: Event) => setNotificationCount((event as CustomEvent<number>).detail); window.addEventListener("floodwatch:notification-count", updateCount); return () => window.removeEventListener("floodwatch:notification-count", updateCount); }, []);
+  useEffect(() => {
+    let mounted = true;
+    const loadCount = async () => {
+      try {
+        const response = await fetch("/api/admin/notifications", { cache: "no-store" });
+        if (!response.ok) return;
+        const body = await response.json() as { data?: { unreadCount: number } };
+        if (mounted && body.data) setNotificationCount(body.data.unreadCount);
+      } catch { /* No count is shown while notices are unavailable. */ }
+    };
+    void loadCount();
+    const timer = window.setInterval(() => void loadCount(), 30_000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, []);
   function toggleTheme() { const next = theme === "light" ? "dark" : "light"; setTheme(next); document.documentElement.dataset.theme = next; document.documentElement.classList.toggle("dark", next === "dark"); localStorage.setItem(THEME_STORAGE_KEY, next); }
   async function logout() { await fetch("/api/auth/logout", { method: "POST", headers: { Origin: window.location.origin } }); await refresh(); router.push("/login"); }
   const initials = (user.displayName ?? user.email).slice(0, 2).toUpperCase();

@@ -55,6 +55,13 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
         requestId: request.id, actorUserId: actorId, eventType: "received",
         nextStatus: "received", nextPriority: input.priority, visibility: "public", note: "Request received. Dispatch is not yet confirmed.",
       } });
+      const administrators = await tx.user.findMany({ where: { role: "admin" }, select: { id: true } });
+      if (administrators.length) await tx.adminNotification.createMany({ data: administrators.map((operator) => ({
+        type: "rescue_received", title: "New rescue request needs review",
+        detail: `${request.reference} · ${request.barangay} · ${request.priority} priority`,
+        targetType: "RescueRequest", targetId: request.id, priority: request.priority === "critical" ? "urgent" : "normal",
+        recipientUserId: operator.id, dedupeKey: `rescue-received:${request.id}`,
+      })), skipDuplicates: true });
       return request;
     });
     return { request: toRescueDto(created, admin), replayed: false, nearDuplicate };
@@ -134,9 +141,9 @@ export async function actOnRescueRequest(id: string, actorId: string, raw: unkno
     if (input.confirmedTeamReference && nextStatus !== "en_route") throw new RescueError("A team reference belongs to a confirmed dispatch event.", 400);
     if (input.outcome && nextStatus !== "completed") throw new RescueError("An outcome belongs to completion.", 400);
     if (nextStatus === "assigned" && !(input.caseOwnerUserId ?? record.caseOwnerUserId)) throw new RescueError("A case owner is required for assignment.", 400);
-    if (nextStatus === "en_route" && !input.confirmedTeamReference) throw new RescueError("A confirmed dispatch acknowledgment and team reference are required.", 400);
-    if (nextStatus === "completed" && !input.outcome) throw new RescueError("Record the rescue outcome.", 400);
-    if ((["rejected", "cancelled"].includes(nextStatus) || (nextStatus === "triaged" && record.status !== "received")) && !input.reason) throw new RescueError("A reason is required.", 400);
+    if (input.action === "transition" && nextStatus === "en_route" && (!input.confirmedTeamReference || !input.reason)) throw new RescueError("Record the confirmed team reference and how dispatch was acknowledged.", 400);
+    if (input.action === "transition" && nextStatus === "completed" && !input.outcome) throw new RescueError("Record the rescue outcome.", 400);
+    if (input.action === "transition" && (["rejected", "cancelled"].includes(nextStatus) || (nextStatus === "triaged" && record.status !== "received")) && !input.reason) throw new RescueError("A reason is required.", 400);
     if (input.caseOwnerUserId) {
       const owner = await tx.user.findUnique({ where: { id: input.caseOwnerUserId }, select: { role: true } });
       if (owner?.role !== "admin") throw new RescueError("Case owner must be an administrator.", 400);
@@ -145,8 +152,8 @@ export async function actOnRescueRequest(id: string, actorId: string, raw: unkno
     if (input.action === "transition" || input.action === "assign") data.status = nextStatus;
     if (input.action === "priority") data.priority = input.priority!;
     if (input.action === "assign" || (input.action === "transition" && input.caseOwnerUserId)) data.caseOwnerUserId = input.caseOwnerUserId;
-    if (nextStatus === "en_route") data.confirmedTeamReference = input.confirmedTeamReference;
-    if (nextStatus === "completed") data.outcome = input.outcome;
+    if (input.action === "transition" && nextStatus === "en_route") data.confirmedTeamReference = input.confirmedTeamReference;
+    if (input.action === "transition" && nextStatus === "completed") data.outcome = input.outcome;
     const updated = await tx.rescueRequest.updateMany({ where: { id, version: input.expectedVersion }, data });
     if (updated.count !== 1) throw new RescueError("This request changed. Refresh before trying again.", 409);
     await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: actorId, eventType: input.action,

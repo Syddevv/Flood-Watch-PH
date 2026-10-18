@@ -130,6 +130,6 @@ export function parseRescueAction(value: unknown) {
       (action !== "priority" && priority) ||
       (action === "note" && caseOwnerUserId) ||
       (action === "priority" && caseOwnerUserId) ||
-      (action === "assign" && note)) throw new RescueError("Action fields do not match the selected action.", 400);
+      (action !== "note" && note)) throw new RescueError("Action fields do not match the selected action.", 400);
   return { expectedVersion: input.expectedVersion as number, action, nextStatus, priority, caseOwnerUserId, confirmedTeamReference, outcome, reason, note, visibility };
 }

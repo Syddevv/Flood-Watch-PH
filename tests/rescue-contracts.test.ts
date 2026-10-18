@@ -57,17 +57,19 @@ test("public DTO hides internal events, actors, assignment and private admin not
     barangay: "Meysulao", linkedReportId: null, linkedReportConsentConfirmedAt: null, caseOwnerUserId: "admin1",
     confirmedTeamReference: null, outcome: null, requesterUserId: "user1", creatorUserId: "user1",
     intakeChannel: "admin_assisted", assistedIntakeMethod: "phone", events: [
-      { id: "e1", eventType: "triage", visibility: "public", reason: "private", note: "private", actorUserId: "admin1", createdAt: new Date() },
+      { id: "e1", eventType: "triage", visibility: "public", reason: "private", note: null, actorUserId: "admin1", createdAt: new Date() },
       { id: "e2", eventType: "note", visibility: "internal", reason: null, note: "phone number", actorUserId: "admin1", createdAt: new Date() },
+      { id: "e3", eventType: "note", visibility: "public", reason: null, note: "Operator is reviewing this request", actorUserId: "admin1", createdAt: new Date() },
     ],
   } as unknown as RescueRequest & { events: RescueRequestEvent[] };
   const dto = toRescueDto(record);
-  assert.equal(dto.events?.length, 1);
+  assert.equal(dto.events?.length, 2);
   assert.equal(dto.events?.[0].note, null);
+  assert.equal(dto.events?.[1].note, "Operator is reviewing this request");
   assert.equal(dto.events?.[0].reason, null);
   assert.equal(dto.caseOwnerUserId, undefined);
   assert.equal(dto.requesterUserId, undefined);
   assert.equal(dto.assistedIntakeMethod, undefined);
   assert.equal(toRescueDto(record, true).assistedIntakeMethod, "phone");
-  assert.equal(toRescueDto(record, true).events?.length, 2);
+  assert.equal(toRescueDto(record, true).events?.length, 3);
 });

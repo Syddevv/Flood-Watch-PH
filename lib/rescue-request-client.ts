@@ -43,6 +43,7 @@ export function rescueStatusLabel(status: string) {
 export function rescueEventLabel(event: RescueEvent) {
   if (event.eventType === "cancellation_requested") return "Cancellation requested";
   if (event.eventType === "requester_correction") return "Details updated";
+  if (event.eventType === "note") return "Update from operations";
   return event.nextStatus ? rescueStatusLabel(event.nextStatus) : "Request updated";
 }
 
