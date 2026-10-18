@@ -18,6 +18,7 @@ type Draft = {
   currentCapacity: string; currentOccupancy: string; adminEvidenceUrl: string;
   duplicateReviewNotes: string;
   confirmAvailability: boolean;
+  operationalConfirmedAt: string; operationalEvidenceUrl: string; directConfirmationNote: string;
 };
 
 const emptyDraft: Draft = {
@@ -27,6 +28,7 @@ const emptyDraft: Draft = {
   sourceType: "official_lgu", sourceName: "", sourceUrl: "",
   lastVerifiedAt: "", notes: "", estimatedCapacity: "", confirmAvailability: false,
   sourceCheckedAt: "", facilityType: "", permanent: "", currentCapacity: "", currentOccupancy: "", adminEvidenceUrl: "", duplicateReviewNotes: "",
+  operationalConfirmedAt: "", operationalEvidenceUrl: "", directConfirmationNote: "",
 };
 
 function fromCenter(center: AdminCenter): Draft {
@@ -45,6 +47,7 @@ function fromCenter(center: AdminCenter): Draft {
     currentCapacity: center.currentCapacity?.toString() ?? "", currentOccupancy: center.currentOccupancy?.toString() ?? "",
     adminEvidenceUrl: center.adminEvidenceUrl ?? "", duplicateReviewNotes: center.duplicateReviewNotes ?? "",
     confirmAvailability: false,
+    operationalConfirmedAt: "", operationalEvidenceUrl: "", directConfirmationNote: "",
   };
 }
 
@@ -104,6 +107,7 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
           sourceCheckedAt: draft.sourceCheckedAt ? new Date(`${draft.sourceCheckedAt}T00:00:00+08:00`).toISOString() : null,
           lastVerifiedAt: draft.lastVerifiedAt ? new Date(`${draft.lastVerifiedAt}T00:00:00+08:00`).toISOString() : null,
           expectedUpdatedAt: center?.updatedAt,
+          operationalConfirmedAt: draft.confirmAvailability && draft.operationalConfirmedAt ? new Date(draft.operationalConfirmedAt).toISOString() : null,
         }),
       });
       const payload = await response.json();
@@ -157,7 +161,7 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
       {field("Facility type", "facilityType")}{select("Permanent facility?", "permanent", ["true", "false"])}
       {field("Current capacity (confirmed)", "currentCapacity", "number")}{field("Current occupancy (confirmed)", "currentOccupancy", "number")}
       {select("Identity verification", "verificationStatus", CENTER_VERIFICATION_STATUSES)}
-      {select("Current operational status", "status", CENTER_STATUSES)}
+      {select("Current operational status (Open means currently accepting evacuees)", "status", CENTER_STATUSES)}
       {select("Source type", "sourceType", CENTER_SOURCE_TYPES)}
       {field("Source name", "sourceName")}{field("Official source URL", "sourceUrl", "url")}
       {field("Last checked date", "lastVerifiedAt", "date")}
@@ -167,7 +171,13 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
       <fieldset className="md:col-span-2"><legend className="text-sm">Facilities</legend><div className="mt-2 flex flex-wrap gap-3">
         {CENTER_FACILITIES.map((facility) => <label key={facility} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={draft.facilities.includes(facility)} onChange={(event) => set("facilities", event.target.checked ? [...draft.facilities, facility] : draft.facilities.filter((item) => item !== facility))} />{facility.replaceAll("_", " ")}</label>)}
       </div></fieldset>
-      <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={draft.confirmAvailability} onChange={(event) => set("confirmAvailability", event.target.checked)} />I have just confirmed this operational availability with the responsible authority.</label>
+      <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={draft.confirmAvailability} onChange={(event) => set("confirmAvailability", event.target.checked)} />Record a current operational update (Open means accepting evacuees now).</label>
+      {draft.confirmAvailability ? <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+        {field("Operational confirmation date and time", "operationalConfirmedAt", "datetime-local")}
+        {field("Current official announcement URL (HTTPS)", "operationalEvidenceUrl", "url")}
+        <div className="md:col-span-2">{field("Or document direct confirmation: authority, method, and details (internal only)", "directConfirmationNote")}</div>
+        <p className="text-sm text-[var(--color-muted-foreground)] md:col-span-2">Provide an official announcement URL or a documented direct confirmation. Source research dates and correction evidence do not confirm opening.</p>
+      </div> : null}
       <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[var(--color-primary)] px-4 font-semibold text-white disabled:opacity-50">{saving ? "Saving…" : "Save center"}</button>
     </form>
     {center ? <button type="button" disabled={saving} onClick={toggleArchive} className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm">{center.isArchived ? "Restore center" : "Archive center"}</button> : null}

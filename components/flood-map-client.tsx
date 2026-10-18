@@ -30,7 +30,9 @@ import {
 import {
   buildCenterDetailsHref,
   buildDirectionsUrl,
-  CENTER_OPENING_UNKNOWN,
+  centerListingLabel,
+  centerOpeningLabel,
+  formatOperationalUpdate,
   EVACUATION_STATUS_META,
   summarizeEvacuationFacilities,
 } from "@/lib/emergency-resources";
@@ -200,7 +202,9 @@ function iconForReportMarker(marker: ReportMapMarker, selected: boolean, mobileP
 }
 
 function iconForCenterMarker(marker: EvacuationCenterMapMarker, selected: boolean, mobilePerformanceMode: boolean) {
-  const statusMeta = EVACUATION_STATUS_META[marker.status];
+  const openingStatus = marker.center.openingStatus;
+  const colorStatus = openingStatus === "open" ? "available" : openingStatus && openingStatus !== "unknown" ? openingStatus : "needs_verification";
+  const statusMeta = EVACUATION_STATUS_META[colorStatus];
   const markerClassName = mobilePerformanceMode
     ? `floodwatch-marker-mobile floodwatch-marker-mobile--center${selected ? " floodwatch-marker-mobile--selected" : ""}`
     : `floodwatch-marker floodwatch-marker--center${selected ? " floodwatch-marker--selected" : ""}`;
@@ -584,6 +588,8 @@ const ReportPopupContent = memo(function ReportPopupContent({
 
 function CenterPopupContent({ marker }: { marker: EvacuationCenterMapMarker }) {
   const facilitySummary = summarizeEvacuationFacilities(marker.center.facilities, 3);
+  const listingLabel = centerListingLabel({ listingKind: marker.center.listingKind ?? null });
+  const openingLabel = centerOpeningLabel({ openingStatus: marker.center.openingStatus ?? "unknown" });
 
   return (
     <div className="w-[240px] space-y-3">
@@ -594,11 +600,11 @@ function CenterPopupContent({ marker }: { marker: EvacuationCenterMapMarker }) {
         <div className="mt-1 text-[0.8rem] text-slate-600">
           {marker.center.address}
         </div>
-        <div className="mt-1 text-[0.75rem] font-medium text-slate-500">
-            {marker.center.status === "needs_verification" ? CENTER_OPENING_UNKNOWN : EVACUATION_STATUS_META[marker.center.status].label}
-        </div>
+        {listingLabel ? <p className="mt-2 text-[0.8rem] font-semibold text-slate-700">Listing: {listingLabel}</p> : null}
+        <p className="mt-1 text-[0.8rem] font-semibold text-slate-900">Opening status: {openingLabel}</p>
+        {!marker.center.openingStatus || marker.center.openingStatus === "unknown" ? <p className="mt-1 text-[0.75rem] text-slate-700">Check opening before going.</p> : marker.center.availabilityConfirmedAt ? <p className="mt-1 text-[0.75rem] text-slate-700">Updated {formatOperationalUpdate(marker.center.availabilityConfirmedAt)}</p> : null}
         <p className="text-[0.72rem] text-slate-500">{marker.center.facilityType?.replaceAll("_", " ") ?? "Facility type not recorded"} · {marker.center.locationProvenance ?? "Location reference; confirm locally"}</p>
-        <p className="text-[0.72rem] text-slate-500">Source researched {marker.center.lastVerifiedAt ? new Date(marker.center.lastVerifiedAt).toLocaleDateString("en-PH") : "date unavailable"}. Route safety unknown.</p>
+        <p className="text-[0.72rem] text-slate-500">Route safety unknown.</p>
         {marker.center.sourceUrl ? <a href={marker.center.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[0.72rem] text-blue-700 underline">Official source</a> : null}
       </div>
 

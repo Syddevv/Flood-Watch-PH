@@ -1439,7 +1439,7 @@ export function DashboardShell({
                   </div>
                 }
               >
-                <EvacuationCentersContent />
+                <EvacuationCentersContent contacts={emergencyContacts} />
               </Suspense>
             ) : isIncidentReportsView ? (
               <IncidentReportsContent />

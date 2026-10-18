@@ -4,7 +4,7 @@ const centers = [
   {
     id: "long-name", name: "Regional Evacuation Center and Community Support Building for Families",
     address: "New City Hall complex, Bulihan", barangay: "Bulihan", city: "City of Malolos",
-    latitude: 14.8611111, longitude: 120.8105556, availability: "unknown", status: "needs_verification",
+    latitude: 14.8611111, longitude: 120.8105556, availability: "unknown", status: "needs_verification", listingKind: "center", openingStatus: "unknown",
     verificationStatus: "official_publication_found", facilities: [], facilityType: "dedicated_evacuation_center",
     permanent: true, estimatedCapacity: 250, capacityFamilies: null, contactNumber: null,
     sourceCheckedAt: "2026-10-18T00:00:00.000Z", availabilityConfirmedAt: null,
@@ -15,7 +15,7 @@ const centers = [
   {
     id: "no-location", name: "San Roque Barangay Hall", address: "San Roque, Angat",
     barangay: "San Roque", city: "Angat", latitude: null, longitude: null,
-    availability: "unknown", status: "needs_verification", verificationStatus: "official_publication_found",
+    availability: "unknown", status: "needs_verification", listingKind: "site", openingStatus: "unknown", verificationStatus: "official_publication_found",
     facilities: [], facilityType: "barangay_hall", permanent: false, estimatedCapacity: null,
     capacityFamilies: null, contactNumber: null, sourceCheckedAt: null, availabilityConfirmedAt: null,
     lastDocumentedEventDate: null, sourceUrl: null, sourceLinks: [], sourceNotes: null, locationProvenance: null,
@@ -33,7 +33,8 @@ test("list keeps cards simple and details accessible", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Evacuation Centers" })).toBeVisible();
   await expect(page.getByLabel("Municipality or city")).toHaveValue("");
   const located = page.locator("#evacuation-center-long-name");
-  await expect(located.getByText("Opening not confirmed")).toBeVisible();
+  await expect(located.getByText("Listed evacuation center")).toBeVisible();
+  await expect(located.getByText("Check opening before going.")).toBeVisible();
   await expect(located.getByRole("link", { name: /Directions to/ })).toBeVisible();
   await expect(located).not.toContainText("Historical or planned capacity");
   await expect(located).not.toContainText("New City Hall complex");
@@ -46,7 +47,7 @@ test("list keeps cards simple and details accessible", async ({ page }) => {
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Close details" })).toBeFocused();
   await expect(dialog.getByText("New City Hall complex, Bulihan")).toBeVisible();
-  await expect(dialog.getByText("Please contact the local DRRMO before going.")).toBeVisible();
+  await expect(dialog.getByText("Check with the local DRRMO before going.")).toBeVisible();
   await expect(dialog.getByText(/not a count of available spaces/)).toBeVisible();
   await expect(dialog.getByRole("link", { name: /City evacuation plan/ })).toBeHidden();
   await page.keyboard.press("Tab");
@@ -64,6 +65,8 @@ test("list keeps cards simple and details accessible", async ({ page }) => {
 test("filters, reset, and empty results work on a narrow screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openDirectory(page);
+  await page.getByText("More filters").click();
+  await expect(page.getByLabel("Opening status", { exact: true })).toHaveCount(0);
   await page.getByLabel("Municipality or city").selectOption("Angat");
   await expect(page.getByText("1 center found")).toBeVisible();
   await page.getByLabel("Search by center or barangay").fill("missing");

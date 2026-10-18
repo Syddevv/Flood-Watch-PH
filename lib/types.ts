@@ -102,6 +102,8 @@ export type WeatherLocationResult = {
 
 export type EvacuationCenterStatus =
   | "available"
+  | "closed"
+  | "full"
   | "standby"
   | "needs_verification"
   | "temporarily_unavailable";
@@ -160,6 +162,8 @@ export type EvacuationCenter = EvacuationCenterResource;
 export type PublicEvacuationCenter = Omit<EvacuationCenterResource, "latitude" | "longitude"> & {
   latitude: number | null;
   longitude: number | null;
+  listingKind: "center" | "site" | null;
+  openingStatus: "unknown" | "open" | "closed" | "full" | "temporarily_unavailable";
   availability: "unknown" | "confirmed_available" | "confirmed_unavailable";
   availabilityConfirmedAt: string | null;
   facilityType: string | null;
@@ -339,7 +343,7 @@ export type EvacuationCenterMapMarker = {
   coordinates: [number, number];
   title: string;
   centerId: string;
-  center: EvacuationCenterResource;
+  center: EvacuationCenterResource & Partial<Pick<PublicEvacuationCenter, "listingKind" | "openingStatus" | "availabilityConfirmedAt">>;
   status: EvacuationCenterStatus;
 };
 

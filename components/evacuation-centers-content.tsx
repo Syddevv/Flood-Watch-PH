@@ -7,25 +7,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
-import { buildCenterMapHref, buildDirectionsUrl, calculateDistanceKm, formatLastVerified, hasCenterCoordinates } from "@/lib/emergency-resources";
-import type { PublicEvacuationCenter } from "@/lib/types";
+import { buildCenterMapHref, buildDirectionsUrl, calculateDistanceKm, centerListingLabel, centerOpeningLabel, formatLastVerified, formatOperationalUpdate, hasCenterCoordinates } from "@/lib/emergency-resources";
+import type { PublicEmergencyContact, PublicEvacuationCenter } from "@/lib/types";
 
 type Point = { latitude: number; longitude: number };
 
 function openingStatusDisplay(center: PublicEvacuationCenter) {
-  if (center.availability === "confirmed_available") return { label: "Open", className: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100" };
-  if (center.availability === "confirmed_unavailable") return { label: "Temporarily unavailable", className: "bg-amber-100 text-amber-950 dark:bg-amber-900/40 dark:text-amber-100" };
-  return { label: "Opening not confirmed", className: "bg-[var(--color-panel)] text-[var(--color-foreground)]" };
+  if (center.openingStatus === "open") return { label: "Open", className: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100" };
+  if (center.openingStatus === "full") return { label: "Full", className: "bg-orange-100 text-orange-950 dark:bg-orange-900/40 dark:text-orange-100" };
+  return { label: centerOpeningLabel(center), className: "bg-[var(--color-panel)] text-[var(--color-foreground)]" };
 }
 
-export function EvacuationCentersContent() {
+function drrmoForCenter(contacts: PublicEmergencyContact[], center: PublicEvacuationCenter) {
+  const offices = contacts.filter((contact) => /\b(?:PDRRMO|MDRRMO|CDRRMO|DRRMO)\b/i.test(contact.agencyName));
+  return offices.find((contact) => contact.city === center.city) ?? offices.find((contact) => contact.city === null) ?? null;
+}
+
+export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergencyContact[] }) {
   const searchParams = useSearchParams();
   const selectedCenterId = searchParams.get("center");
   const [centers, setCenters] = useState<PublicEvacuationCenter[]>([]);
   const [municipality, setMunicipality] = useState("");
   const [query, setQuery] = useState("");
   const [facilityType, setFacilityType] = useState("");
-  const [openingStatus, setOpeningStatus] = useState("");
   const [origin, setOrigin] = useState<Point | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,16 +58,16 @@ export function EvacuationCentersContent() {
     const results = centers.filter((center) =>
       (!municipality || center.city === municipality) &&
       (!facilityType || center.facilityType === facilityType) &&
-      (!openingStatus || center.availability === openingStatus) &&
       (!needle || [center.name, center.address, center.city, center.barangay ?? ""].join(" ").toLowerCase().includes(needle)),
     );
     return origin
       ? results.sort((a, b) => (hasCenterCoordinates(a) ? calculateDistanceKm(origin, a) : Infinity) - (hasCenterCoordinates(b) ? calculateDistanceKm(origin, b) : Infinity))
       : results.sort((a, b) => a.city.localeCompare(b.city) || a.name.localeCompare(b.name));
-  }, [centers, municipality, facilityType, openingStatus, query, origin]);
+  }, [centers, municipality, facilityType, query, origin]);
   const facilityTypes = useMemo(() => [...new Set(centers.map((center) => center.facilityType).filter((type): type is string => Boolean(type)))].sort(), [centers]);
   const selectedCenter = centers.find((center) => center.id === selectedId) ?? null;
-  const hasFilters = Boolean(municipality || query || facilityType || openingStatus || origin);
+  const relevantDrrmo = selectedCenter ? drrmoForCenter(contacts, selectedCenter) : null;
+  const hasFilters = Boolean(municipality || query || facilityType || origin);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -77,7 +81,6 @@ export function EvacuationCentersContent() {
     setMunicipality("");
     setQuery("");
     setFacilityType("");
-    setOpeningStatus("");
     setOrigin(null);
     setLocationMessage(null);
   }
@@ -103,6 +106,7 @@ export function EvacuationCentersContent() {
     <header>
       <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Evacuation Centers</h1>
       <p className="mt-2 text-lg leading-relaxed">Find an evacuation center near you.</p>
+      <p className="mt-2 text-base leading-relaxed text-[var(--color-muted-foreground)]">Listed centers may open during emergencies. Check their opening status before going.</p>
     </header>
 
     <div className="grid gap-5 md:grid-cols-2">
@@ -119,12 +123,9 @@ export function EvacuationCentersContent() {
 
     <details className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
       <summary className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><SlidersHorizontal aria-hidden="true" className="h-5 w-5" />More filters<ChevronDown aria-hidden="true" className="ml-auto h-5 w-5" /></summary>
-      <div className="grid gap-4 border-t border-[var(--color-border)] p-4 md:grid-cols-2">
+      <div className="grid gap-4 border-t border-[var(--color-border)] p-4">
         <label className="grid gap-2 text-lg font-medium">Facility type
           <select value={facilityType} onChange={(event) => setFacilityType(event.target.value)} className="min-h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-lg focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><option value="">All types</option>{facilityTypes.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select>
-        </label>
-        <label className="grid gap-2 text-lg font-medium">Opening status
-          <select value={openingStatus} onChange={(event) => setOpeningStatus(event.target.value)} className="min-h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-lg focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><option value="">All statuses</option><option value="unknown">Opening not confirmed</option><option value="confirmed_available">Open</option><option value="confirmed_unavailable">Temporarily unavailable</option></select>
         </label>
         <div className="flex flex-wrap gap-3 md:col-span-2">
           <button type="button" onClick={findNearest} className="min-h-12 rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><MapPin aria-hidden="true" className="mr-2 inline h-5 w-5" />Sort nearest to me</button>
@@ -142,10 +143,12 @@ export function EvacuationCentersContent() {
       {visibleCenters.length === 0 ? <p className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-lg leading-relaxed">No centers match this search. Try another municipality or clear the filters. This directory is still being expanded.</p> : <div className="grid items-start gap-4 lg:grid-cols-2">
         {visibleCenters.map((center) => {
           const status = openingStatusDisplay(center);
+          const listing = centerListingLabel(center);
           return <article key={center.id} id={`evacuation-center-${center.id}`} className="flex h-full flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm sm:p-6">
             <h2 className="text-xl font-bold leading-snug wrap-break-word">{center.name}</h2>
             <p className="mt-3 flex items-start gap-2 text-lg leading-relaxed"><MapPin aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-[var(--color-primary)]" />{[center.barangay, center.city].filter(Boolean).join(", ")}</p>
-            <p className={`mt-4 w-fit rounded-lg px-3 py-2 text-lg font-bold ${status.className}`}>{status.label}</p>
+            <p className={`mt-4 w-fit rounded-lg px-3 py-2 text-lg font-bold ${status.className}`}>{center.openingStatus === "unknown" && listing ? listing : status.label}</p>
+            {center.openingStatus === "unknown" ? <p className="mt-2 text-lg">Check opening before going.</p> : center.availabilityConfirmedAt ? <p className="mt-2 text-base">Updated {formatOperationalUpdate(center.availabilityConfirmedAt)}</p> : null}
             {origin && hasCenterCoordinates(center) ? <p className="mt-3 text-lg">{calculateDistanceKm(origin, center).toFixed(1)} km direct distance</p> : null}
             <div className="mt-auto flex flex-wrap gap-3 pt-6">
               <button type="button" aria-label={`View details for ${center.name}`} onClick={(event) => { triggerRef.current = event.currentTarget; setSelectedId(center.id); }} className="min-h-12 rounded-xl bg-[var(--color-primary)] px-5 text-lg font-bold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View details</button>
@@ -154,7 +157,7 @@ export function EvacuationCentersContent() {
           </article>;
         })}
       </div>}
-      <p className="text-base leading-relaxed text-[var(--color-muted-foreground)]">This is a partial directory. Check opening status with your local DRRMO before going.</p>
+      <p className="text-base leading-relaxed text-[var(--color-muted-foreground)]">This partial directory is still being expanded.</p>
     </>}
 
     {selectedCenter ? <dialog ref={dialogRef} aria-labelledby="center-detail-title" onClose={() => { setSelectedId(null); triggerRef.current?.focus(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-foreground)] shadow-2xl backdrop:bg-slate-950/70">
@@ -164,14 +167,21 @@ export function EvacuationCentersContent() {
           <button ref={closeButtonRef} type="button" onClick={() => dialogRef.current?.close()} aria-label="Close details" className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="h-6 w-6" /></button>
         </div>
         <p className="mt-3 text-lg">{[selectedCenter.barangay, selectedCenter.city].filter(Boolean).join(", ")}</p>
-        <p className={`mt-4 w-fit rounded-lg px-3 py-2 text-lg font-bold ${openingStatusDisplay(selectedCenter).className}`}>{openingStatusDisplay(selectedCenter).label}</p>
-        {selectedCenter.availability === "unknown" ? <p className="mt-3 text-lg">Please contact the local DRRMO before going.</p> : null}
+        <p className="mt-4 text-lg"><span className="font-semibold">Listing:</span> {centerListingLabel(selectedCenter) ?? "Listing not confirmed"}</p>
+        <p className="mt-3 text-lg"><span className="font-semibold">Opening status:</span> <span className={`inline-block rounded-lg px-3 py-2 font-bold ${openingStatusDisplay(selectedCenter).className}`}>{centerOpeningLabel(selectedCenter)}</span></p>
+        {selectedCenter.openingStatus === "unknown" ? <p className="mt-2 text-lg">Check with the local DRRMO before going.</p> : selectedCenter.availabilityConfirmedAt ? <p className="mt-2 text-base">Operational update: {formatOperationalUpdate(selectedCenter.availabilityConfirmedAt)}</p> : null}
         {selectedCenter.address ? <p className="mt-5 text-lg leading-relaxed"><span className="font-semibold">Address:</span> {selectedCenter.address}</p> : null}
         {hasCenterCoordinates(selectedCenter) ? <div className="mt-5 flex flex-wrap gap-3">
           <Link href={buildCenterMapHref(selectedCenter.id)} className="inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View on map</Link>
           <a href={buildDirectionsUrl(selectedCenter, origin)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-xl bg-[var(--color-primary)] px-4 text-lg font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><Navigation aria-hidden="true" className="mr-2 h-5 w-5" />Directions</a>
           <p className="w-full text-base">Map location is a reference. Route safety is not confirmed.</p>
         </div> : <p className="mt-5 text-lg">Exact location unavailable. Contact the local DRRMO for guidance.</p>}
+        {relevantDrrmo ? <div className="mt-5 rounded-xl border border-[var(--color-border)] p-4 text-lg">
+          <p className="font-semibold">{relevantDrrmo.city ? "Municipal or city DRRMO contact" : "Bulacan PDRRMO contact"}</p>
+          <p>{relevantDrrmo.agencyName}</p>
+          {relevantDrrmo.phones[0] ? <p className="mt-2">{relevantDrrmo.phones[0].telUri ? <a href={relevantDrrmo.phones[0].telUri} className="font-semibold text-[var(--color-primary)] underline">Call {relevantDrrmo.phones[0].raw}</a> : relevantDrrmo.phones[0].raw}</p> : null}
+          <p className="mt-2 text-base">This is the DRRMO contact, not the facility’s direct number. Confirm that the number is current.</p>
+        </div> : null}
         <Link href="/emergency-hotlines" className="mt-4 inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Find local emergency contacts</Link>
         {selectedCenter.contactNumber ? <p className="mt-4 text-lg"><span className="font-semibold">Listed facility contact:</span> {selectedCenter.contactNumber}</p> : null}
         {selectedCenter.facilityType ? <p className="mt-5 text-lg"><span className="font-semibold">Facility type:</span> {selectedCenter.facilityType.replaceAll("_", " ")}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</p> : null}
@@ -182,7 +192,6 @@ export function EvacuationCentersContent() {
           <summary className="flex min-h-12 cursor-pointer items-center text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Sources and updates</summary>
           <div className="space-y-3 pb-3 text-base leading-relaxed">
             {selectedCenter.sourceCheckedAt ? <p>Source researched {formatLastVerified(selectedCenter.sourceCheckedAt)}.</p> : null}
-            {selectedCenter.availabilityConfirmedAt ? <p>Opening status checked {formatLastVerified(selectedCenter.availabilityConfirmedAt)}.</p> : null}
             {selectedCenter.lastDocumentedEventDate ? <p>Documented event: {formatLastVerified(selectedCenter.lastDocumentedEventDate)}.</p> : null}
             {selectedCenter.verificationStatus === "outdated" ? <p>Source needs rechecking.</p> : null}
             {selectedCenter.locationProvenance ? <p>{selectedCenter.locationProvenance}</p> : null}

@@ -5,6 +5,7 @@ import type {
   EvacuationCenterStatus,
   EvacuationCenterVerificationStatus,
   EvacuationFacility,
+  PublicEvacuationCenter,
 } from "@/lib/types";
 
 export const EVACUATION_STATUS_META: Record<
@@ -17,11 +18,23 @@ export const EVACUATION_STATUS_META: Record<
   }
 > = {
   available: {
-    label: "Available",
+    label: "Open",
     badgeClassName:
       "border-[rgba(34,197,94,0.34)] bg-[rgba(34,197,94,0.08)] text-[var(--color-success)]",
     markerColor: "#22c55e",
     markerRing: "rgba(34,197,94,0.22)",
+  },
+  closed: {
+    label: "Closed",
+    badgeClassName: "border-slate-400/40 bg-slate-500/10 text-slate-800 dark:text-slate-100",
+    markerColor: "#475569",
+    markerRing: "rgba(71,85,105,0.22)",
+  },
+  full: {
+    label: "Full",
+    badgeClassName: "border-orange-500/40 bg-orange-500/10 text-orange-800 dark:text-orange-100",
+    markerColor: "#ea580c",
+    markerRing: "rgba(234,88,12,0.22)",
   },
   standby: {
     label: "Standby",
@@ -31,11 +44,8 @@ export const EVACUATION_STATUS_META: Record<
     markerRing: "rgba(245,158,11,0.2)",
   },
   needs_verification: {
-    label: "Needs Verification",
-    badgeClassName:
-      "border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.08)] text-[#93c5fd]",
-    // Violet: distinct from active-report blue, receded grey, and the other
-    // status colours, so an unverified shelter never reads as a flood report.
+    label: "Opening not confirmed",
+    badgeClassName: "border-slate-400/40 bg-slate-500/10 text-slate-800 dark:text-slate-100",
     markerColor: "#7c3aed",
     markerRing: "rgba(124,58,237,0.22)",
   },
@@ -230,6 +240,36 @@ export function buildDirectionsUrl(
 }
 
 export const CENTER_OPENING_UNKNOWN = "Opening status unconfirmed — contact the local DRRMO.";
+
+export function currentCenterOpeningStatus(status: string, confirmedAt: Date | string | null, now = Date.now()): PublicEvacuationCenter["openingStatus"] {
+  if (!confirmedAt) return "unknown";
+  const age = now - new Date(confirmedAt).getTime();
+  if (!Number.isFinite(age) || age < 0 || age > 24 * 60 * 60 * 1000) return "unknown";
+  if (status === "available") return "open";
+  if (status === "closed" || status === "full" || status === "temporarily_unavailable") return status;
+  return "unknown";
+}
+
+export function centerListingLabel(center: Pick<PublicEvacuationCenter, "listingKind">) {
+  return center.listingKind === "center" ? "Listed evacuation center"
+    : center.listingKind === "site" ? "Listed evacuation site" : null;
+}
+
+export function centerOpeningLabel(center: Pick<PublicEvacuationCenter, "openingStatus">) {
+  switch (center.openingStatus) {
+    case "open": return "Open";
+    case "closed": return "Closed";
+    case "full": return "Full";
+    case "temporarily_unavailable": return "Temporarily unavailable";
+    default: return "Opening not confirmed";
+  }
+}
+
+export function formatOperationalUpdate(value: string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+  }).format(new Date(value));
+}
 
 export function hasCenterCoordinates<T extends { latitude: number | null; longitude: number | null }>(
   center: T,

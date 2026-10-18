@@ -3,10 +3,31 @@ import { BULACAN_SCOPE_VERSION, isWithinBulacan } from "@/lib/bulacan-scope";
 import { isSafeCenterSourceUrl } from "@/lib/public-evacuation-centers";
 import { isValidLatitude, isValidLongitude } from "@/lib/validations";
 
-export const CENTER_STATUSES = ["available", "standby", "temporarily_unavailable", "needs_verification"] as const;
+export const CENTER_STATUSES = ["available", "closed", "full", "standby", "temporarily_unavailable", "needs_verification"] as const;
 export const CENTER_VERIFICATION_STATUSES = ["verified", "official_publication_found", "needs_verification", "outdated", "disputed"] as const;
 export const CENTER_SOURCE_TYPES = ["official_dswd", "official_lgu", "official_government", "openstreetmap", "community_reference"] as const;
 export const CENTER_FACILITIES = ["pwd_accessible", "medical_support", "drinking_water", "restrooms", "pet_friendly", "parking"] as const;
+
+const operationalStatuses = new Set(["available", "closed", "full", "temporarily_unavailable"]);
+
+export function parseOperationalConfirmation(body: unknown, status: string, previousStatus?: string) {
+  const value = body && typeof body === "object" && !Array.isArray(body) ? body as Record<string, unknown> : {};
+  const confirming = value.confirmAvailability === true;
+  if (!confirming) {
+    if (operationalStatuses.has(status) && status !== previousStatus) return { error: "Confirm the new operational status with evidence and a confirmation time." };
+    return { confirmedAt: undefined, evidenceUrl: undefined, directNote: undefined };
+  }
+  if (!operationalStatuses.has(status)) return { error: "Only Open, Closed, Full, or Temporarily Unavailable can be confirmed." };
+  const time = value.operationalConfirmedAt;
+  const confirmedAt = typeof time === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(time) ? new Date(time) : null;
+  if (!confirmedAt || Number.isNaN(confirmedAt.getTime()) || confirmedAt.getTime() > Date.now()) return { error: "Enter a valid operational confirmation date and time that is not in the future." };
+  const evidenceUrl = typeof value.operationalEvidenceUrl === "string" ? value.operationalEvidenceUrl.trim() : "";
+  const directNote = typeof value.directConfirmationNote === "string" ? value.directConfirmationNote.trim() : "";
+  if (evidenceUrl && !isSafeCenterSourceUrl(evidenceUrl)) return { error: "Operational evidence URL must be a valid HTTPS address." };
+  if (!evidenceUrl && directNote.length < 10) return { error: "Provide a current official announcement URL or document the direct confirmation (authority, method, and details)." };
+  if (evidenceUrl.length > 500 || directNote.length > 500) return { error: "Operational evidence is too long." };
+  return { confirmedAt, evidenceUrl: evidenceUrl || undefined, directNote: directNote || undefined };
+}
 
 export function parseCenterPayload(body: unknown) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return { error: "Invalid evacuation-center data." };

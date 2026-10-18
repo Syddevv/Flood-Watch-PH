@@ -2,6 +2,7 @@ import type { EvacuationCenter } from "@prisma/client";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
+import { currentCenterOpeningStatus } from "@/lib/emergency-resources";
 import type { EvacuationCenterResource, EvacuationFacility, PublicEvacuationCenter } from "@/lib/types";
 
 const publicSources = new Set(["official_dswd", "official_lgu", "official_government"]);
@@ -37,16 +38,16 @@ export function isPublishableCenter(center: EvacuationCenter) {
 export function toPublicCenter(center: EvacuationCenter) {
   const checkedAt = center.sourceCheckedAt ?? center.lastVerifiedAt;
   const referenceStale = !checkedAt || Date.now() - checkedAt.getTime() > CENTER_REFERENCE_STALE_MS;
-  const availabilityFresh = center.availabilityConfirmedAt &&
-    Date.now() - center.availabilityConfirmedAt.getTime() <= 24 * 60 * 60 * 1000;
-  const availability = availabilityFresh && center.status === "available"
-    ? "confirmed_available"
-    : availabilityFresh && center.status === "temporarily_unavailable"
-      ? "confirmed_unavailable"
-      : "unknown";
+  const openingStatus = currentCenterOpeningStatus(center.status, center.availabilityConfirmedAt);
+  const availability = openingStatus === "open" ? "confirmed_available"
+    : openingStatus === "unknown" ? "unknown" : "confirmed_unavailable";
   const snapshot = center.sourceSnapshot && typeof center.sourceSnapshot === "object" && !Array.isArray(center.sourceSnapshot)
     ? center.sourceSnapshot as { record?: { notes?: string | null; coordinate_precision?: string | null }; sources?: Array<{ title: string; url: string; published_at: string | null }> }
     : null;
+  const sourceIdentifiesOnlyAnArea = /(?:does not identify the exact building|not the exact facility)/i.test(snapshot?.record?.notes ?? "");
+  const officiallyListed = publicSources.has(center.sourceType) &&
+    ["verified", "official_publication_found"].includes(center.verificationStatus) &&
+    Boolean(center.sourceUrl && isSafeCenterSourceUrl(center.sourceUrl)) && Boolean(checkedAt);
   const resource: PublicEvacuationCenter = {
     id: center.id,
     name: center.name,
@@ -57,6 +58,8 @@ export function toPublicCenter(center: EvacuationCenter) {
     region: center.region ?? undefined,
     latitude: center.latitude,
     longitude: center.longitude,
+    listingKind: officiallyListed ? sourceIdentifiesOnlyAnArea ? "site" : "center" : null,
+    openingStatus,
     facilities: center.facilities.filter((facility): facility is EvacuationFacility => publicFacilities.has(facility)),
     estimatedCapacity: center.estimatedCapacity ?? undefined,
     contactNumber: center.contactNumber ?? undefined,
@@ -66,9 +69,9 @@ export function toPublicCenter(center: EvacuationCenter) {
     lastVerifiedAt: checkedAt?.toISOString(),
     sourceCheckedAt: checkedAt?.toISOString() ?? null,
     verificationStatus: referenceStale ? "outdated" : center.verificationStatus as EvacuationCenterResource["verificationStatus"],
-    status: availability === "confirmed_available" ? "available" : availability === "confirmed_unavailable" ? "temporarily_unavailable" : "needs_verification",
+    status: openingStatus === "open" ? "available" : openingStatus === "unknown" ? "needs_verification" : openingStatus,
     availability,
-    availabilityConfirmedAt: availabilityFresh ? center.availabilityConfirmedAt?.toISOString() ?? null : null,
+    availabilityConfirmedAt: openingStatus !== "unknown" ? center.availabilityConfirmedAt?.toISOString() ?? null : null,
     facilityType: center.facilityType,
     permanent: center.permanent,
     capacityFamilies: center.capacityFamilies,

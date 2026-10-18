@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { currentCenterOpeningStatus, centerOpeningLabel } from "@/lib/emergency-resources";
 import { useEffect, useState } from "react";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
@@ -89,7 +90,7 @@ export function AdminEvacuationCentersPage() {
                 <p className="mt-3 text-sm">Identity: {center.verificationStatus.replaceAll("_", " ")}</p>
                 {center.externalKey ? <p className="text-xs">Imported: {center.externalKey}</p> : null}
                 {center.duplicateReviewNotes ? <p className="text-xs text-[var(--color-warning)]">Duplicate review: {center.duplicateReviewNotes}</p> : null}
-                <p className="text-sm">Availability: {center.availabilityConfirmedAt ? center.status.replaceAll("_", " ") : "unknown"}</p>
+                <p className="text-sm">Opening status: {centerOpeningLabel({ openingStatus: currentCenterOpeningStatus(center.status, center.availabilityConfirmedAt) })}</p>
                 <p className="text-sm">Estimated capacity: {center.estimatedCapacity ?? "not recorded"}</p>
                 <Link href={`/admin/data/${center.id}`} className="mt-4 inline-block font-semibold text-[var(--color-primary)]">Manage center</Link>
               </article>)}
