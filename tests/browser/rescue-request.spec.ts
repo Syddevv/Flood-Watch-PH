@@ -10,7 +10,7 @@ test.describe("Request Rescue page", () => {
   test("renders the form, empty history, and the support aside", async ({
     page,
   }) => {
-    await page.goto("/rescue-request");
+    await signIn(page);
 
     await expect(
       page.getByRole("heading", { name: "Request Rescue Assistance" }),
@@ -48,7 +48,7 @@ test.describe("Request Rescue page", () => {
   });
 
   test("the people stepper clamps at one and counts up", async ({ page }) => {
-    await page.goto("/rescue-request");
+    await signIn(page);
 
     const count = page.getByTestId("rescue-people-count");
     await expect(count).toHaveText("1");
@@ -65,7 +65,7 @@ test.describe("Request Rescue page", () => {
   test("None and the real assistance needs are mutually exclusive", async ({
     page,
   }) => {
-    await page.goto("/rescue-request");
+    await signIn(page);
 
     const children = page.getByTestId("rescue-assistance-children");
     const none = page.getByTestId("rescue-assistance-none");
@@ -82,13 +82,36 @@ test.describe("Request Rescue page", () => {
     await expect(none).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("anonymous visitors see the sign-in notice and a disabled submit", async ({
+  test("anonymous visitors see sign-in choices, not the request form", async ({
     page,
   }) => {
     await page.goto("/rescue-request");
 
     await expect(page.getByTestId("rescue-signin-notice")).toBeVisible();
-    await expect(page.getByTestId("rescue-submit")).toBeDisabled();
+    await expect(page.getByTestId("rescue-request-form")).toHaveCount(0);
+    const signInPrompt = page.getByTestId("rescue-signin-notice");
+    await expect(signInPrompt.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?next=/rescue-request");
+    await expect(signInPrompt.getByRole("link", { name: "Create account" })).toHaveAttribute("href", "/register?next=/rescue-request");
+  });
+
+  test("GPS fills the locality and barangay when reverse geocoding identifies them", async ({ page }) => {
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: 14.858, longitude: 120.857 });
+    await page.route("**/api/reports/reverse-geocode?**", (route) => route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({ data: {
+        locationName: "Bulihan Road, Bulihan, Plaridel, Bulacan",
+        formattedAddress: "Bulihan Road, Bulihan, Plaridel, Bulacan",
+        localityCode: "0301417000", barangay: "Bulihan",
+      } }),
+    }));
+    await signIn(page);
+    await page.getByTestId("rescue-locality").selectOption("0301407000");
+    await page.getByTestId("rescue-barangay").fill("Old barangay");
+    await page.getByTestId("rescue-use-current-location").click();
+    await expect(page.getByTestId("rescue-location-name")).toHaveValue("Bulihan Road, Bulihan, Plaridel, Bulacan");
+    await expect(page.getByTestId("rescue-locality")).toHaveValue("0301417000");
+    await expect(page.getByTestId("rescue-barangay")).toHaveValue("Bulihan");
   });
 
   test("manual location is allowed but contact is required", async ({
@@ -152,7 +175,7 @@ test.describe("Request Rescue page", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/rescue-request");
+    await signIn(page);
 
     await expect(page.getByTestId("rescue-request-form")).toBeVisible();
 

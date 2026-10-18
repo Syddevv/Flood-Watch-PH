@@ -5,6 +5,8 @@ type ReportReverseGeocodeResponse =
       data: {
         locationName: string | null;
         formattedAddress: string | null;
+        localityCode?: string | null;
+        barangay?: string | null;
       };
     }
   | {
@@ -14,13 +16,15 @@ type ReportReverseGeocodeResponse =
 export type ReportLocationResolution = {
   locationName: string;
   precise: boolean;
+  localityCode?: string;
+  barangay?: string;
 };
 
 async function resolvePreciseLocationName(
   latitude: number,
   longitude: number,
   signal?: AbortSignal,
-): Promise<string | null> {
+): Promise<{ locationName: string; localityCode?: string; barangay?: string } | null> {
   try {
     const searchParams = new URLSearchParams({
       lat: String(latitude),
@@ -44,7 +48,13 @@ async function resolvePreciseLocationName(
       return null;
     }
 
-    return payload.data.formattedAddress?.trim() || payload.data.locationName?.trim() || null;
+    const locationName = payload.data.formattedAddress?.trim() || payload.data.locationName?.trim();
+    if (!locationName) return null;
+    return {
+      locationName,
+      ...(payload.data.localityCode ? { localityCode: payload.data.localityCode } : {}),
+      ...(payload.data.barangay ? { barangay: payload.data.barangay } : {}),
+    };
   } catch {
     return null;
   }
@@ -64,7 +74,7 @@ export async function resolveReportLocationName(
   const preciseLocationName = await resolvePreciseLocationName(latitude, longitude, signal);
 
   if (preciseLocationName) {
-    return { locationName: preciseLocationName, precise: true };
+    return { ...preciseLocationName, precise: true };
   }
 
   const result = await fetchWeatherLocation({ lat: latitude, lon: longitude }, signal);
