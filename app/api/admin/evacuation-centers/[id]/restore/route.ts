@@ -10,7 +10,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const center = await prisma.evacuationCenter.findUnique({ where: { id } });
   if (!center) return adminErrorResponse(request, "Evacuation center not found.", 404);
   if (!center.isArchived) return adminSuccessResponse(request, { center });
-  const restored = await prisma.evacuationCenter.update({ where: { id }, data: { isArchived: false, archivedAt: null, archivedByUserId: null, updatedByUserId: auth.user.id } });
+  const body = await request.json().catch(() => null);
+  const expectedUpdatedAt = body && typeof body.expectedUpdatedAt === "string" ? new Date(body.expectedUpdatedAt) : null;
+  if (!expectedUpdatedAt || center.updatedAt.getTime() !== expectedUpdatedAt.getTime()) return adminErrorResponse(request, "This center changed. Refresh before restoring.", 409);
+  const changed = await prisma.evacuationCenter.updateMany({ where: { id, updatedAt: expectedUpdatedAt, isArchived: true }, data: { isArchived: false, archivedAt: null, archivedByUserId: null, updatedByUserId: auth.user.id } });
+  if (changed.count !== 1) return adminErrorResponse(request, "This center changed. Refresh before restoring.", 409);
+  const restored = await prisma.evacuationCenter.findUniqueOrThrow({ where: { id } });
   await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_RESTORED", targetType: "EvacuationCenter", targetId: id, requestId: request.headers.get("x-request-id") ?? undefined });
   return adminSuccessResponse(request, { center: restored });
 }

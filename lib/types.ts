@@ -152,6 +152,11 @@ export type EvacuationCenterResource = {
 
 export type EvacuationCenter = EvacuationCenterResource;
 
+export type PublicEvacuationCenter = EvacuationCenterResource & {
+  availability: "unknown" | "confirmed_available" | "confirmed_unavailable";
+  availabilityConfirmedAt: string | null;
+};
+
 export type EmergencyHotline = {
   id: string;
   name: string;

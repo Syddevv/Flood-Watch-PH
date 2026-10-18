@@ -122,7 +122,7 @@ model EvacuationCenter {
   scopeVersion       String    @default("osm-1504656-2026-10-14")
   contactNumber      String?
   facilities         String[]
-  status             String    @default("Unknown")
+  status             String    @default("needs_verification")
   barangay           String?
   region             String?
   verificationStatus String    @default("needs_verification")
@@ -130,6 +130,7 @@ model EvacuationCenter {
   sourceName         String?
   sourceUrl          String?
   lastVerifiedAt     DateTime?
+  availabilityConfirmedAt DateTime?
   notes              String?
   estimatedCapacity  Int?
   isArchived         Boolean   @default(false)

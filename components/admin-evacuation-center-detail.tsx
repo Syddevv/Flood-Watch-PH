@@ -1,28 +1,155 @@
 "use client";
 
-import { Clock3, MoreHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { FloodMap } from "@/components/flood-map";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import type { AdminCenter } from "@/components/admin-evacuation-centers-page";
-import { FLOOD_LEGEND } from "@/lib/constants";
-import type { EvacuationCenterMapMarker, EvacuationCenterResource } from "@/lib/types";
-import type { ReportActionLoadingState } from "@/lib/report-actions";
+import { CENTER_FACILITIES, CENTER_SOURCE_TYPES, CENTER_STATUSES, CENTER_VERIFICATION_STATUSES } from "@/lib/admin-evacuation";
 
-const noop = () => undefined;
-const allowedStatus = new Set(["available", "standby", "needs_verification", "temporarily_unavailable"]);
-const allowedVerification = new Set(["verified", "needs_verification", "sample_demo", "outdated"]);
-const allowedFacilities = new Set(["pwd_accessible", "medical_support", "drinking_water", "restrooms", "pet_friendly", "parking"]);
-function normalize(center: AdminCenter): EvacuationCenterResource { return { id: center.id, name: center.name, address: center.address, barangay: center.barangay ?? undefined, city: center.city, province: center.province, latitude: center.latitude, longitude: center.longitude, status: (allowedStatus.has(center.status) ? center.status : "needs_verification") as EvacuationCenterResource["status"], verificationStatus: (allowedVerification.has(center.verificationStatus) ? center.verificationStatus : "needs_verification") as EvacuationCenterResource["verificationStatus"], facilities: center.facilities.filter((facility) => allowedFacilities.has(facility)) as EvacuationCenterResource["facilities"], estimatedCapacity: center.estimatedCapacity ?? undefined, sourceType: "community_reference", lastVerifiedAt: center.lastVerifiedAt ?? undefined } }
-function text(value: string) { return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+type Draft = {
+  name: string; description: string; address: string; barangay: string;
+  city: string; latitude: string; longitude: string; contactNumber: string;
+  facilities: string[]; status: string; verificationStatus: string;
+  sourceType: string; sourceName: string; sourceUrl: string;
+  lastVerifiedAt: string; notes: string; estimatedCapacity: string;
+  confirmAvailability: boolean;
+};
 
-export function AdminEvacuationCenterDetail({ centerId }: { centerId: string }) {
-  const [center, setCenter] = useState<AdminCenter | null>(null); const [error, setError] = useState<string | null>(null);
-  useEffect(() => { void fetch(`/api/admin/evacuation-centers/${centerId}`, { cache: "no-store" }).then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to load center."); setCenter(body.data.center); }).catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load center.")); }, [centerId]);
-  const marker = useMemo<EvacuationCenterMapMarker[]>(() => center ? [{ id: `center-marker-${center.id}`, label: "E", category: "center", coordinates: [center.latitude, center.longitude], title: center.name, centerId: center.id, center: normalize(center), status: normalize(center).status }] : [], [center]);
-  if (error) return <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400">{error}</p>;
-  if (!center) return <p className="text-sm text-[var(--color-muted-foreground)]">Loading evacuation center...</p>;
-  const capacity = center.estimatedCapacity;
-  const actionLoading: ReportActionLoadingState = null;
-  return <div className="space-y-6"><header className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[.18em] text-[var(--color-primary)]">CALUMPIT EMERGENCY OPERATIONS</p><h2 className="mt-2 text-3xl font-bold tracking-tight">{center.name}</h2><p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{center.address} · Detailed administrative record and accountable actions.</p></div><button type="button" className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-semibold"><MoreHorizontal className="h-4 w-4" />More actions</button></header><div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]"><div className="space-y-4"><section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Record details</h3><p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Current information for this evacuation center record.</p><span className="mt-6 inline-block rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-500">{text(center.status)}</span><p className="mt-4 font-semibold">{capacity ? `${capacity.toLocaleString()} estimated spaces.` : "Estimated capacity has not been recorded."}</p><div className="mt-4 flex flex-wrap gap-2">{center.facilities.map((facility) => <span key={facility} className="rounded-md bg-[var(--color-panel)] px-2 py-1 text-xs font-medium">{text(facility)}</span>)}</div></section><section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Location context</h3><div className="mt-5 h-[360px] overflow-hidden rounded-lg"><FloodMap polygons={[]} legend={FLOOD_LEGEND} showRiskOverlays={false} onToggleRiskOverlays={noop} reportMarkers={[]} evacuationCenterMarkers={marker} showFloodReports={false} showEvacuationCenters={true} onToggleFloodReports={noop} onToggleEvacuationCenters={noop} focusedCenterId={center.id} selectedReportStatus="active" onSelectReportStatus={noop} highSeverityOnly={false} onToggleHighSeverityOnly={noop} loadingReports={false} reportLoadError={null} actionLoading={actionLoading} confirmedReportIds={{}} resolvedReportIds={{}} onSelectReport={noop} onOpenReportDetails={noop} onShareReport={noop} onConfirmReport={noop} onResolveReport={noop} /></div></section></div><aside className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Activity timeline</h3><p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Recent changes to this record.</p><div className="mt-6 space-y-5"><Timeline title="Center record updated" detail={new Date(center.updatedAt).toLocaleString()} /><Timeline title={`Verification: ${text(center.verificationStatus)}`} detail={center.lastVerifiedAt ? new Date(center.lastVerifiedAt).toLocaleString() : "No verification timestamp recorded"} /><Timeline title="Location confirmed" detail={`${center.latitude.toFixed(5)}, ${center.longitude.toFixed(5)}`} /></div><button className="mt-7 w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white">Update status</button><button className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-semibold">Add operational note</button></aside></div></div>;
+const emptyDraft: Draft = {
+  name: "", description: "", address: "", barangay: "", city: "",
+  latitude: "", longitude: "", contactNumber: "", facilities: [],
+  status: "needs_verification", verificationStatus: "needs_verification",
+  sourceType: "official_lgu", sourceName: "", sourceUrl: "",
+  lastVerifiedAt: "", notes: "", estimatedCapacity: "", confirmAvailability: false,
+};
+
+function fromCenter(center: AdminCenter): Draft {
+  return {
+    name: center.name, description: center.description ?? "", address: center.address,
+    barangay: center.barangay ?? "", city: center.city,
+    latitude: String(center.latitude), longitude: String(center.longitude),
+    contactNumber: center.contactNumber ?? "", facilities: center.facilities,
+    status: center.status, verificationStatus: center.verificationStatus,
+    sourceType: center.sourceType, sourceName: center.sourceName ?? "",
+    sourceUrl: center.sourceUrl ?? "",
+    lastVerifiedAt: center.lastVerifiedAt?.slice(0, 10) ?? "",
+    notes: center.notes ?? "", estimatedCapacity: center.estimatedCapacity == null ? "" : String(center.estimatedCapacity),
+    confirmAvailability: false,
+  };
 }
-function Timeline({ title, detail }: { title: string; detail: string }) { return <div className="flex gap-3"><Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" /><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{detail}</p></div></div>; }
+
+export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string }) {
+  const router = useRouter();
+  const [center, setCenter] = useState<AdminCenter | null>(null);
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [loading, setLoading] = useState(Boolean(centerId));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!centerId) return;
+    const controller = new AbortController();
+    fetch(`/api/admin/evacuation-centers/${centerId}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error ?? "Unable to load center.");
+        setCenter(payload.data.center);
+        setDraft(fromCenter(payload.data.center));
+      })
+      .catch((cause) => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load center."); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [centerId]);
+
+  const set = (key: keyof Draft, value: string | boolean | string[]) => setDraft((current) => ({ ...current, [key]: value }));
+  const field = (label: string, key: keyof Draft, type = "text") => (
+    <label className="grid gap-1 text-sm"><span>{label}</span>
+      <input className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3" type={type} value={String(draft[key])} onChange={(event) => set(key, event.target.value)} />
+    </label>
+  );
+  const select = (label: string, key: keyof Draft, options: readonly string[]) => (
+    <label className="grid gap-1 text-sm"><span>{label}</span>
+      <select className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3" value={String(draft[key])} onChange={(event) => set(key, event.target.value)}>
+        <option value="">Select</option>
+        {options.map((option) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}
+      </select>
+    </label>
+  );
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true); setError(null); setNotice(null);
+    try {
+      const response = await fetch(centerId ? `/api/admin/evacuation-centers/${centerId}` : "/api/admin/evacuation-centers", {
+        method: centerId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...draft, province: "Bulacan", region: "Region III",
+          latitude: Number(draft.latitude), longitude: Number(draft.longitude),
+          estimatedCapacity: draft.estimatedCapacity === "" ? null : Number(draft.estimatedCapacity),
+          lastVerifiedAt: draft.lastVerifiedAt ? new Date(`${draft.lastVerifiedAt}T00:00:00+08:00`).toISOString() : null,
+          expectedUpdatedAt: center?.updatedAt,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Unable to save center.");
+      if (!centerId) { router.push(`/admin/data/${payload.data.center.id}`); return; }
+      setCenter(payload.data.center);
+      setDraft(fromCenter(payload.data.center));
+      setNotice("Center saved. Public views refresh from the database.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save center.");
+    } finally { setSaving(false); }
+  }
+
+  async function toggleArchive() {
+    if (!center || saving) return;
+    setSaving(true); setError(null); setNotice(null);
+    try {
+      const action = center.isArchived ? "restore" : "archive";
+      const response = await fetch(`/api/admin/evacuation-centers/${center.id}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedUpdatedAt: center.updatedAt }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? `Unable to ${action} center.`);
+      setCenter(payload.data.center);
+      setNotice(center.isArchived ? "Center restored." : "Center archived and hidden from public views.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update center."); }
+    finally { setSaving(false); }
+  }
+
+  if (loading) return <p role="status">Loading evacuation center…</p>;
+  if (centerId && !center) return <p role="alert">{error ?? "Evacuation center not found."}</p>;
+
+  return <div className="space-y-5">
+    <Link href="/admin/data" className="text-sm text-[var(--color-primary)]">← Back to centers</Link>
+    <h1 className="text-2xl font-semibold">{center ? `Edit ${center.name}` : "Add evacuation center"}</h1>
+    <p className="text-sm text-[var(--color-muted-foreground)]">Only sourced and dated official records become public. Estimated capacity is planning data, not current occupancy.</p>
+    {error ? <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-red-400">{error}</p> : null}
+    {notice ? <p role="status" className="rounded-lg border border-green-500/30 p-3">{notice}</p> : null}
+    <form onSubmit={save} className="grid gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:grid-cols-2">
+      {field("Name", "name")}{field("Address", "address")}
+      {select("Municipality or city", "city", BULACAN_LOCALITIES.map((locality) => locality.name))}
+      {field("Barangay", "barangay")}
+      {field("Latitude", "latitude", "number")}{field("Longitude", "longitude", "number")}
+      {field("Contact number", "contactNumber", "tel")}{field("Estimated planning capacity", "estimatedCapacity", "number")}
+      {select("Identity verification", "verificationStatus", CENTER_VERIFICATION_STATUSES)}
+      {select("Current operational status", "status", CENTER_STATUSES)}
+      {select("Source type", "sourceType", CENTER_SOURCE_TYPES)}
+      {field("Source name", "sourceName")}{field("Official source URL", "sourceUrl", "url")}
+      {field("Last checked date", "lastVerifiedAt", "date")}
+      {field("Description", "description")}{field("Internal note", "notes")}
+      <fieldset className="md:col-span-2"><legend className="text-sm">Facilities</legend><div className="mt-2 flex flex-wrap gap-3">
+        {CENTER_FACILITIES.map((facility) => <label key={facility} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={draft.facilities.includes(facility)} onChange={(event) => set("facilities", event.target.checked ? [...draft.facilities, facility] : draft.facilities.filter((item) => item !== facility))} />{facility.replaceAll("_", " ")}</label>)}
+      </div></fieldset>
+      <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={draft.confirmAvailability} onChange={(event) => set("confirmAvailability", event.target.checked)} />I have just confirmed this operational availability with the responsible authority.</label>
+      <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[var(--color-primary)] px-4 font-semibold text-white disabled:opacity-50">{saving ? "Saving…" : "Save center"}</button>
+    </form>
+    {center ? <button type="button" disabled={saving} onClick={toggleArchive} className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm">{center.isArchived ? "Restore center" : "Archive center"}</button> : null}
+  </div>;
+}

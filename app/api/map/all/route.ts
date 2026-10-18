@@ -1,7 +1,7 @@
 import { errorResponse } from "@/lib/api-response";
 import { parseReportFilters } from "@/lib/api-utils";
 import { BULACAN_BOUNDS, isWithinBulacan } from "@/lib/bulacan-scope";
-import { NEARBY_EVACUATION_CENTERS } from "@/lib/evacuation-center-scope";
+import { getPublicEvacuationCenters } from "@/lib/public-evacuation-query";
 import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import {
   deriveReportLifecycleStatus,
@@ -158,8 +158,7 @@ export async function GET(request: Request) {
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
 
-    // The same Bulacan polygon gates both reports and static reference centers.
-    const mappedEvacuationCenters = NEARBY_EVACUATION_CENTERS.map((center) => ({
+    const mappedEvacuationCenters = (await getPublicEvacuationCenters()).map((center) => ({
       ...center,
       type: "evacuation_center" as const,
       updatedAt: center.lastVerifiedAt,
