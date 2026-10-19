@@ -122,6 +122,7 @@ model EvacuationCenter {
   description        String?
   address            String
   city               String
+    localityCode       String?
   province           String
   latitude           Float?
   longitude          Float?
@@ -161,6 +162,7 @@ model EvacuationCenter {
   @@index([verificationStatus])
   @@index([isArchived])
   @@index([city, province])
+    @@index([localityCode])
   @@index([updatedAt])
 }
 

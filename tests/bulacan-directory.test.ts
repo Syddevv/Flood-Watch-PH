@@ -3,7 +3,7 @@ import test from "node:test";
 
 import dataset from "../data/bulacan-emergency-directory.json";
 import { BULACAN_LOCALITIES } from "../data/bulacan-localities";
-import { canonicalDirectoryMunicipality, sourceLocationRefreshData, sourceRefreshData, validateBulacanDirectory } from "../lib/bulacan-directory";
+import { canonicalDirectoryMunicipality, directoryLocalityCode, sourceLocationRefreshData, sourceRefreshData, validateBulacanDirectory } from "../lib/bulacan-directory";
 
 test("directory validates every source, record, and Bulacan LGU without inventing locations", () => {
   const directory = validateBulacanDirectory(dataset);
@@ -12,6 +12,7 @@ test("directory validates every source, record, and Bulacan LGU without inventin
   assert.equal(directory.sources.length, 43);
   assert.equal(directory.coverage_by_municipality.length, BULACAN_LOCALITIES.length);
   assert.equal(new Set(directory.coverage_by_municipality.map((row) => canonicalDirectoryMunicipality(row.municipality))).size, BULACAN_LOCALITIES.length);
+  assert.ok(directory.evacuation_centers.every((center) => directoryLocalityCode(center.municipality)));
   assert.equal(directory.evacuation_centers.filter((center) => center.latitude !== null).length, 19);
   assert.equal(directory.evacuation_centers.filter((center) => center.latitude === null && center.longitude === null).length, 24);
   const addedLocationIds = [
@@ -49,6 +50,9 @@ test("directory rejects missing source references, repeated IDs, invalid coordin
   const badDate = structuredClone(dataset);
   badDate.sources[0].checked_at = "2026-02-31";
   assert.throws(() => validateBulacanDirectory(badDate), /Invalid source/);
+  const liveOccupancy = structuredClone(dataset);
+  Object.assign(liveOccupancy.evacuation_centers[0], { current_occupancy: 10 });
+  assert.throws(() => validateBulacanDirectory(liveOccupancy), /Invalid facility/);
 });
 
 test("refreshes source evidence but preserves corrected admin fields", () => {

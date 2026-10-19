@@ -8,7 +8,7 @@ import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 
 export type AdminCenter = {
   id: string; name: string; description: string | null; address: string;
-  barangay: string | null; city: string; province: string;
+  barangay: string | null; city: string; localityCode: string | null; province: string;
   latitude: number | null; longitude: number | null; contactNumber: string | null;
   facilities: string[]; status: string; verificationStatus: string;
   sourceType: string; sourceName: string | null; sourceUrl: string | null;
@@ -17,7 +17,6 @@ export type AdminCenter = {
   isArchived: boolean; updatedAt: string;
   externalKey: string | null; sourceSnapshot: unknown; sourceCheckedAt: string | null;
   facilityType: string | null; permanent: boolean | null; capacityFamilies: number | null;
-  currentOccupancy: number | null; currentCapacity: number | null;
   adminEvidenceUrl: string | null; duplicateReviewNotes: string | null;
 };
 

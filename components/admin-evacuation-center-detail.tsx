@@ -15,7 +15,7 @@ type Draft = {
   sourceType: string; sourceName: string; sourceUrl: string;
   lastVerifiedAt: string; notes: string; estimatedCapacity: string;
   sourceCheckedAt: string; facilityType: string; permanent: string;
-  currentCapacity: string; currentOccupancy: string; adminEvidenceUrl: string;
+  adminEvidenceUrl: string;
   duplicateReviewNotes: string;
   confirmAvailability: boolean;
   operationalConfirmedAt: string; operationalEvidenceUrl: string; directConfirmationNote: string;
@@ -27,7 +27,7 @@ const emptyDraft: Draft = {
   status: "needs_verification", verificationStatus: "needs_verification",
   sourceType: "official_lgu", sourceName: "", sourceUrl: "",
   lastVerifiedAt: "", notes: "", estimatedCapacity: "", confirmAvailability: false,
-  sourceCheckedAt: "", facilityType: "", permanent: "", currentCapacity: "", currentOccupancy: "", adminEvidenceUrl: "", duplicateReviewNotes: "",
+  sourceCheckedAt: "", facilityType: "", permanent: "", adminEvidenceUrl: "", duplicateReviewNotes: "",
   operationalConfirmedAt: "", operationalEvidenceUrl: "", directConfirmationNote: "",
 };
 
@@ -44,7 +44,6 @@ function fromCenter(center: AdminCenter): Draft {
     notes: center.notes ?? "", estimatedCapacity: center.estimatedCapacity == null ? "" : String(center.estimatedCapacity),
     sourceCheckedAt: center.sourceCheckedAt?.slice(0, 10) ?? "", facilityType: center.facilityType ?? "",
     permanent: center.permanent == null ? "" : String(center.permanent),
-    currentCapacity: center.currentCapacity?.toString() ?? "", currentOccupancy: center.currentOccupancy?.toString() ?? "",
     adminEvidenceUrl: center.adminEvidenceUrl ?? "", duplicateReviewNotes: center.duplicateReviewNotes ?? "",
     confirmAvailability: false,
     operationalConfirmedAt: "", operationalEvidenceUrl: "", directConfirmationNote: "",
@@ -98,11 +97,9 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
         method: centerId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...draft, province: "Bulacan", region: "Region III",
+          ...draft, localityCode: BULACAN_LOCALITIES.find((locality) => locality.name === draft.city)?.code, province: "Bulacan", region: "Region III",
           latitude: draft.latitude ? Number(draft.latitude) : null, longitude: draft.longitude ? Number(draft.longitude) : null,
           estimatedCapacity: draft.estimatedCapacity === "" ? null : Number(draft.estimatedCapacity),
-          currentCapacity: draft.currentCapacity === "" ? null : Number(draft.currentCapacity),
-          currentOccupancy: draft.currentOccupancy === "" ? null : Number(draft.currentOccupancy),
           permanent: draft.permanent === "" ? null : draft.permanent === "true",
           sourceCheckedAt: draft.sourceCheckedAt ? new Date(`${draft.sourceCheckedAt}T00:00:00+08:00`).toISOString() : null,
           lastVerifiedAt: draft.lastVerifiedAt ? new Date(`${draft.lastVerifiedAt}T00:00:00+08:00`).toISOString() : null,
@@ -147,6 +144,7 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
     <h1 className="text-2xl font-semibold">{center ? `Edit ${center.name}` : "Add evacuation center"}</h1>
     <p className="text-sm text-[var(--color-muted-foreground)]">Only sourced and dated official records become public. Estimated capacity is planning data, not current occupancy.</p>
     {center?.externalKey ? <p className="text-sm">Imported record: {center.externalKey}. Edits below override source values and survive reimport.</p> : null}
+    {center?.localityCode ? <p className="text-xs text-[var(--color-muted-foreground)]">Bulacan locality ID: {center.localityCode}</p> : null}
     {center?.duplicateReviewNotes ? <p className="text-sm text-[var(--color-warning)]">Potential duplicate: {center.duplicateReviewNotes}</p> : null}
     {center?.sourceSnapshot ? <details className="rounded-lg border border-[var(--color-border)] p-3 text-sm"><summary>View original source values and references</summary><pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(center.sourceSnapshot, null, 2)}</pre></details> : null}
     {error ? <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-red-400">{error}</p> : null}
@@ -159,7 +157,6 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
       <p className="text-xs text-[var(--color-muted-foreground)] md:col-span-2">Leave both coordinates blank when the source does not publish an exact location. Never enter a barangay centroid.</p>
       {field("Contact number", "contactNumber", "tel")}{field("Estimated planning capacity", "estimatedCapacity", "number")}
       {field("Facility type", "facilityType")}{select("Permanent facility?", "permanent", ["true", "false"])}
-      {field("Current capacity (confirmed)", "currentCapacity", "number")}{field("Current occupancy (confirmed)", "currentOccupancy", "number")}
       {select("Identity verification", "verificationStatus", CENTER_VERIFICATION_STATUSES)}
       {select("Current operational status (Open means currently accepting evacuees)", "status", CENTER_STATUSES)}
       {select("Source type", "sourceType", CENTER_SOURCE_TYPES)}
