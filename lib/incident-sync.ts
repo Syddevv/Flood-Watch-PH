@@ -17,6 +17,7 @@ export async function syncIncidentAggregate(
   const siblingReports = await tx.floodReport.findMany({
     where: { incidentId },
     select: {
+      verificationStatus: true,
       status: true,
       severity: true,
       confirmationCount: true,
@@ -35,6 +36,7 @@ export async function syncIncidentAggregate(
     where: { id: incidentId },
     data: {
       status: aggregate.status,
+      reportCount: siblingReports.filter((report) => report.verificationStatus !== "rejected").length,
       lastActivityAt: now,
     },
   });

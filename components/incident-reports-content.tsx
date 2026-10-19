@@ -470,6 +470,7 @@ function ReportCard({
               <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusPresentation.dotClassName)} />
               <span className="truncate">{statusPresentation.label}</span>
             </span>
+            {report.verificationStatus === "unreviewed" || report.verificationStatus === "disputed" || report.verificationStatus === "rejected" ? <span className="rounded-full border border-amber-500/40 px-2 py-0.5 text-[0.66rem] text-amber-300">{report.verificationStatus === "unreviewed" ? "Admin review pending" : report.verificationStatus === "disputed" ? "Admin review disputed" : "Rejected by admin"}</span> : null}
             {freshnessBadge ? (
               <span
                 className={cn(

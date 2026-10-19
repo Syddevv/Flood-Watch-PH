@@ -49,6 +49,10 @@ export async function GET(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
+    if (report.verificationStatus === "rejected" && !isReportOwner(report, identity)) {
+      return errorResponse("Flood report not found.", 404);
+    }
+
     const patch = getLifecyclePersistencePatch(report);
     const reconciledReport =
       Object.keys(patch).length > 0

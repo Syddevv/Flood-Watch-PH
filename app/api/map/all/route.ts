@@ -20,6 +20,7 @@ const mapReportSelect = {
   category: true,
   severity: true,
   status: true,
+  verificationStatus: true,
   locationName: true,
   latitude: true,
   longitude: true,
@@ -40,6 +41,7 @@ type MapReportRecord = {
   category: string;
   severity: string;
   status: string;
+  verificationStatus: string;
   locationName: string;
   latitude: number;
   longitude: number;
@@ -127,6 +129,7 @@ export async function GET(request: Request) {
 
     const filteredReports = reconciledReports
       .filter((report: MapReportRecord) => {
+        if (report.verificationStatus === "rejected") return false;
         if (!isWithinBulacan(report.latitude, report.longitude)) {
           return false;
         }

@@ -19,6 +19,10 @@ model FloodReport {
   severity            String
   status              String               @default("Needs More Confirmation")
   verificationStatus  String               @default("unreviewed")
+  reviewVersion       Int                  @default(1)
+  reviewedAt          DateTime?
+  reviewedByUserId    String?
+  reviewPublicMessage String?
   locationName        String
   latitude            Float
   longitude           Float
@@ -46,6 +50,7 @@ model FloodReport {
   incident            Incident             @relation(fields: [incidentId], references: [id])
   userId              String?
   user                User?                @relation(fields: [userId], references: [id])
+  reviewer            User?                @relation("FloodReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   confirmations       ReportConfirmation[]
   updates             ReportUpdate[]
   rescueRequests      RescueRequest[]
@@ -228,6 +233,7 @@ model User {
   updatedAt               DateTime             @updatedAt
   sessions                Session[]
   reports                 FloodReport[]
+  reviewedFloodReports    FloodReport[]        @relation("FloodReportReviewer")
   adminAuditLogs          AdminAuditLog[]
   emailVerification       EmailVerification?
   createdRescueRequests   RescueRequest[]      @relation("RescueCreator")
