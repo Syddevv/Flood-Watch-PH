@@ -8,7 +8,7 @@ import { isPublishableCenter, toPublicCenter } from "../lib/public-evacuation-ce
 const recent = new Date();
 const validCenter = {
   id: "center-1", name: "Official Bulacan Center", address: "Poblacion, Calumpit",
-  city: "Calumpit", province: "Bulacan", latitude: 14.9169, longitude: 120.7657,
+  city: "Calumpit", localityCode: "0301407000", province: "Bulacan", latitude: 14.9169, longitude: 120.7657,
   facilities: [], status: "available", verificationStatus: "verified",
   sourceType: "official_lgu", sourceName: "Calumpit LGU",
   sourceUrl: "https://calumpit.gov.ph/centers", lastVerifiedAt: recent,
@@ -28,6 +28,8 @@ test("only sourced, dated, in-province, non-archived official centers are public
   for (const changed of [
     { isArchived: true },
     { province: "Pampanga" },
+    { localityCode: null },
+    { localityCode: "0301401000" },
     { latitude: 14.5, longitude: 121.5 },
     { verificationStatus: "needs_verification" },
     { sourceType: "sample_demo" },
@@ -119,7 +121,10 @@ test("admin center input rejects out-of-province, bad capacity, and unsourced ve
     sourceType: "official_lgu",
   };
   assert.ok(parseCenterPayload(input).data);
+  assert.equal(parseCenterPayload(input).data?.localityCode, "0301407000");
+  assert.match(parseCenterPayload({ ...input, localityCode: "0301401000" }).error ?? "", /Locality ID/);
   assert.match(parseCenterPayload({ ...input, province: "Pampanga" }).error ?? "", /Bulacan/);
   assert.match(parseCenterPayload({ ...input, estimatedCapacity: -1 }).error ?? "", /capacity/);
+  assert.match(parseCenterPayload({ ...input, currentOccupancy: 20 }).error ?? "", /occupancy updates are unavailable/);
   assert.match(parseCenterPayload({ ...input, verificationStatus: "verified" }).error ?? "", /official HTTPS/);
 });

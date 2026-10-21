@@ -12,24 +12,18 @@ export const ADMIN_REPORT_STATUSES = [
 
 export type AdminReportStatus = (typeof ADMIN_REPORT_STATUSES)[number];
 
-export const ADMIN_TO_PUBLIC_REPORT_STATUS: Readonly<
-  Record<AdminReportStatus, string>
-> = {
-  pending: "Needs More Confirmation",
-  under_review: "Needs More Confirmation",
-  verified: "Confirmed by Community",
-  responding: "Confirmed by Community",
-  resolved: "Resolved",
-  rejected: "Rejected",
-  closed: "Archived",
-};
+export function publicStatusForOperationalAction(next: AdminReportStatus, confirmationCount: number) {
+  if (next === "resolved") return "Resolved";
+  if (next === "closed") return "Archived";
+  return confirmationCount >= 2 ? "Confirmed by Community" : "Needs More Confirmation";
+}
 
 export const ADMIN_REPORT_STATUS_TRANSITIONS: Readonly<
   Record<AdminReportStatus, readonly AdminReportStatus[]>
 > = {
-  pending: ["under_review", "rejected", "closed"],
-  under_review: ["pending", "verified", "responding", "rejected", "closed"],
-  verified: ["under_review", "responding", "resolved", "rejected", "closed"],
+  pending: ["under_review", "closed"],
+  under_review: ["pending", "responding", "closed"],
+  verified: ["under_review", "responding", "resolved", "closed"],
   responding: ["under_review", "resolved", "closed"],
   resolved: ["responding", "closed"],
   rejected: ["under_review", "closed"],
@@ -74,6 +68,13 @@ export function canTransitionAdminReportStatus(
   next: AdminReportStatus,
 ) {
   return current === next || ADMIN_REPORT_STATUS_TRANSITIONS[current].includes(next);
+}
+
+export function inferAdminReportStatus(report: { status: string | null; archivedAt: Date | null; resolvedAt: Date | null }, latestActionStatus?: string | null): AdminReportStatus {
+  if (latestActionStatus && isAdminReportStatus(latestActionStatus)) return latestActionStatus;
+  if (report.archivedAt || report.status === "Archived") return "closed";
+  if (report.resolvedAt || report.status === "Resolved") return "resolved";
+  return "pending";
 }
 
 export function isAdminSettingKey(value: string): value is AdminSettingKey {

@@ -25,7 +25,7 @@ export function isPublishableCenter(center: EvacuationCenter) {
   const sourced = center.verificationStatus === "official_publication_found";
   return !center.isArchived &&
     center.province.trim().toLowerCase() === "bulacan" &&
-    BULACAN_LOCALITIES.some((locality) => locality.name.toLowerCase() === center.city.trim().toLowerCase()) &&
+    BULACAN_LOCALITIES.some((locality) => locality.code === center.localityCode && locality.name.toLowerCase() === center.city.trim().toLowerCase()) &&
     (!hasCoordinates || isWithinBulacan(center.latitude!, center.longitude!)) &&
     ((center.latitude === null) === (center.longitude === null)) &&
     (hasCoordinates || sourced) &&

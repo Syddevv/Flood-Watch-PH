@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  ADMIN_TO_PUBLIC_REPORT_STATUS,
+  publicStatusForOperationalAction,
   canTransitionAdminReportStatus,
   isAdminSettingKey,
   isAdminReportStatus,
   parseAdminPagination,
   parseExpectedUpdatedAt,
+  inferAdminReportStatus,
 } from "@/lib/admin-contracts";
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 
@@ -37,11 +38,17 @@ test("admin status transitions follow the operational matrix", () => {
   assert.equal(canTransitionAdminReportStatus("verified", "verified"), true);
 });
 
-test("admin statuses map to the existing public lifecycle vocabulary", () => {
-  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.pending, "Needs More Confirmation");
-  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.responding, "Confirmed by Community");
-  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.resolved, "Resolved");
-  assert.equal(ADMIN_TO_PUBLIC_REPORT_STATUS.closed, "Archived");
+test("operational action preserves community confirmation rather than inventing it", () => {
+  assert.equal(publicStatusForOperationalAction("pending", 0), "Needs More Confirmation");
+  assert.equal(publicStatusForOperationalAction("responding", 0), "Needs More Confirmation");
+  assert.equal(publicStatusForOperationalAction("under_review", 2), "Confirmed by Community");
+  assert.equal(publicStatusForOperationalAction("resolved", 0), "Resolved");
+  assert.equal(publicStatusForOperationalAction("closed", 0), "Archived");
+});
+
+test("community confirmation never implies administrator verification", () => {
+  assert.equal(inferAdminReportStatus({ status: "Confirmed by Community", archivedAt: null, resolvedAt: null }), "pending");
+  assert.equal(inferAdminReportStatus({ status: "Confirmed by Community", archivedAt: null, resolvedAt: null }, "under_review"), "under_review");
 });
 
 test("admin settings accept only approved keys", () => {

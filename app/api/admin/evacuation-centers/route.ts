@@ -1,7 +1,6 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { parseCenterPayload, parseOperationalConfirmation } from "@/lib/admin-evacuation";
-import { recordAdminAudit } from "@/lib/admin-audit";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
@@ -37,21 +36,24 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = parseCenterPayload(body);
   if (parsed.error || !parsed.data) return adminErrorResponse(request, parsed.error ?? "Invalid evacuation-center data.", 400);
-  const duplicate = await prisma.evacuationCenter.findFirst({ where: {
-    isArchived: false,
-    name: { equals: parsed.data.name, mode: "insensitive" },
-    address: { equals: parsed.data.address, mode: "insensitive" },
-    city: parsed.data.city,
-  }, select: { id: true } });
-  if (duplicate) return adminErrorResponse(request, "A center with this name and address already exists.", 409);
   const confirmation = parseOperationalConfirmation(body, parsed.data.status);
   if (confirmation.error) return adminErrorResponse(request, confirmation.error, 400);
-  const center = await prisma.evacuationCenter.create({ data: {
-    ...parsed.data,
-    adminEvidenceUrl: parsed.data.adminEvidenceUrl ?? confirmation.evidenceUrl ?? null,
-    availabilityConfirmedAt: confirmation.confirmedAt ?? null,
-    updatedByUserId: auth.user.id,
-  } });
-  await recordAdminAudit({ actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_CREATED", targetType: "EvacuationCenter", targetId: center.id, requestId: request.headers.get("x-request-id") ?? undefined, metadata: { operationalConfirmation: confirmation.confirmedAt ? { at: confirmation.confirmedAt.toISOString(), evidenceUrl: confirmation.evidenceUrl, directNote: confirmation.directNote } : null } });
-  return adminSuccessResponse(request, { center }, { status: 201 });
+  const result = await prisma.$transaction(async (tx) => {
+    const nameKey = `${parsed.data.localityCode}:${parsed.data.name.toLocaleLowerCase("en-PH")}`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${nameKey})::bigint)`;
+    const duplicate = await tx.evacuationCenter.findFirst({ where: {
+      name: { equals: parsed.data.name, mode: "insensitive" }, city: parsed.data.city,
+    }, select: { id: true } });
+    if (duplicate) return { error: "A center with this name already exists in this locality. Review the existing record.", status: 409 } as const;
+    const center = await tx.evacuationCenter.create({ data: {
+      ...parsed.data,
+      adminEvidenceUrl: parsed.data.adminEvidenceUrl ?? confirmation.evidenceUrl ?? null,
+      availabilityConfirmedAt: confirmation.confirmedAt ?? null,
+      updatedByUserId: auth.user.id,
+    } });
+    await tx.adminAuditLog.create({ data: { actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_CREATED", targetType: "EvacuationCenter", targetId: center.id, requestId: request.headers.get("x-request-id"), metadata: { operationalConfirmation: confirmation.confirmedAt ? { at: confirmation.confirmedAt.toISOString(), evidenceUrl: confirmation.evidenceUrl, directNote: confirmation.directNote } : null } } });
+    return { center } as const;
+  });
+  if (result.error) return adminErrorResponse(request, result.error, result.status);
+  return adminSuccessResponse(request, { center: result.center }, { status: 201 });
 }

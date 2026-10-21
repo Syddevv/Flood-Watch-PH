@@ -64,3 +64,10 @@ test("all reports archived yields an archived incident", () => {
   const aggregate = deriveIncidentAggregate([first, second], NOW);
   assert.equal(aggregate.status, "Archived");
 });
+
+test("rejected reports do not keep an incident active", () => {
+  const rejected = createReport({ verificationStatus: "rejected", confirmationCount: 4 });
+  const resolved = createReport({ verificationStatus: "verified", resolvedCount: 3 });
+  assert.equal(deriveIncidentAggregate([rejected, resolved], NOW).status, "Resolved");
+  assert.equal(deriveIncidentAggregate([rejected], NOW).status, "Archived");
+});

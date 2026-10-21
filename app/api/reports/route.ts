@@ -29,6 +29,7 @@ import {
   parseReportRequestFormData,
   reportListInclude,
   serializeReportRecord,
+  isReportOwner,
   uploadReportImageFile,
   type ReportIdentity,
 } from "@/lib/report-api";
@@ -76,6 +77,7 @@ type ReportListRecord = {
   category: string;
   severity: string;
   status: string;
+  verificationStatus: string;
   locationName: string;
   latitude: number;
   longitude: number;
@@ -246,6 +248,7 @@ export async function GET(request: Request) {
       if (!isWithinBulacan(report.latitude, report.longitude)) {
         return false;
       }
+      if (report.verificationStatus === "rejected" && !isReportOwner(report, identity)) return false;
 
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
@@ -421,6 +424,7 @@ export async function POST(request: Request) {
         const bounds = createBoundingBox(latitude, longitude, INCIDENT_MATCH_RADIUS_METERS);
         const candidates = await tx.floodReport.findMany({
           where: {
+            verificationStatus: { not: "rejected" },
             latitude: { gte: bounds.minLatitude, lte: bounds.maxLatitude },
             longitude: { gte: bounds.minLongitude, lte: bounds.maxLongitude },
           },

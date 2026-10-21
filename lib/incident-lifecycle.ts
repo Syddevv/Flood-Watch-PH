@@ -4,7 +4,7 @@ import {
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 
-type IncidentAggregateInput = Parameters<typeof deriveReportLifecycleStatus>[0];
+type IncidentAggregateInput = Parameters<typeof deriveReportLifecycleStatus>[0] & { verificationStatus?: string };
 
 export type IncidentAggregate = {
   status: ReportLifecycleStatus;
@@ -26,7 +26,8 @@ export function deriveIncidentAggregate(
   reports: IncidentAggregateInput[],
   now: Date = new Date(),
 ): IncidentAggregate {
-  const statuses = reports.map((report) => deriveReportLifecycleStatus(report, now));
+  const statuses = reports.filter((report) => report.verificationStatus !== "rejected").map((report) => deriveReportLifecycleStatus(report, now));
+  if (statuses.length === 0) return { status: "Archived" };
   const activeStatuses = statuses.filter(isActiveLifecycleStatus);
 
   if (activeStatuses.length > 0) {

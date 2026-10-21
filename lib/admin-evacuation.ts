@@ -38,7 +38,9 @@ export function parseCenterPayload(body: unknown) {
   const name = text("name", 160);
   const address = text("address", 240);
   const cityInput = text("city", 100);
-  const city = BULACAN_LOCALITIES.find((locality) => locality.name.toLowerCase() === cityInput.toLowerCase())?.name;
+  const locality = BULACAN_LOCALITIES.find((entry) => entry.name.toLowerCase() === cityInput.toLowerCase());
+  const city = locality?.name;
+  const localityCode = text("localityCode", 10);
   const province = text("province", 100);
   const latitude = value.latitude == null || value.latitude === "" ? null : Number(value.latitude);
   const longitude = value.longitude == null || value.longitude === "" ? null : Number(value.longitude);
@@ -52,12 +54,11 @@ export function parseCenterPayload(body: unknown) {
   const sourceCheckedAt = sourceCheckedDate && !Number.isNaN(Date.parse(sourceCheckedDate)) ? new Date(sourceCheckedDate) : null;
   const capacity = value.estimatedCapacity == null || value.estimatedCapacity === ""
     ? null : Number(value.estimatedCapacity);
-  const currentCapacity = value.currentCapacity == null || value.currentCapacity === "" ? null : Number(value.currentCapacity);
-  const currentOccupancy = value.currentOccupancy == null || value.currentOccupancy === "" ? null : Number(value.currentOccupancy);
   const facilities = value.facilities;
 
   if (!name || !address) return { error: "Name and address are required." };
   if (!city || province.toLowerCase() !== "bulacan") return { error: "Select a Bulacan municipality or city." };
+  if (localityCode && localityCode !== locality?.code) return { error: "Locality ID does not match the selected municipality or city." };
   if ((latitude === null) !== (longitude === null) || (latitude !== null &&
       (!isValidLatitude(latitude) || !isValidLongitude(longitude!) || !isWithinBulacan(latitude, longitude!)))) {
     return { error: "Enter both center coordinates inside Bulacan, or leave both blank." };
@@ -72,8 +73,7 @@ export function parseCenterPayload(body: unknown) {
     return { error: "Invalid facilities." };
   }
   if (capacity !== null && (!Number.isSafeInteger(capacity) || capacity < 0)) return { error: "Estimated capacity must be a non-negative whole number." };
-  if (currentCapacity !== null && (!Number.isSafeInteger(currentCapacity) || currentCapacity < 0)) return { error: "Current capacity must be a non-negative whole number." };
-  if (currentOccupancy !== null && (!Number.isSafeInteger(currentOccupancy) || currentOccupancy < 0 || (currentCapacity !== null && currentOccupancy > currentCapacity))) return { error: "Current occupancy must be a non-negative whole number no greater than current capacity." };
+  if (value.currentCapacity != null || value.currentOccupancy != null) return { error: "Live capacity and occupancy updates are unavailable until a sourced workflow is approved." };
   if (sourceUrl && !isSafeCenterSourceUrl(sourceUrl)) return { error: "Source URL must be a valid HTTPS address." };
   if (text("adminEvidenceUrl", 500) && !isSafeCenterSourceUrl(text("adminEvidenceUrl", 500))) return { error: "Evidence URL must be a valid HTTPS address." };
   if (verifiedDate && !lastVerifiedAt) return { error: "Last checked date is invalid." };
@@ -87,7 +87,7 @@ export function parseCenterPayload(body: unknown) {
   }
 
   return { data: {
-    name, address, city, province: "Bulacan", scopeVersion: BULACAN_SCOPE_VERSION,
+    name, address, city, localityCode: locality!.code, province: "Bulacan", scopeVersion: BULACAN_SCOPE_VERSION,
     description: text("description", 500) || null,
     barangay: text("barangay", 120) || null,
     region: text("region", 100) || "Region III",
@@ -101,8 +101,6 @@ export function parseCenterPayload(body: unknown) {
     sourceCheckedAt,
     notes: text("notes", 1000) || null,
     estimatedCapacity: capacity,
-    currentCapacity,
-    currentOccupancy,
     facilityType: text("facilityType", 80) || null,
     permanent: typeof value.permanent === "boolean" ? value.permanent : null,
     adminEvidenceUrl: text("adminEvidenceUrl", 500) || null,

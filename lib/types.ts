@@ -276,6 +276,8 @@ export type IncidentReport = {
   severity: AlertSeverity;
   severityValue: string;
   status: IncidentReportStatus;
+  verificationStatus?: "unreviewed" | "verified" | "disputed" | "rejected";
+  reviewFeedback?: { message: string; recordedAt: string | null } | null;
   description: string;
   createdAt?: string;
   updatedAt?: string;

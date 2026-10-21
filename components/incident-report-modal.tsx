@@ -483,6 +483,7 @@ export function IncidentReportModal({
                 <span className={cn("h-2 w-2 rounded-full", statusPresentation.dotClassName)} />
                 <span>{statusPresentation.label}</span>
               </span>
+              {report.verificationStatus ? <span className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[0.7rem]">Admin review: {report.verificationStatus === "unreviewed" ? "pending (provisional)" : report.verificationStatus}</span> : null}
               <span
                 className={cn(
                   "rounded-full border px-2 py-0.75 text-[0.66rem] font-semibold md:px-2.5 md:py-1 md:text-[0.72rem]",
@@ -601,6 +602,7 @@ export function IncidentReportModal({
                   {report.note}
                 </div>
               ) : null}
+              {report.reviewFeedback?.message ? <p className="mt-2 text-[0.78rem] text-[var(--color-foreground)]">Admin feedback: {report.reviewFeedback.message}</p> : null}
             </div>
 
             <div className="mt-2.5 md:mt-4">

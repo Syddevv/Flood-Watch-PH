@@ -1,4 +1,5 @@
 import { isValidReportSeverity, isValidReportStatus } from "@/lib/validations";
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 
 export const ADMIN_VERIFICATION_STATUSES = ["unreviewed", "verified", "disputed", "rejected"] as const;
 export type AdminVerificationStatus = (typeof ADMIN_VERIFICATION_STATUSES)[number];
@@ -13,6 +14,7 @@ export function parseAdminReportFilters(params: URLSearchParams) {
   const verificationStatus = params.get("verificationStatus") ?? "";
   const publicStatus = params.get("publicStatus") ?? "";
   const severity = params.get("severity") ?? "";
+  const localityCode = params.get("localityCode") ?? "";
   const incidentId = params.get("incidentId")?.trim() ?? "";
   const createdFrom = params.get("createdFrom") ?? "";
   const createdTo = params.get("createdTo") ?? "";
@@ -22,8 +24,9 @@ export function parseAdminReportFilters(params: URLSearchParams) {
   if (verificationStatus && !isAdminVerificationStatus(verificationStatus)) return { error: "Invalid verification status." };
   if (publicStatus && !isValidReportStatus(publicStatus)) return { error: "Invalid public status." };
   if (severity && !isValidReportSeverity(severity)) return { error: "Invalid severity value." };
+  if (localityCode && !BULACAN_LOCALITIES.some((entry) => entry.code === localityCode)) return { error: "Invalid Bulacan locality." };
   if (createdFrom && !Number.isFinite(Date.parse(createdFrom))) return { error: "Invalid start date." };
   if (createdTo && !Number.isFinite(Date.parse(createdTo))) return { error: "Invalid end date." };
   if (!(ADMIN_REPORT_SORTS as readonly string[]).includes(sort)) return { error: "Invalid sort field." };
-  return { filters: { search, verificationStatus, publicStatus, severity, incidentId, createdFrom, createdTo, sort: sort as typeof ADMIN_REPORT_SORTS[number], order } };
+  return { filters: { search, verificationStatus, publicStatus, severity, localityCode, incidentId, createdFrom, createdTo, sort: sort as typeof ADMIN_REPORT_SORTS[number], order } };
 }

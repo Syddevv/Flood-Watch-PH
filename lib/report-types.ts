@@ -21,6 +21,8 @@ export type ReportRecord = {
   category: string;
   severity: string;
   status: ReportLifecycleStatus | LegacyReportLifecycleStatus;
+  verificationStatus?: "unreviewed" | "verified" | "disputed" | "rejected";
+  reviewFeedback?: { message: string; recordedAt: string | null } | null;
   locationName: string;
   latitude: number;
   longitude: number;

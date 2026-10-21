@@ -27,6 +27,7 @@ type NearbyReportRecord = {
   category: string;
   severity: string;
   status: string;
+  verificationStatus: string;
   locationName: string;
   latitude: number;
   longitude: number;
@@ -164,6 +165,7 @@ export async function GET(request: Request) {
 
     const nearbyReports = reconciledReports
       .filter((report: NearbyReportRecord) =>
+        report.verificationStatus !== "rejected" &&
         isActiveLifecycleStatus(report.status as ReportLifecycleStatus) &&
         isWithinBulacan(report.latitude, report.longitude),
       )

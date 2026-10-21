@@ -49,6 +49,11 @@ export type PublicReportRecord = {
   category: string;
   severity: string;
   status: string;
+  verificationStatus?: string;
+  reviewVersion?: number;
+  reviewedAt?: Date | null;
+  reviewedByUserId?: string | null;
+  reviewPublicMessage?: string | null;
   locationName: string;
   latitude: number;
   longitude: number;
@@ -151,6 +156,10 @@ export function serializeReportRecord<T extends PublicReportRecord>(
   delete safeReport.gpsLongitude;
   delete safeReport.gpsCapturedAt;
   delete safeReport.onsiteEligibleAt;
+  delete safeReport.reviewVersion;
+  delete safeReport.reviewedAt;
+  delete safeReport.reviewedByUserId;
+  delete safeReport.reviewPublicMessage;
   if (!owner) {
     safeReport.reportedByName = null;
   }
@@ -158,6 +167,7 @@ export function serializeReportRecord<T extends PublicReportRecord>(
   return {
     ...safeReport,
     onsiteEligible: Boolean(report.onsitePolicyVersion && report.onsiteEligibleAt),
+    reviewFeedback: report.reviewPublicMessage ? { message: report.reviewPublicMessage, recordedAt: report.reviewedAt?.toISOString() ?? null } : null,
     isOwner: owner,
     lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
     lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,

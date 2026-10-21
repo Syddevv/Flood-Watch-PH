@@ -49,6 +49,7 @@ export async function POST(request: Request, context: RouteContext) {
         id: true,
         severity: true,
         status: true,
+        verificationStatus: true,
         confirmationCount: true,
         resolvedCount: true,
         createdAt: true,
@@ -60,7 +61,7 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
 
-    if (!report) {
+    if (!report || report.verificationStatus === "rejected") {
       return errorResponse("Flood report not found.", 404);
     }
 
@@ -74,6 +75,9 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      await lockFloodReportForUpdate(tx, id);
+      const currentReview = await tx.floodReport.findUnique({ where: { id }, select: { verificationStatus: true } });
+      if (currentReview?.verificationStatus === "rejected") return "rejected" as const;
       const lifecyclePatch = getLifecyclePersistencePatch(report);
       if (Object.keys(lifecyclePatch).length > 0) {
         await tx.floodReport.update({
@@ -113,6 +117,8 @@ export async function POST(request: Request, context: RouteContext) {
 
       return finalReport;
     });
+
+    if (updatedReport === "rejected") return errorResponse("Flood report not found.", 404);
 
     return successResponse(
       serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }),

@@ -142,6 +142,8 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     severity: severityTone,
     severityValue: report.severity,
     status: derivedStatus,
+    verificationStatus: report.verificationStatus,
+    reviewFeedback: report.reviewFeedback,
     description,
     createdAt,
     updatedAt,

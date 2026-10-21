@@ -92,3 +92,14 @@ test("precise GPS evidence stays private while onsite eligibility is exposed", (
   assert.equal(serialized.onsiteEligible, true);
   assert.equal(serializeReportRecord(legacyReport).onsiteEligible, false);
 });
+
+test("review provenance stays private while decision and approved feedback remain public", () => {
+  const report = createReport({ verificationStatus: "disputed", reviewVersion: 3, reviewedByUserId: "private-admin-id", reviewedAt: new Date("2026-01-02T00:00:00Z"), reviewPublicMessage: "Location needs confirmation." });
+  const serialized = serializeReportRecord(report);
+  assert.equal("verificationStatus" in serialized && serialized.verificationStatus, "disputed");
+  assert.equal("reviewVersion" in serialized, false);
+  assert.equal("reviewedByUserId" in serialized, false);
+  assert.equal("reviewedAt" in serialized, false);
+  assert.equal("reviewPublicMessage" in serialized, false);
+  assert.equal(serialized.reviewFeedback?.message, "Location needs confirmation.");
+});

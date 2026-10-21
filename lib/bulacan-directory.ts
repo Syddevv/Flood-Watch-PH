@@ -41,14 +41,22 @@ export type DirectoryDataset = {
 };
 
 const aliases: Record<string, string> = {
-  Baliwag: "City of Baliwag", Malolos: "City of Malolos",
-  Meycauayan: "City of Meycauayan", "San Jose del Monte": "City of San Jose Del Monte",
+  Baliwag: "City of Baliwag", "Baliwag City": "City of Baliwag",
+  Malolos: "City of Malolos", "Malolos City": "City of Malolos",
+  Meycauayan: "City of Meycauayan", "Meycauayan City": "City of Meycauayan",
+  "San Jose del Monte": "City of San Jose Del Monte", "San Jose del Monte City": "City of San Jose Del Monte",
   Bulakan: "Bulacan",
 };
 
 export function canonicalDirectoryMunicipality(value: string) {
-  const name = aliases[value] ?? value;
-  return BULACAN_LOCALITIES.find((locality) => locality.name === name)?.name ?? null;
+  const input = value.trim().toLocaleLowerCase("en-PH");
+  const name = Object.entries(aliases).find(([alias]) => alias.toLocaleLowerCase("en-PH") === input)?.[1] ?? value.trim();
+  return BULACAN_LOCALITIES.find((locality) => locality.name.toLocaleLowerCase("en-PH") === name.toLocaleLowerCase("en-PH"))?.name ?? null;
+}
+
+export function directoryLocalityCode(value: string) {
+  const name = canonicalDirectoryMunicipality(value);
+  return BULACAN_LOCALITIES.find((locality) => locality.name === name)?.code ?? null;
 }
 
 export function sourceRefreshData<T extends object, S>(updatedByUserId: string | null, values: T, sourceSnapshot: S) {
@@ -128,7 +136,8 @@ export function validateBulacanDirectory(value: unknown): DirectoryDataset {
         (center.latitude !== null && (!Number.isFinite(center.latitude) || !Number.isFinite(center.longitude) ||
           !isWithinBulacan(center.latitude, center.longitude!))) ||
         (center.capacity_individuals !== null && (!Number.isSafeInteger(center.capacity_individuals) || center.capacity_individuals < 0)) ||
-        (center.capacity_families !== null && (!Number.isSafeInteger(center.capacity_families) || center.capacity_families < 0))) {
+        (center.capacity_families !== null && (!Number.isSafeInteger(center.capacity_families) || center.capacity_families < 0)) ||
+        center.current_occupancy !== null || center.current_available_spaces !== null) {
       throw new Error(`Invalid facility ${center.id}.`);
     }
   }
