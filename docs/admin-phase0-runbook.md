@@ -1,5 +1,7 @@
 # Admin Phase 0 Database Runbook
 
+For the current cross-phase release and operator handover, use [A6 rollout and handover](a6-rollout-runbook.md). This page retains Phase 0 instructions.
+
 ## Reset an administrator password
 
 From an interactive terminal at the project root, with `DATABASE_URL` (or
