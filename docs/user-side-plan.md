@@ -159,10 +159,10 @@ The sequence is interleaved: **U5 must follow A0**, and the user rescue journey 
 **Goal.** Verify the complete public journey against deployed-like data, including admin actions, before a release decision.
 
 **Tasks**
-- [ ] Run cross-phase fixtures for every Bulacan locality plus outside/hole/edge cases, weather provider partial failures, onsite camera/GPS policy, pending/verified registration, centers/contacts, and rescue intake through A4 completion.
-- [ ] Review public copy and browser accessibility on phone/desktop, especially emergency disclaimers, stale data, status wording, camera/GPS failures, and unverified-resource warnings.
-- [ ] Compare public report/incident/rescue counts and timelines with A1/A4/A5; check rejected/archived privacy and legacy Calumpit visibility.
-- [ ] Create an operator sign-off record for authoritative geometry, verified resource/contact data, email delivery, and real responder coverage; carry unresolved gaps into A6 rollout gate.
+- [ ] Run cross-phase fixtures for every Bulacan locality plus outside/hole/edge cases, weather provider partial failures, onsite camera/GPS policy, pending/verified registration, centers/contacts, and rescue intake through A4 completion. **Partial:** Existing unit tests cover all 24 locality points and geometry cases; a real resident-to-admin completion browser flow is written but awaits isolated PostgreSQL execution.
+- [ ] Review public copy and browser accessibility on phone/desktop, especially emergency disclaimers, stale data, status wording, camera/GPS failures, and unverified-resource warnings. **Partial:** Sixteen focused browser cases pass, including phone layout, resource details, outage copy, and rescue status wording; full manual review remains.
+- [ ] Compare public report/incident/rescue counts and timelines with A1/A4/A5; check rejected/archived privacy and legacy Calumpit visibility. **Remaining:** Run a combined staging fixture and reconcile all counts and privacy views.
+- [x] Create an operator sign-off record for authoritative geometry, verified resource/contact data, email delivery, and real responder coverage; carry unresolved gaps into A6 rollout gate. Record: `docs/u6-acceptance-record.md`. Every external sign-off remains pending; this checkbox records the gate, not approval.
 
 **Files.** Existing: `tests/browser/report-flows.spec.ts`, `tests/browser/rescue-request.spec.ts`, `tests/browser/evacuation-center-scope.spec.ts`, `tests/integration/reports.integration.test.ts`, `tests/integration/auth.integration.test.ts`, `README.md`. Proposed: focused cross-flow browser/integration specs and updated user-facing operating guidance under `docs/`. No new schema/API; UI fixes are fed back to owning phases.
 
