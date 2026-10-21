@@ -59,20 +59,23 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
     return () => controller.abort();
   }, [refreshKey]);
 
-  const visibleCenters = useMemo(() => {
+  const { visibleCenters, mappedCenters, unmappedCenters } = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const results = centers.filter((center) =>
+    const visibleCenters = centers.filter((center) =>
       (!municipality || center.city === municipality) &&
       (!facilityType || center.facilityType === facilityType) &&
       (!needle || [center.name, center.address, center.city, center.barangay ?? ""].join(" ").toLowerCase().includes(needle)),
     );
+    const mappedCenters = visibleCenters.filter(hasCenterCoordinates);
+    const unmappedCenters = visibleCenters.filter((center) => !hasCenterCoordinates(center));
     if (sortMode === "nearest" && origin) {
-      return results.sort((a, b) => (hasCenterCoordinates(a) ? calculateDistanceKm(origin, a) : Infinity) - (hasCenterCoordinates(b) ? calculateDistanceKm(origin, b) : Infinity) || a.name.localeCompare(b.name));
+      mappedCenters.sort((a, b) => calculateDistanceKm(origin, a) - calculateDistanceKm(origin, b));
+    } else if (sortMode === "name") {
+      mappedCenters.sort((a, b) => a.name.localeCompare(b.name));
+      unmappedCenters.sort((a, b) => a.name.localeCompare(b.name));
     }
-    return results.sort((a, b) => sortMode === "name" ? a.name.localeCompare(b.name) : a.city.localeCompare(b.city) || a.name.localeCompare(b.name));
+    return { visibleCenters, mappedCenters, unmappedCenters };
   }, [centers, municipality, facilityType, query, origin, sortMode]);
-  const mappedCenters = sortMode === "nearest" ? visibleCenters.filter(hasCenterCoordinates) : visibleCenters;
-  const unmappedCenters = sortMode === "nearest" ? visibleCenters.filter((center) => !hasCenterCoordinates(center)) : [];
   const representedLocalities = new Set(centers.map((center) => center.city)).size;
   const mappedTotal = centers.filter(hasCenterCoordinates).length;
   const facilityTypes = useMemo(() => [...new Set(centers.map((center) => center.facilityType).filter((type): type is string => Boolean(type)))].sort(), [centers]);
@@ -157,7 +160,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
         <span className="inline-flex items-center gap-1.5"><Info aria-hidden="true" className="size-3.5" />{center.openingStatus === "unknown" ? "Check opening before going." : center.availabilityConfirmedAt ? `Updated ${formatOperationalUpdate(center.availabilityConfirmedAt)}` : "Confirm availability before traveling."}</span>
       </div>
       {sortMode === "nearest" && origin && mapped ? <p className="mt-3 text-sm font-semibold text-[var(--color-primary)]">{calculateDistanceKm(origin, center).toFixed(1)} km direct distance</p> : null}
-      {!mapped ? <p className="mt-3 text-xs font-medium text-[var(--color-muted-foreground)]">Location not yet mapped</p> : null}
+      {!mapped ? <p className="mt-3 text-xs font-medium text-[var(--color-muted-foreground)]">Exact location unavailable</p> : null}
       <div className="mt-auto grid grid-cols-2 gap-2 border-t border-[var(--color-border)] pt-5 [margin-top:1.25rem]">
         <button type="button" aria-label={`View details for ${center.name}`} onClick={(event) => { triggerRef.current = event.currentTarget; setSelectedId(center.id); }} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-primary)] px-3 text-sm font-semibold text-white transition-colors hover:brightness-110 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View details</button>
         {mapped ? <Link href={buildCenterMapHref(center.id)} aria-label={`View ${center.name} on map`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border)] px-2 text-center text-sm font-semibold transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><MapPin aria-hidden="true" className="size-4 shrink-0" />View on map</Link> : <button type="button" disabled title="Location not yet mapped" aria-label={`View ${center.name} on map unavailable: location not yet mapped`} className="inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-[var(--color-disabled-border)] px-2 text-center text-sm font-semibold text-[var(--color-disabled-text)]"><MapPin aria-hidden="true" className="size-4 shrink-0" />View on map</button>}
@@ -166,7 +169,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
     </article>;
   }
 
-  return <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 pb-24 md:px-8 md:py-8">
+  return <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 px-4 py-6 pb-24 md:px-8 md:py-8">
     <header className="space-y-2">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]"><MapPin aria-hidden="true" className="size-4" />Bulacan directory</p>
       <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Evacuation Centers</h1>
@@ -180,7 +183,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
       <p><strong className="mr-1.5 text-lg text-[var(--color-foreground)]">{mappedTotal}</strong>mapped locations</p>
     </div> : null}
 
-    <div className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
+    <div role="search" aria-label="Evacuation center filters" className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1.35fr_0.85fr]">
       <label className="grid min-w-0 gap-1.5 text-sm font-semibold">Municipality or city
         <select value={municipality} onChange={(event) => setMunicipality(event.target.value)} className="min-h-11 w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] px-3 text-sm font-normal focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">
@@ -211,14 +214,14 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
 
     {locationMessage ? <p role="status" className="text-sm text-[var(--color-muted-foreground)]">{locationMessage}{!locating && sortMode !== "nearest" && origin === null ? <button type="button" onClick={findNearest} className="ml-2 font-semibold text-[var(--color-primary)] underline underline-offset-2">Retry</button> : null}</p> : null}
     {locating ? <p role="status" className="text-sm text-[var(--color-muted-foreground)]">Sorting by location…</p> : null}
-    {loading ? <p role="status" className="text-sm">Loading centers…</p> : error ? <div role="alert" className="space-y-3 text-sm"><p>Unable to load centers. Please try again.</p><button type="button" onClick={() => { setLoading(true); setError(null); setRefreshKey((value) => value + 1); }} className="min-h-11 rounded-xl border border-[var(--color-border)] px-4 font-semibold">Retry</button></div> : <section ref={resultsRef} aria-label="Evacuation center results" className={`scroll-mt-5 rounded-2xl border p-4 transition-[border-color,background-color,box-shadow] duration-700 sm:p-5 ${highlightResults ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] shadow-md" : "border-transparent"}`}>
+    {loading ? <p role="status" className="text-sm">Loading centers…</p> : error ? <div role="alert" className="space-y-3 text-sm"><p>Unable to load centers. Please try again.</p><button type="button" onClick={() => { setLoading(true); setError(null); setRefreshKey((value) => value + 1); }} className="min-h-11 rounded-xl border border-[var(--color-border)] px-4 font-semibold">Retry</button></div> : <section ref={resultsRef} aria-label="Evacuation center results" className={`min-w-0 scroll-mt-5 rounded-2xl transition-[background-color,box-shadow] duration-700 ${highlightResults ? "bg-[var(--color-primary-soft)] ring-1 ring-[var(--color-primary)] shadow-md" : ""}`}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div><h2 aria-live="polite" className="text-xl font-bold">{visibleCenters.length} center{visibleCenters.length === 1 ? "" : "s"} found</h2>{sortMode === "nearest" ? <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Sorted by nearest distance · mapped locations first</p> : sortMode === "name" ? <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Sorted by name A–Z</p> : null}</div>
+        <div><h2 aria-live="polite" className="text-xl font-bold">{visibleCenters.length} center{visibleCenters.length === 1 ? "" : "s"} found</h2>{sortMode === "nearest" ? <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Sorted by nearest distance · mapped locations first</p> : sortMode === "name" ? <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Sorted by name A–Z within each location group</p> : null}</div>
         {hasFilters ? <button type="button" onClick={clearFilters} className="min-h-11 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Clear search and filters</button> : null}
       </div>
-      {visibleCenters.length === 0 ? <div className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-sm leading-relaxed"><p>No centers match this search. Try another municipality or clear the filters.</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-3 min-h-11 font-semibold text-[var(--color-primary)] underline underline-offset-2">Clear filters</button> : null}</div> : <div className="space-y-8">
-        {sortMode === "nearest" ? <div><h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Mapped centers · {mappedCenters.length}</h3>{mappedCenters.length ? <div className="grid items-stretch gap-4 lg:grid-cols-2">{mappedCenters.map(renderCenterCard)}</div> : <p className="text-sm text-[var(--color-muted-foreground)]">No mapped centers match these filters.</p>}</div> : <div className="grid items-stretch gap-4 lg:grid-cols-2">{mappedCenters.map(renderCenterCard)}</div>}
-        {sortMode === "nearest" && unmappedCenters.length ? <div><h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Location not yet mapped · {unmappedCenters.length}</h3><p className="mb-4 text-sm text-[var(--color-muted-foreground)]">Distances are available only for mapped centers. These locations remain in the directory.</p><div className="grid items-stretch gap-4 lg:grid-cols-2">{unmappedCenters.map(renderCenterCard)}</div></div> : null}
+      {visibleCenters.length === 0 ? <div className="rounded-xl border border-dashed border-[var(--color-border)] p-6 text-sm leading-relaxed"><p>No centers match this search. Try another municipality or clear the filters.</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-3 min-h-11 font-semibold text-[var(--color-primary)] underline underline-offset-2">Clear filters</button> : null}</div> : <div className="space-y-6">
+        {mappedCenters.length ? <div><h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Mapped evacuation centers · {mappedCenters.length}</h3><div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">{mappedCenters.map(renderCenterCard)}</div></div> : null}
+        {unmappedCenters.length ? <div><div className="mb-4 border-t border-[var(--color-border)] pt-5"><h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]"><Info aria-hidden="true" className="size-4 text-[var(--color-primary)]" />Centers Awaiting Map Verification · {unmappedCenters.length}</h3><p className="mt-2 text-sm leading-relaxed text-[var(--color-muted-foreground)]">These evacuation centers are included in Bulacan&apos;s directory, but their exact map locations have not yet been verified. You can still view their details, but map navigation is temporarily unavailable to avoid showing an inaccurate location.</p>{sortMode === "nearest" ? <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Distances are available only for mapped centers.</p> : null}</div><div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">{unmappedCenters.map(renderCenterCard)}</div></div> : null}
       </div>}
       <p className="mt-6 text-xs leading-relaxed text-[var(--color-muted-foreground)]">This partial directory is still being expanded. Confirm availability and route safety before traveling.</p>
     </section>}
