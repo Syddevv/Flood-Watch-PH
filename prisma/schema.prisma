@@ -242,6 +242,8 @@ model User {
   requestedRescueRequests RescueRequest[]      @relation("RescueRequester")
   ownedRescueRequests     RescueRequest[]      @relation("RescueCaseOwner")
   rescueEvents            RescueRequestEvent[] @relation("RescueEventActor")
+  recordedRescueAssignments RescueAssignment[] @relation("RescueAssignmentRecorder")
+  confirmedRescueDispatches RescueAssignment[] @relation("RescueDispatchConfirmer")
 
   @@index([role])
   @@index([emailVerificationStatus])
@@ -279,6 +281,7 @@ model RescueRequest {
   confirmedTeamReference         String?
   outcome                        String?
   version                        Int                  @default(1)
+  workflowVersion                Int                  @default(1)
   createdAt                      DateTime             @default(now())
   updatedAt                      DateTime             @updatedAt
   requester                      User?                @relation("RescueRequester", fields: [requesterUserId], references: [id])
@@ -286,6 +289,7 @@ model RescueRequest {
   caseOwner                      User?                @relation("RescueCaseOwner", fields: [caseOwnerUserId], references: [id])
   linkedReport                   FloodReport?         @relation(fields: [linkedReportId], references: [id])
   events                         RescueRequestEvent[]
+  assignments                    RescueAssignment[]
 
   @@unique([creatorUserId, intakeChannel, idempotencyKey])
   @@index([requesterUserId, createdAt, id])
@@ -298,7 +302,11 @@ model RescueRequest {
 model RescueRequestEvent {
   id                      String        @id @default(cuid())
   requestId               String
-  actorUserId             String
+  actorUserId             String?
+  assignmentId            String?
+  source                  String?
+  details                 Json?
+  occurredAt              DateTime?
   eventType               String
   previousStatus          String?
   nextStatus              String?
@@ -311,9 +319,71 @@ model RescueRequestEvent {
   note                    String?
   createdAt               DateTime      @default(now())
   request                 RescueRequest @relation(fields: [requestId], references: [id])
-  actor                   User          @relation("RescueEventActor", fields: [actorUserId], references: [id])
+  actor                   User?         @relation("RescueEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  assignment              RescueAssignment? @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
 
   @@index([requestId, createdAt, id])
+  @@index([assignmentId, createdAt])
+}
+
+model ResponderOrganization {
+  id                    String             @id @default(cuid())
+  name                  String
+  type                  String
+  homeLocalityCode      String
+  coverageLocalityCodes String[]           @default([])
+  capabilityCodes       String[]           @default([])
+  contactOffice         String?
+  contactPerson         String?
+  officialPhone         String?
+  secondaryContact      String?
+  preferredChannel      String?
+  availability          String             @default("unknown")
+  active                Boolean            @default(true)
+  lastContactVerifiedAt DateTime?
+  demo                  Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  assignments           RescueAssignment[]
+
+  @@index([name])
+  @@index([homeLocalityCode, active])
+  @@index([availability, active])
+}
+
+model RescueAssignment {
+  id                         String                 @id @default(cuid())
+  requestId                  String
+  organizationId             String
+  recordedByAdminUserId      String
+  status                     String                 @default("selected")
+  selectedAt                 DateTime               @default(now())
+  contactChannel             String?
+  contactOutcome             String?
+  contactDetails             String?
+  contactedAt                DateTime?
+  acknowledgementOutcome     String?
+  acknowledgedAt             DateTime?
+  dispatchConfirmedAt        DateTime?
+  dispatchConfirmedByAdminId String?
+  dispatchMethod             String?
+  departedAt                 DateTime?
+  arrivedAt                  DateTime?
+  reportedCompletedAt        DateTime?
+  resolutionDetails          String?
+  endedAt                    DateTime?
+  endReason                  String?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  request                    RescueRequest          @relation(fields: [requestId], references: [id])
+  organization               ResponderOrganization  @relation(fields: [organizationId], references: [id])
+  recordedByAdmin            User                   @relation("RescueAssignmentRecorder", fields: [recordedByAdminUserId], references: [id])
+  dispatchConfirmedByAdmin   User?                  @relation("RescueDispatchConfirmer", fields: [dispatchConfirmedByAdminId], references: [id], onDelete: Restrict)
+  events                     RescueRequestEvent[]
+
+  @@index([requestId, selectedAt, id])
+  @@index([organizationId, status])
+  @@index([status, selectedAt])
 }
 
 model EmailVerification {

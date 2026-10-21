@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma, isPrismaUniqueConstraintError } from "@/lib/prisma";
 import { canTransitionRescue, parseRescueIntake, parseRescueCorrection, parseRescueAction, RescueError, TERMINAL_RESCUE_STATUSES } from "@/lib/rescue-contracts";
 import { toRescueDto } from "@/lib/rescue-dto";
+import { createResponderOrganization as persistResponderOrganization, selectResponderAssignment as persistResponderAssignment } from "@/lib/rescue-dispatch-data";
 
 const events = { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }] };
 const terminal = (status: string) => TERMINAL_RESCUE_STATUSES.includes(status);
@@ -52,7 +53,7 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
         idempotencyKey, idempotencyHash: hash,
       } });
       await tx.rescueRequestEvent.create({ data: {
-        requestId: request.id, actorUserId: actorId, eventType: "received",
+        requestId: request.id, actorUserId: actorId, source: admin ? "admin" : "citizen", eventType: "received",
         nextStatus: "received", nextPriority: input.priority, visibility: "public", note: "Request received. Dispatch is not yet confirmed.",
       } });
       const administrators = await tx.user.findMany({ where: { role: "admin" }, select: { id: true } });
@@ -119,7 +120,7 @@ export async function correctRescueRequest(id: string, userId: string, raw: unkn
     const data = input.action === "cancel" && !cancellationRequested ? { status: "cancelled" } : input.action === "correct" ? input.patch : {};
     const updated = await tx.rescueRequest.updateMany({ where: { id, version: input.expectedVersion }, data: { ...data, version: { increment: 1 } } });
     if (updated.count !== 1) throw new RescueError("This request changed. Refresh before trying again.", 409);
-    await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: userId,
+    await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: userId, source: "citizen",
       eventType: cancellationRequested ? "cancellation_requested" : input.action === "cancel" ? "cancelled" : "requester_correction",
       previousStatus: record.status, nextStatus: input.action === "cancel" && !cancellationRequested ? "cancelled" : record.status,
       visibility: "public" } });
@@ -156,7 +157,7 @@ export async function actOnRescueRequest(id: string, actorId: string, raw: unkno
     if (input.action === "transition" && nextStatus === "completed") data.outcome = input.outcome;
     const updated = await tx.rescueRequest.updateMany({ where: { id, version: input.expectedVersion }, data });
     if (updated.count !== 1) throw new RescueError("This request changed. Refresh before trying again.", 409);
-    await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: actorId, eventType: input.action,
+    await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: actorId, source: "admin", eventType: input.action,
       previousStatus: record.status, nextStatus, previousPriority: record.priority,
       nextPriority: input.action === "priority" ? input.priority : record.priority,
       previousCaseOwnerUserId: record.caseOwnerUserId,
@@ -165,3 +166,10 @@ export async function actOnRescueRequest(id: string, actorId: string, raw: unkno
     return toRescueDto(await tx.rescueRequest.findUniqueOrThrow({ where: { id } }), true);
   });
 }
+
+// Phase 1 data seam; protected admin routes are added in Phase 2.
+export const createRescueResponderOrganization = (actorId: string, input: unknown) =>
+  persistResponderOrganization(prisma, actorId, input);
+
+export const selectRescueResponderAssignment = (actorId: string, requestId: string, organizationId: string, expectedVersion: number) =>
+  persistResponderAssignment(prisma, actorId, requestId, organizationId, expectedVersion);

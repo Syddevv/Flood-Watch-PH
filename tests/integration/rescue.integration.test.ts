@@ -59,7 +59,10 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
 
     const ownerRead = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     assert.equal(ownerRead.status, 200);
-    assert.equal((await ownerRead.json()).data.events.length, 1);
+    const ownerPayload = (await ownerRead.json()).data;
+    assert.equal(ownerPayload.events.length, 1);
+    assert.equal("assignments" in ownerPayload, false);
+    assert.equal("organization" in ownerPayload, false);
     const otherRead = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[1] } });
     assert.equal(otherRead.status, 404);
     const adminRead = await fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}`, { headers: { Cookie: cookies[2] } });
