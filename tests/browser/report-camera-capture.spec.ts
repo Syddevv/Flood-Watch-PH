@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { registerVerifiedTestUser } from "./verified-test-user";
 
 // Chromium's fake media device is enabled for every project in
 // playwright.config.ts, so getUserMedia resolves without a real camera.
@@ -7,17 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
 // resolves to signed-out, so every spec that lingers on the form must
 // authenticate first. Same helper shape as calumpit-picker-scope.spec.ts.
 async function signIn(page: Page) {
-  await page.goto("/incident-reports");
-  const origin = new URL(page.url()).origin;
-  const response = await page.request.post("/api/auth/register", {
-    headers: { Origin: origin, "Content-Type": "application/json" },
-    data: JSON.stringify({
-      email: `camera-capture-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`,
-      password: "correct-horse-battery",
-    }),
-  });
-  expect(response.status()).toBe(201);
-  await page.reload();
+  await registerVerifiedTestUser(page, "camera-capture");
   await expect(page.getByTestId("submit-report")).toBeVisible();
 }
 

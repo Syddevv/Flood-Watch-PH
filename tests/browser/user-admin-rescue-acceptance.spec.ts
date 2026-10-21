@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import { hashSessionToken } from "@/lib/auth-session-token";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 test.skip(!testDatabaseUrl || process.env.DATABASE_URL !== testDatabaseUrl, "Requires matching isolated TEST_DATABASE_URL and DATABASE_URL.");
 
 test("resident submission reaches admin completion and returns a private-safe timeline", async ({ page, browser }) => {
@@ -23,7 +24,7 @@ test("resident submission reaches admin completion and returns a private-safe ti
       await db.session.create({ data: { userId: userIds[index], tokenHash: hashSessionToken(token), expiresAt: new Date(Date.now() + 10 * 60_000) } });
     }
 
-    await page.context().addCookies([{ name: "floodwatch_auth_session", value: ownerToken, url: "http://localhost:3000" }]);
+    await page.context().addCookies([{ name: "floodwatch_auth_session", value: ownerToken, url: baseUrl }]);
     await page.goto("/rescue-request");
     await page.getByTestId("rescue-locality").selectOption("0301407000");
     await page.getByTestId("rescue-barangay").fill("Meysulao");
@@ -40,11 +41,11 @@ test("resident submission reaches admin completion and returns a private-safe ti
     await expect(page.getByRole("heading", { name: "Request received" })).toBeVisible();
     await expect(page.getByText("A request receipt does not confirm that a team has been dispatched.")).toBeVisible();
 
-    const otherRead = await fetch(`http://localhost:3000/api/rescue-requests/${saved.id}`, { headers: { Cookie: `floodwatch_auth_session=${otherToken}` } });
+    const otherRead = await fetch(`${baseUrl}/api/rescue-requests/${saved.id}`, { headers: { Cookie: `floodwatch_auth_session=${otherToken}` } });
     assert.equal(otherRead.status, 404);
 
-    adminContext = await browser.newContext({ baseURL: "http://localhost:3000" });
-    await adminContext.addCookies([{ name: "floodwatch_auth_session", value: adminToken, url: "http://localhost:3000" }]);
+    adminContext = await browser.newContext({ baseURL: baseUrl });
+    await adminContext.addCookies([{ name: "floodwatch_auth_session", value: adminToken, url: baseUrl }]);
     const adminPage = await adminContext.newPage();
     await adminPage.goto("/admin/rescue-requests");
     await expect(adminPage.getByText(saved.reference)).toBeVisible();

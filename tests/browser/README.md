@@ -5,36 +5,37 @@ picker, in-browser camera capture, the Bulacan reporting boundary, evacuation
 center coverage, ownership management, confirmation undo affordances, and
 invalid image selection behavior.
 
-Run account-creating specs only against a dev or staging server connected to an isolated test database:
+Run account-creating specs against a disposable PostgreSQL database with all
+Prisma migrations applied. Set `TEST_DATABASE_URL`, `DATABASE_URL`, and
+`DIRECT_URL` to that same database. The full suite also needs
+`EMAIL_DELIVERY_TEST_STUB=success`, `EMAIL_VERIFICATION_TEST_CODE=123456`,
+`REPORT_IMAGE_UPLOAD_TEST_STUB=true`, and test-only auth secrets.
 
 ```powershell
-npx playwright test
-# or against an already-running server (prod builds set Secure cookies, which
-# require a localhost origin rather than 127.0.0.1):
-$env:PLAYWRIGHT_BASE_URL = "http://localhost:3000"; npx playwright test
+$env:PLAYWRIGHT_BASE_URL = "http://localhost:3100"
+npx playwright test --workers=1
 ```
 
 `npm run check:deploy` deliberately does not include the browser suite. GitHub
 Actions runs the database-backed A6 acceptance subset against its disposable
 PostgreSQL service after API integration tests. The full local suite remains
-opt-in and needs a browser download and a running server.
+opt-in and needs a browser download. Playwright starts a server on the selected
+localhost port with a separate `.next-playwright` build directory. When
+`TEST_DATABASE_URL` is set, it will not reuse an existing server.
 
 ## Signing in
 
 `POST /api/reports` has required authentication since Priority 1, and the
 report form is replaced by a sign-in prompt once the auth session resolves to
-signed-out. Any spec that lingers on the form must therefore register first;
-copy the `signIn` helper from `report-camera-capture.spec.ts` or
-`bulacan-picker-scope.spec.ts`. A spec that only asserts against the freshly
-loaded page can skip it, because the swap happens after the session resolves.
+signed-out. Account-creating specs use `registerVerifiedTestUser` from
+`verified-test-user.ts` to register and verify an isolated test account.
 
 ## Rate limits
 
-`auth-register` allows 5 requests per hour, keyed by the anonymous report
-session when one exists and by `anonymous` otherwise. Specs that register
-before their session cookie is issued therefore share one bucket, so running
-the whole suite repeatedly will start returning **429** and the affected specs
-fail with `Expected: 201 / Received: 429`.
+`auth-register` allows 5 requests per hour. The verified-user helper assigns a
+unique test client address per case so account-creating specs do not share one
+bucket. Repeated anonymous session requests from the same address can still
+reach the `report-session` limit and log initialization errors.
 
 That is an environment condition, not a product bug. Clear it with:
 

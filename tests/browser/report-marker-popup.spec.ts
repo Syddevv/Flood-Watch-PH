@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -11,34 +14,44 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("report marker popup", () => {
   test("stays open after the fly-to settles, including for clustered pins", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/flood-map");
-    await page.locator(".leaflet-tile-loaded").first().waitFor({ timeout: 20_000 });
-    await page.waitForTimeout(3000);
-
-    // Drill into a cluster so its members are individually clickable - this is
-    // the state the bug needed, because the pins are only ~40 m apart.
-    const cluster = page.locator(".marker-cluster").first();
-
-    if (await cluster.count()) {
-      await cluster.click({ force: true });
-      await page.waitForTimeout(3000);
+    if (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL !== process.env.DATABASE_URL) {
+      throw new Error("Map marker fixtures require an isolated TEST_DATABASE_URL matching DATABASE_URL.");
     }
+    const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.TEST_DATABASE_URL }) });
+    const incidentIds = [randomUUID(), randomUUID()];
+    const reportIds = [randomUUID(), randomUUID()];
+    try {
+      for (const [index, incidentId] of incidentIds.entries()) {
+        const latitude = 14.916 + index * 0.0003;
+        const longitude = 120.766 + index * 0.0003;
+        await db.incident.create({ data: { id: incidentId, representativeLatitude: latitude, representativeLongitude: longitude, locationName: `Popup fixture ${index}`, severity: "Moderate" } });
+        await db.floodReport.create({ data: { id: reportIds[index], incidentId, title: `Popup fixture ${index}`, description: "Map popup regression fixture", category: "Flooding", severity: "Moderate", locationName: `Popup fixture ${index}`, latitude, longitude } });
+      }
 
-    const reportMarker = page
-      .locator(".leaflet-marker-icon")
-      .filter({ hasText: "R" })
-      .first();
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/flood-map");
+      await page.getByRole("button", { name: "Collapse map layers panel" }).click();
+      await expect(page.locator(".marker-cluster").first()).toBeVisible({ timeout: 15_000 });
+      const reportMarker = page.locator(".leaflet-marker-icon").filter({ hasText: "R" }).first();
+      // Near pins may remain clustered after the first zoom; keep drilling in.
+      for (let attempt = 0; attempt < 6 && !(await reportMarker.isVisible()); attempt++) {
+        const cluster = page.locator(".marker-cluster").first();
+        await expect(cluster).toBeVisible();
+        await cluster.click();
+        await page.waitForTimeout(1000);
+      }
+      await expect(reportMarker).toBeVisible();
+      await reportMarker.click();
 
-    await expect(reportMarker).toBeVisible();
-    await reportMarker.click({ force: true });
-
-    const popup = page.locator(".leaflet-popup");
-    await expect(popup).toBeVisible();
-
-    // The fly-to runs for ~0.9 s and clustering settles on zoomend, which is
-    // when the popup used to disappear. Wait past both, then re-assert.
-    await page.waitForTimeout(2500);
-    await expect(popup).toBeVisible();
+      const popup = page.locator(".leaflet-popup");
+      await expect(popup).toBeVisible();
+      // The fly-to runs for ~0.9 s; the popup must survive clustering on zoomend.
+      await page.waitForTimeout(2500);
+      await expect(popup).toBeVisible();
+    } finally {
+      await db.floodReport.deleteMany({ where: { id: { in: reportIds } } });
+      await db.incident.deleteMany({ where: { id: { in: incidentIds } } });
+      await db.$disconnect();
+    }
   });
 });

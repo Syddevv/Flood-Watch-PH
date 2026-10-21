@@ -175,6 +175,7 @@ export async function startTestServer(
         DATABASE_URL: testDatabaseUrl,
         DIRECT_URL: testDatabaseUrl,
         NODE_ENV: "test",
+        FLOODWATCH_TEST_DIST_DIR: ".next-integration",
         REPORT_IMAGE_UPLOAD_TEST_STUB: "true",
         EMAIL_PROVIDER: "emailjs",
         EMAILJS_SERVICE_ID: "service_integration_test_only",

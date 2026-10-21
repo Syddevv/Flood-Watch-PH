@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { registerVerifiedTestUser } from "./verified-test-user";
 
 // Marikina is outside the Bulacan polygon.
 const OUTSIDE_BULACAN = { latitude: 14.6507, longitude: 121.1029 };
@@ -6,17 +7,7 @@ const OUTSIDE_BULACAN = { latitude: 14.6507, longitude: 121.1029 };
 const MALOLOS = { latitude: 14.8515, longitude: 120.8162 };
 
 async function signIn(page: Page) {
-  await page.goto("/incident-reports");
-  const origin = new URL(page.url()).origin;
-  const response = await page.request.post("/api/auth/register", {
-    headers: { Origin: origin, "Content-Type": "application/json" },
-    data: JSON.stringify({
-      email: `bulacan-scope-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`,
-      password: "correct-horse-battery",
-    }),
-  });
-  expect(response.status()).toBe(201);
-  await page.reload();
+  await registerVerifiedTestUser(page, "bulacan-scope");
   await expect(page.getByPlaceholder("Street, barangay, city")).toBeVisible();
 }
 
@@ -39,7 +30,9 @@ test.describe("Bulacan reporting scope", () => {
     await page.getByPlaceholder("120.766000").fill(String(MALOLOS.longitude));
 
     await expect(page.getByTestId("coordinates-outside-area")).not.toBeVisible();
-    await expect(page.getByTestId("submit-report")).toBeEnabled();
+    // In-scope coordinates clear the geography error, but onsite camera/GPS
+    // evidence is still required before submission.
+    await expect(page.getByTestId("submit-report")).toBeDisabled();
   });
 
   test("the map picker renders the Bulacan outline on desktop and mobile", async ({
@@ -59,7 +52,7 @@ test.describe("Bulacan reporting scope", () => {
     await expect(map).toBeVisible();
   });
 
-  test("a GPS fix outside Bulacan is rejected and hands off to the map picker", async ({
+  test("a GPS fix outside Bulacan is rejected and the map picker remains available", async ({
     page,
     context,
   }) => {
@@ -70,10 +63,11 @@ test.describe("Bulacan reporting scope", () => {
     await page.getByTestId("use-current-location").click();
 
     await expect(page.getByText(/appears to be outside Bulacan/i)).toBeVisible();
+    // The invalid fix must not populate the form or open the picker for the user.
+    await expect(page.getByPlaceholder("14.915000")).toHaveValue("");
+    await page.getByTestId("pick-location-on-map").click();
     await expect(
       page.getByRole("dialog", { name: /pick flood location on the map/i }),
     ).toBeVisible();
-    // The out-of-area fix must not have been written into the form.
-    await expect(page.getByPlaceholder("14.915000")).toHaveValue("");
   });
 });

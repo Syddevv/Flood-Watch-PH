@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import { hashSessionToken } from "@/lib/auth-session-token";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 test.skip(!testDatabaseUrl || process.env.DATABASE_URL !== testDatabaseUrl, "Requires matching isolated TEST_DATABASE_URL and DATABASE_URL.");
 
 const ids = [randomUUID(), randomUUID(), randomUUID()];
@@ -40,7 +41,7 @@ test.afterAll(async () => {
 });
 
 test("queue, detail actions and a second-admin conflict use live state", async ({ page }) => {
-  await page.context().addCookies([{ name: "floodwatch_auth_session", value: tokens[0], url: "http://localhost:3000" }]);
+  await page.context().addCookies([{ name: "floodwatch_auth_session", value: tokens[0], url: baseUrl }]);
   await page.goto("/admin/rescue-requests");
   await expect(page.getByText(reference)).toBeVisible();
   await page.getByRole("combobox", { name: "Rescue status filter" }).selectOption("received");
@@ -55,8 +56,8 @@ test("queue, detail actions and a second-admin conflict use live state", async (
   await expect(page.getByText("assigned · routine priority")).toBeVisible();
   assert.equal((await db.rescueRequest.findUniqueOrThrow({ where: { id: requestId } })).caseOwnerUserId, ids[0]);
 
-  const competing = await page.request.post(`http://localhost:3000/api/admin/rescue-requests/${requestId}/actions`, {
-    headers: { Cookie: `floodwatch_auth_session=${tokens[1]}`, Origin: "http://localhost:3000" },
+  const competing = await page.request.post(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, {
+    headers: { Cookie: `floodwatch_auth_session=${tokens[1]}`, Origin: baseUrl },
     data: { expectedVersion: 3, action: "priority", priority: "urgent" },
   });
   expect(competing.status()).toBe(200);
@@ -67,7 +68,7 @@ test("queue, detail actions and a second-admin conflict use live state", async (
 });
 
 test("queue remains usable at phone width", async ({ page }) => {
-  await page.context().addCookies([{ name: "floodwatch_auth_session", value: tokens[0], url: "http://localhost:3000" }]);
+  await page.context().addCookies([{ name: "floodwatch_auth_session", value: tokens[0], url: baseUrl }]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/rescue-requests");
   await expect(page.getByText(reference)).toBeVisible();

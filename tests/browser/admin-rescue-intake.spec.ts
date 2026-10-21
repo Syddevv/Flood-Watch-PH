@@ -6,6 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { hashSessionToken } from "@/lib/auth-session-token";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 test.skip(!testDatabaseUrl || process.env.DATABASE_URL !== testDatabaseUrl, "Requires matching isolated TEST_DATABASE_URL and DATABASE_URL.");
 const userId = randomUUID(), token = randomUUID();
 let db: PrismaClient;
@@ -28,7 +29,7 @@ test.afterAll(async () => {
 });
 
 async function signIn(page: Page) {
-  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: "http://localhost:3000" }]);
+  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: baseUrl }]);
 }
 
 async function fillIntake(page: Page) {

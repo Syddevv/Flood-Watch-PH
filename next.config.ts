@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  ...(process.env.FLOODWATCH_TEST_DIST_DIR
+    ? { distDir: process.env.FLOODWATCH_TEST_DIST_DIR }
+    : {}),
 };
 
 export default nextConfig;
