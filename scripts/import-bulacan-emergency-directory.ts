@@ -13,6 +13,7 @@ import { normalizedContactNumber } from "../lib/emergency-contact-policy";
 const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DIRECT_URL or DATABASE_URL is required.");
 const apply = process.argv.includes("--apply");
+if (apply && process.argv.includes("--dry-run")) throw new Error("Choose either --dry-run or --apply, not both.");
 const directory = validateBulacanDirectory(dataset);
 const sources = new Map(directory.sources.map((source) => [source.id, source]));
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });

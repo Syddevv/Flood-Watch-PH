@@ -194,6 +194,8 @@ instructions.
 
 ### Apply database migrations
 
+For staging or production rollout, follow the [A6 rollout and handover checklist](docs/a6-rollout-runbook.md) before running a migration. It records the backup, dry run, feature gates, rollback, and operator sign-offs.
+
 For a new database, apply the complete migration history:
 
 ```bash

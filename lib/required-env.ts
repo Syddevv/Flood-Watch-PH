@@ -7,9 +7,10 @@
  * failing at the protection layer, before any of its own logic runs.
  *
  * This module is the single description of what a real deployment needs, so a
- * build can refuse to ship without it. Plain TypeScript with no imports, so it
- * runs from a build script and from unit tests alike.
+ * build can refuse to ship without it. It has no runtime service dependencies,
+ * so it runs from a build script and from unit tests alike.
  */
+import { ROLLOUT_FLAGS } from "@/lib/rollout-gates";
 
 /** Long enough that an HMAC key is not brute-forceable. Matches the getters. */
 export const MIN_SECRET_LENGTH = 32;
@@ -197,6 +198,13 @@ export function findRequiredEnvIssues(env: EnvLike): RequiredEnvIssue[] {
       severity: "error",
       hint: "Use a complete ISO-8601 timestamp such as 2027-01-31T00:00:00.000Z.",
     });
+  }
+
+  for (const name of Object.values(ROLLOUT_FLAGS)) {
+    const value = env[name];
+    if (value !== undefined && value !== "on" && value !== "off") {
+      issues.push({ name, problem: "invalid", severity: "error", hint: 'Use exactly "on" or "off". An unset flag preserves current behavior.' });
+    }
   }
 
   return issues;

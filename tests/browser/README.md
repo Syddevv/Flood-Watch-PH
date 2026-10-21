@@ -14,8 +14,10 @@ npx playwright test
 $env:PLAYWRIGHT_BASE_URL = "http://localhost:3000"; npx playwright test
 ```
 
-`npm run check:deploy` deliberately does not include this suite - it needs a
-browser download and a running server, so it stays opt-in.
+`npm run check:deploy` deliberately does not include the browser suite. GitHub
+Actions runs the database-backed A6 acceptance subset against its disposable
+PostgreSQL service after API integration tests. The full local suite remains
+opt-in and needs a browser download and a running server.
 
 ## Signing in
 

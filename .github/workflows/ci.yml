@@ -103,3 +103,16 @@ jobs:
 
       - name: Run API integration tests
         run: npm run test:integration
+
+      - name: Install Chromium for browser acceptance
+        run: npx playwright install --with-deps chromium
+
+      - name: Run database-backed browser acceptance
+        run: >-
+          npx playwright test
+          tests/browser/user-admin-rescue-acceptance.spec.ts
+          tests/browser/evacuation-center-scope.spec.ts
+          tests/browser/admin-rescue-intake.spec.ts
+          tests/browser/admin-rescue-operations.spec.ts
+          tests/browser/admin-analytics.spec.ts
+          --workers=1
