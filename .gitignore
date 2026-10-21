@@ -19,6 +19,8 @@
 
 # next.js
 /.next/
+/.next-integration/
+/.next-playwright/
 /out/
 
 # production

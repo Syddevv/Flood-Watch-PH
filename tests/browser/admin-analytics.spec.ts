@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import { hashSessionToken } from "@/lib/auth-session-token";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 test.skip(!testDatabaseUrl || process.env.DATABASE_URL !== testDatabaseUrl, "Requires matching isolated TEST_DATABASE_URL and DATABASE_URL.");
 const userId = randomUUID(), token = randomUUID(), rescueId = randomUUID();
 let db: PrismaClient;
@@ -26,7 +27,7 @@ test.afterAll(async () => {
 });
 
 test("live filters and CSV agree, and chart bars expose keyboard details", async ({ page }) => {
-  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: "http://localhost:3000" }]);
+  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: baseUrl }]);
   await page.goto("/admin/analytics");
   await expect(page.getByRole("heading", { name: "Operational analytics" })).toBeVisible();
   await expect(page.getByText(/Data checked/)).toBeVisible();
@@ -46,7 +47,7 @@ test("live filters and CSV agree, and chart bars expose keyboard details", async
   await page.getByRole("button", { name: /Rescue requests \d+/ }).last().hover();
   await expect(tooltip).toBeVisible();
   const href = await page.getByRole("link", { name: "Download matching CSV" }).getAttribute("href");
-  const csvResponse = await page.request.get(`http://localhost:3000${href}`, { headers: { Cookie: `floodwatch_auth_session=${token}` } });
+  const csvResponse = await page.request.get(`${baseUrl}${href}`, { headers: { Cookie: `floodwatch_auth_session=${token}` } });
   assert.equal(csvResponse.status(), 200);
   assert.ok((await csvResponse.text()).includes(`"rescue requests","${count}","complete"`));
   await page.getByRole("combobox", { name: "Analytics municipality" }).selectOption("0301407000");
@@ -55,7 +56,7 @@ test("live filters and CSV agree, and chart bars expose keyboard details", async
 });
 
 test("zero or partial views fit on a phone", async ({ page }) => {
-  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: "http://localhost:3000" }]);
+  await page.context().addCookies([{ name: "floodwatch_auth_session", value: token, url: baseUrl }]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/analytics");
   await page.getByRole("combobox", { name: "Analytics municipality" }).selectOption("0301401000");
