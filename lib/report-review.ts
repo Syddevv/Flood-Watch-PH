@@ -1,4 +1,5 @@
 export const REPORT_VERIFICATION_STATES = ["unreviewed", "verified", "disputed", "rejected"] as const;
+export const MIN_REVIEW_REASON_LENGTH = 10;
 export type ReportVerificationState = (typeof REPORT_VERIFICATION_STATES)[number];
 
 export function isReportVerificationState(value: unknown): value is ReportVerificationState {
@@ -18,10 +19,17 @@ export function parseReviewDecision(value: unknown) {
   if (reason.length > 2000 || publicMessage.length > 500 ||
       (body.reason !== undefined && typeof body.reason !== "string") ||
       (body.publicMessage !== undefined && typeof body.publicMessage !== "string")) return { error: "Invalid review explanation." } as const;
-  if (reason.length < 10) return { error: "Record the evidence or reason for this review change (at least 10 characters)." } as const;
+  if (reason.length < MIN_REVIEW_REASON_LENGTH) return { error: `Record the evidence or reason for this review change (at least ${MIN_REVIEW_REASON_LENGTH} characters).` } as const;
   if (publicMessage && body.verificationStatus === "unreviewed") return { error: "Public feedback requires a completed review." } as const;
   if (publicMessage && (/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(publicMessage) || /(?:\+?\d[\d\s().-]{7,}\d)/.test(publicMessage) || /(?:https?:\/\/|www\.)\S+/i.test(publicMessage))) return { error: "Public feedback must not include contact details or links." } as const;
   return { data: { verificationStatus: body.verificationStatus, expectedReviewVersion: body.expectedReviewVersion as number, expectedUpdatedAt: updatedAt, reason: reason || null, publicMessage: publicMessage || null } } as const;
+}
+
+export function getReviewDecisionBlockReason(currentStatus: string, decision: unknown): string | null {
+  if (decision && typeof decision === "object" && "verificationStatus" in decision && decision.verificationStatus === currentStatus) {
+    return "Choose a decision different from the current verification status.";
+  }
+  return parseReviewDecision(decision).error ?? null;
 }
 
 export function reviewEvidenceSummary(report: { imageUrl: string | null; onsiteEligibleAt: Date | null; gpsCapturedAt: Date | null; photoCapturedAt: Date | null; confirmationCount: number }) {
