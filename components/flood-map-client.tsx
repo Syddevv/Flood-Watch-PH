@@ -730,10 +730,13 @@ export function FloodMapClient({
 
     let frameId = 0;
     let timeoutId = 0;
+    let attempts = 0;
 
     const focusTargetMarker = () => {
       const targetMarker = centerMarkerRefs.current[focusedCenterId];
       if (!targetMarker) {
+        if (evacuationCenterMarkers.length && !evacuationCenterMarkers.some((marker) => marker.centerId === focusedCenterId)) return;
+        if (++attempts > 100) return;
         timeoutId = window.setTimeout(() => {
           frameId = window.requestAnimationFrame(focusTargetMarker);
         }, 120);

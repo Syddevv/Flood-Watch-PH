@@ -102,3 +102,33 @@ test("a center link opens its details directly", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("mapped cards link to the live map and unmapped cards explain why they cannot", async ({ page }) => {
+  await openDirectory(page);
+  const mapped = page.locator("#evacuation-center-long-name");
+  const mapLink = mapped.getByRole("link", { name: /View .* on map/ });
+  await expect(mapLink).toHaveAttribute("href", "/?center=long-name");
+  const unmapped = page.locator("#evacuation-center-no-location");
+  await expect(unmapped.getByText("Location not yet mapped")).toBeVisible();
+  await expect(unmapped.getByRole("button", { name: /on map unavailable/ })).toBeDisabled();
+  await mapLink.click();
+  await expect(page).toHaveURL(/\?center=long-name$/);
+  await expect(page.locator(".leaflet-popup-content").getByText(centers[0].name)).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Evacuation Centers" })).toBeVisible();
+});
+
+test("nearest sorting separates unknown distances, scrolls, and highlights results", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 14.86, longitude: 120.81 });
+  await openDirectory(page);
+  const results = page.getByRole("region", { name: "Evacuation center results" });
+  const initialTop = await results.evaluate((element) => element.getBoundingClientRect().top);
+  await page.getByLabel("Sort by").selectOption("nearest");
+  await expect(page.getByText("Sorted by nearest distance · mapped locations first")).toBeVisible();
+  await expect(page.getByText("Mapped centers · 1")).toBeVisible();
+  await expect(page.getByText("Location not yet mapped · 1")).toBeVisible();
+  await expect(page.locator("#evacuation-center-long-name")).toContainText("km direct distance");
+  await expect(results).toHaveClass(/border-\[var\(--color-primary\)\]/);
+  await expect.poll(() => results.evaluate((element) => element.getBoundingClientRect().top)).toBeLessThan(initialTop - 20);
+});
