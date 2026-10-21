@@ -19,6 +19,7 @@ import {
   Navigation,
   Send,
   Share2,
+  ShieldCheck,
   ShieldPlus,
   MapPin,
   ShieldAlert,
@@ -473,6 +474,31 @@ export function IncidentReportModal({
             )}
           >
             <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+              {report.verificationStatus ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.75 text-[0.66rem] font-medium md:px-2.5 md:py-1 md:text-[0.74rem]",
+                    report.verificationStatus === "verified"
+                      ? "border-[color:color-mix(in_srgb,var(--color-success-text)_42%,transparent)] bg-[var(--color-success-surface)] text-[var(--color-success-text)]"
+                      : report.verificationStatus === "disputed"
+                        ? "border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] text-[var(--color-warning-text)]"
+                        : report.verificationStatus === "rejected"
+                          ? "border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] text-[var(--color-danger-text)]"
+                          : "border-[var(--color-muted-border)] bg-[var(--color-muted-surface)] text-[var(--color-muted-text)]",
+                  )}
+                >
+                  {report.verificationStatus === "verified" ? <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : null}
+                  <span>
+                    {report.verificationStatus === "verified"
+                      ? "Admin Verified"
+                      : report.verificationStatus === "unreviewed"
+                        ? "Awaiting Admin Review"
+                        : report.verificationStatus === "disputed"
+                          ? "Admin Review Disputed"
+                          : "Rejected by Admin"}
+                  </span>
+                </span>
+              ) : null}
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2 py-0.75 text-[0.66rem] font-semibold md:px-2.5 md:py-1 md:text-[0.74rem]",
@@ -483,7 +509,6 @@ export function IncidentReportModal({
                 <span className={cn("h-2 w-2 rounded-full", statusPresentation.dotClassName)} />
                 <span>{statusPresentation.label}</span>
               </span>
-              {report.verificationStatus ? <span className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[0.7rem]">Admin review: {report.verificationStatus === "unreviewed" ? "pending (provisional)" : report.verificationStatus}</span> : null}
               <span
                 className={cn(
                   "rounded-full border px-2 py-0.75 text-[0.66rem] font-semibold md:px-2.5 md:py-1 md:text-[0.72rem]",
