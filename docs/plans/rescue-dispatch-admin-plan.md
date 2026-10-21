@@ -1,6 +1,6 @@
 # Admin-managed rescue dispatch: admin and shared-data plan
 
-**Status:** Planning only, 18 October 2026. No phase has started. This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
+**Status:** Phase 1 implemented on `feat/rescue-dispatch-phase1-foundation`, 21 October 2026; review pending. Phases 2–6 have not started. See [Phase 1 report](rescue-dispatch-phase1-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
 
 ## Current architecture and invariants
 
@@ -40,11 +40,11 @@ Use a new branch for each approved phase, as requested for earlier phased work. 
 
 ### Server and proof
 
-- [ ] Re-audit current schema, migrations, service, routes, queue, analytics, UI and tests; record baseline behavior, counts and representative legacy statuses before editing.
-- [ ] Implement additive Prisma schema/migration and relations; use stable database defaults or nullable additions so rolling application versions still read existing rows.
-- [ ] Add validation/DB helpers for organization and assignment codes. Require an admin actor for operational records; source and recorded timestamp come from server.
-- [ ] Create assignment/event persistence through `lib/rescue-service.ts` or a focused helper used by it. No new public mutation in this phase. Keep current citizen submission and admin actions working.
-- [ ] Test migration on disposable PostgreSQL, historical-row preservation, FKs, unique active assignment, event order and rejection of invalid data. Run focused rescue unit/integration tests, lint and typecheck.
+- [x] Re-audit current schema, migrations, service, routes, queue, analytics, UI and tests; record baseline behavior, counts and representative legacy statuses before editing. The synthetic pre-migration baseline had one `en_route` request and one event; operational database counts were not read.
+- [x] Implement additive Prisma schema/migration and relations; use stable database defaults or nullable additions so rolling application versions still read existing rows. `workflowVersion=1` distinguishes historical records without changing their status.
+- [x] Add validation/DB helpers for organization and assignment codes. Require an admin actor for operational records; source and recorded timestamp come from server. New organizations default to unknown availability; existing events retain null source.
+- [x] Create assignment/event persistence through `lib/rescue-service.ts` or a focused helper used by it. No new public mutation in this phase. Keep current citizen submission and admin actions working.
+- [x] Test migration on disposable PostgreSQL, historical-row preservation, FKs, unique active assignment, event order and rejection of invalid data. Run focused rescue unit/integration tests, lint and typecheck. Results and limits are in the Phase 1 report.
 
 **Acceptance:** All existing request IDs/references/statuses remain unchanged; citizen submissions still work; organizations and multiple sequential assignment attempts persist; one active assignment rule holds under race; authorization and existing API behavior pass. No real contacts or responder accounts are created.
 

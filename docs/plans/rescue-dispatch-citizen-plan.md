@@ -1,6 +1,6 @@
 # Admin-managed rescue dispatch: citizen experience plan
 
-**Status:** Planning only, 18 October 2026. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). No phase has started. Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
+**Status:** Phase 1 foundation review passed on `feat/rescue-dispatch-phase1-foundation`, 21 October 2026; review pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 2–6 have not started. See [Phase 1 report](rescue-dispatch-phase1-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
 
 ## Current architecture and functionality to preserve
 
@@ -59,9 +59,9 @@ Each approved phase uses a new branch. After implementation, check its completed
 
 ### Phase 1 — Foundation review
 
-- [ ] Re-run public intake/list/detail/correction/cancellation baseline tests against the additive migration.
-- [ ] Confirm unchanged IDs, owner filters, Bulacan validation, idempotency and event ordering.
-- [ ] Review DTO shape for newly added assignment/organization fields; do not expose them by broad object spreading.
+- [x] Re-run public intake/list/detail/correction/cancellation baseline tests against the additive migration. The focused rescue integration test passed on disposable PostgreSQL.
+- [x] Confirm unchanged IDs, owner filters, Bulacan validation, idempotency and event ordering. Synthetic legacy-row migration and existing rescue API tests passed.
+- [x] Review DTO shape for newly added assignment/organization fields; do not expose them by broad object spreading. The owner DTO remains an explicit field list; integration assertions exclude assignment and organization objects.
 
 **Acceptance:** Existing submission and tracking remain functional; no new private data enters public responses.
 
