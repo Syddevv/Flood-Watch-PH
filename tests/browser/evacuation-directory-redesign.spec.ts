@@ -103,6 +103,24 @@ test("a center link opens its details directly", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("details modal keeps opening status plain and its header accessible while content scrolls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 560 });
+  await openDirectory(page);
+  await page.locator("#evacuation-center-long-name").getByRole("button", { name: /View details for/ }).click();
+  const dialog = page.getByRole("dialog");
+  const openingStatus = dialog.locator("dt", { hasText: "Opening status" }).locator("..").locator("dd");
+  await expect(openingStatus).toHaveText("Opening not confirmed");
+  await expect(openingStatus).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(dialog.getByRole("link", { name: "View on map" })).toHaveAttribute("href", "/?center=long-name");
+  await expect(dialog.getByRole("link", { name: "Directions" })).toHaveAttribute("href", /google\.com\/maps/);
+  const content = dialog.locator(".overflow-y-auto");
+  expect(await content.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await content.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(dialog.getByRole("button", { name: "Close details" })).toBeVisible();
+  await expect(dialog.getByText("Sources and updates")).toBeVisible();
+  expect(await dialog.evaluate((element) => element.getBoundingClientRect().width <= window.innerWidth - 16)).toBe(true);
+});
+
 test("mapped cards link to the live map and unmapped cards explain why they cannot", async ({ page }) => {
   await openDirectory(page);
   const mapped = page.locator("#evacuation-center-long-name");

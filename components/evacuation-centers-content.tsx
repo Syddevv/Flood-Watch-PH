@@ -81,6 +81,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
   const facilityTypes = useMemo(() => [...new Set(centers.map((center) => center.facilityType).filter((type): type is string => Boolean(type)))].sort(), [centers]);
   const selectedCenter = centers.find((center) => center.id === selectedId) ?? null;
   const relevantDrrmo = selectedCenter ? drrmoForCenter(contacts, selectedCenter) : null;
+  const hasSourceDetails = Boolean(selectedCenter && (selectedCenter.sourceCheckedAt || selectedCenter.lastDocumentedEventDate || selectedCenter.verificationStatus === "outdated" || selectedCenter.locationProvenance || selectedCenter.locationNotes || selectedCenter.sourceNotes || selectedCenter.sourceLinks.length || selectedCenter.sourceUrl));
   const hasFilters = Boolean(municipality || query || facilityType || sortMode !== "default");
 
   useEffect(() => {
@@ -226,46 +227,66 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
       <p className="mt-6 text-xs leading-relaxed text-[var(--color-muted-foreground)]">This partial directory is still being expanded. Confirm availability and route safety before traveling.</p>
     </section>}
 
-    {selectedCenter ? <dialog ref={dialogRef} aria-labelledby="center-detail-title" onClose={() => { setSelectedId(null); triggerRef.current?.focus(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-foreground)] shadow-2xl backdrop:bg-slate-950/70">
-      <div className="p-5 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <h2 id="center-detail-title" className="text-2xl font-bold leading-snug wrap-break-word">{selectedCenter.name}</h2>
-          <button ref={closeButtonRef} type="button" onClick={() => dialogRef.current?.close()} aria-label="Close details" className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="h-6 w-6" /></button>
-        </div>
-        <p className="mt-3 text-lg">{[selectedCenter.barangay, selectedCenter.city].filter(Boolean).join(", ")}</p>
-        <p className="mt-4 text-lg"><span className="font-semibold">Listing:</span> {centerListingLabel(selectedCenter) ?? "Listing not confirmed"}</p>
-        <p className="mt-3 text-lg"><span className="font-semibold">Opening status:</span> <span className={`inline-block rounded-lg px-3 py-2 font-bold ${openingStatusDisplay(selectedCenter).className}`}>{centerOpeningLabel(selectedCenter)}</span></p>
-        {selectedCenter.openingStatus === "unknown" ? <p className="mt-2 text-lg">Check with the local DRRMO before going.</p> : selectedCenter.availabilityConfirmedAt ? <p className="mt-2 text-base">Operational update: {formatOperationalUpdate(selectedCenter.availabilityConfirmedAt)}</p> : null}
-        {selectedCenter.address ? <p className="mt-5 text-lg leading-relaxed"><span className="font-semibold">Address:</span> {selectedCenter.address}</p> : null}
-        {hasCenterCoordinates(selectedCenter) ? <div className="mt-5 flex flex-wrap gap-3">
-          <Link href={buildCenterMapHref(selectedCenter.id)} className="inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">View on map</Link>
-          <a href={buildDirectionsUrl(selectedCenter, origin)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center rounded-xl bg-[var(--color-primary)] px-4 text-lg font-semibold text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><Navigation aria-hidden="true" className="mr-2 h-5 w-5" />Directions</a>
-          <p className="w-full text-base">Map location is a reference. Route safety is not confirmed.</p>
-        </div> : <p className="mt-5 text-lg">Exact location unavailable. Contact the local DRRMO for guidance.</p>}
-        {relevantDrrmo ? <div className="mt-5 rounded-xl border border-[var(--color-border)] p-4 text-lg">
-          <p className="font-semibold">{relevantDrrmo.city ? "Municipal or city DRRMO contact" : "Bulacan PDRRMO contact"}</p>
-          <p>{relevantDrrmo.agencyName}</p>
-          {relevantDrrmo.phones[0] ? <p className="mt-2">{relevantDrrmo.phones[0].telUri ? <a href={relevantDrrmo.phones[0].telUri} className="font-semibold text-[var(--color-primary)] underline">Call {relevantDrrmo.phones[0].raw}</a> : relevantDrrmo.phones[0].raw}</p> : null}
-          <p className="mt-2 text-base">This is the DRRMO contact, not the facility’s direct number. Confirm that the number is current.</p>
-        </div> : null}
-        <Link href="/emergency-hotlines" className="mt-4 inline-flex min-h-12 items-center rounded-xl border border-[var(--color-border)] px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Find local emergency contacts</Link>
-        {selectedCenter.contactNumber ? <p className="mt-4 text-lg"><span className="font-semibold">Listed facility contact:</span> {selectedCenter.contactNumber}</p> : null}
-        {selectedCenter.facilityType ? <p className="mt-5 text-lg"><span className="font-semibold">Facility type:</span> {selectedCenter.facilityType.replaceAll("_", " ")}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</p> : null}
-        {selectedCenter.estimatedCapacity != null || selectedCenter.capacityFamilies != null ? <p className="mt-4 text-lg leading-relaxed"><span className="font-semibold">Historical or planned capacity:</span> {[selectedCenter.estimatedCapacity != null ? `${selectedCenter.estimatedCapacity} people` : null, selectedCenter.capacityFamilies != null ? `${selectedCenter.capacityFamilies} families` : null].filter(Boolean).join(" · ")}. This is not a count of available spaces.</p> : null}
-        {selectedCenter.facilities.length ? <p className="mt-4 text-lg"><span className="font-semibold">Listed facilities:</span> {selectedCenter.facilities.join(", ").replaceAll("_", " ")}</p> : null}
-
-        <details className="mt-6 border-t border-[var(--color-border)] pt-3">
-          <summary className="flex min-h-12 cursor-pointer items-center text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Sources and updates</summary>
-          <div className="space-y-3 pb-3 text-base leading-relaxed">
-            {selectedCenter.sourceCheckedAt ? <p>Source researched {formatLastVerified(selectedCenter.sourceCheckedAt)}.</p> : null}
-            {selectedCenter.lastDocumentedEventDate ? <p>Documented event: {formatLastVerified(selectedCenter.lastDocumentedEventDate)}.</p> : null}
-            {selectedCenter.verificationStatus === "outdated" ? <p>Source needs rechecking.</p> : null}
-            {selectedCenter.locationProvenance ? <p>{selectedCenter.locationProvenance}</p> : null}
-            {selectedCenter.locationNotes ? <p>{selectedCenter.locationNotes}</p> : null}
-            {selectedCenter.sourceNotes ? <p>{selectedCenter.sourceNotes}</p> : null}
-            {selectedCenter.sourceLinks.length ? <ul className="space-y-2">{selectedCenter.sourceLinks.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{source.title}{source.publishedAt ? ` (${source.publishedAt})` : ""}</a></li>)}</ul> : selectedCenter.sourceUrl ? <a href={selectedCenter.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline underline-offset-2">Official source</a> : null}
+    {selectedCenter ? <dialog ref={dialogRef} aria-labelledby="center-detail-title" onClose={() => { setSelectedId(null); triggerRef.current?.focus(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[660px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-foreground)] shadow-2xl backdrop:bg-slate-950/70">
+      <div className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0">
+            <h2 id="center-detail-title" className="text-xl font-bold leading-snug wrap-break-word sm:text-2xl">{selectedCenter.name}</h2>
+            <p className="mt-2 flex items-start gap-2 text-sm text-[var(--color-muted-foreground)]"><MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[var(--color-primary)]" />{[selectedCenter.barangay, selectedCenter.city].filter(Boolean).join(", ")}</p>
           </div>
-        </details>
+          <button ref={closeButtonRef} type="button" onClick={() => dialogRef.current?.close()} aria-label="Close details" className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] transition-colors hover:bg-[var(--color-panel)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="size-5" /></button>
+        </div>
+        <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-5 py-5 text-sm sm:px-6">
+          <section aria-label="Facility information">
+            <h3 className="mb-3 text-sm font-semibold">Facility information</h3>
+            <dl className="space-y-2.5">
+              <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Facility type</dt><dd>{selectedCenter.facilityType ? <>{selectedCenter.facilityType.replaceAll("_", " ")}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</> : "Not listed"}</dd></div>
+              <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Listing</dt><dd>{centerListingLabel(selectedCenter) ?? "Listing not confirmed"}</dd></div>
+              <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Opening status</dt><dd>{centerOpeningLabel(selectedCenter)}</dd></div>
+              {selectedCenter.address ? <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Address</dt><dd className="wrap-break-word">{selectedCenter.address}</dd></div> : null}
+            </dl>
+            {selectedCenter.openingStatus === "unknown" ? <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">Check with the local DRRMO before going.</p> : selectedCenter.availabilityConfirmedAt ? <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">Operational update: {formatOperationalUpdate(selectedCenter.availabilityConfirmedAt)}</p> : null}
+            {selectedCenter.estimatedCapacity != null || selectedCenter.capacityFamilies != null ? <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted-foreground)]"><span className="font-semibold">Historical or planned capacity:</span> {[selectedCenter.estimatedCapacity != null ? `${selectedCenter.estimatedCapacity} people` : null, selectedCenter.capacityFamilies != null ? `${selectedCenter.capacityFamilies} families` : null].filter(Boolean).join(" · ")}. This is not a count of available spaces.</p> : null}
+            {selectedCenter.facilities.length ? <p className="mt-2 text-xs text-[var(--color-muted-foreground)]"><span className="font-semibold">Listed facilities:</span> {selectedCenter.facilities.join(", ").replaceAll("_", " ")}</p> : null}
+          </section>
+
+          <section aria-label="Location actions" className="border-t border-[var(--color-border)] pt-5">
+            <h3 className="mb-3 text-sm font-semibold">Location</h3>
+            {hasCenterCoordinates(selectedCenter) ? <>
+              <div className="flex flex-wrap gap-2">
+                <Link href={buildCenterMapHref(selectedCenter.id)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-4 font-semibold transition-colors hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><MapPin aria-hidden="true" className="size-4" />View on map</Link>
+                <a href={buildDirectionsUrl(selectedCenter, origin)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 font-semibold text-white transition-colors hover:brightness-110 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><Navigation aria-hidden="true" className="size-4" />Directions</a>
+              </div>
+              <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">Map location is a reference. Route safety is not confirmed.</p>
+            </> : <p className="text-sm text-[var(--color-muted-foreground)]">Exact location unavailable. Contact the local DRRMO for guidance.</p>}
+          </section>
+
+          <section aria-label="Emergency contacts" className="rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-4">
+            <h3 className="text-sm font-semibold">Emergency contact</h3>
+            {relevantDrrmo ? <div className="mt-2 space-y-1.5">
+              <p className="text-xs text-[var(--color-muted-foreground)]">{relevantDrrmo.city ? "Municipal or city DRRMO contact" : "Bulacan PDRRMO contact"}</p>
+              <p className="font-medium">{relevantDrrmo.agencyName}</p>
+              {relevantDrrmo.phones[0] ? <p>{relevantDrrmo.phones[0].telUri ? <a href={relevantDrrmo.phones[0].telUri} className="font-semibold text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Call {relevantDrrmo.phones[0].raw}</a> : relevantDrrmo.phones[0].raw}</p> : null}
+              <p className="text-xs leading-relaxed text-[var(--color-muted-foreground)]">This is the DRRMO contact, not the facility’s direct number. Confirm that the number is current.</p>
+            </div> : null}
+            {selectedCenter.contactNumber ? <p className="mt-2 text-xs"><span className="font-semibold">Listed facility contact:</span> {selectedCenter.contactNumber}</p> : null}
+            <Link href="/emergency-hotlines" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-[var(--color-border)] px-3 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Find local emergency contacts</Link>
+          </section>
+
+          <details className="group rounded-xl border border-[var(--color-border)]">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Sources and updates<ChevronDown aria-hidden="true" className="ml-auto size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" /></summary>
+            <div className="space-y-2 border-t border-[var(--color-border)] px-4 py-3 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+              {selectedCenter.sourceCheckedAt ? <p>Source researched {formatLastVerified(selectedCenter.sourceCheckedAt)}.</p> : null}
+              {selectedCenter.lastDocumentedEventDate ? <p>Documented event: {formatLastVerified(selectedCenter.lastDocumentedEventDate)}.</p> : null}
+              {selectedCenter.verificationStatus === "outdated" ? <p>Source needs rechecking.</p> : null}
+              {selectedCenter.locationProvenance ? <p>{selectedCenter.locationProvenance}</p> : null}
+              {selectedCenter.locationNotes ? <p>{selectedCenter.locationNotes}</p> : null}
+              {selectedCenter.sourceNotes ? <p>{selectedCenter.sourceNotes}</p> : null}
+              {selectedCenter.sourceLinks.length ? <ul className="space-y-2">{selectedCenter.sourceLinks.map((source) => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--color-primary)] underline underline-offset-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{source.title}{source.publishedAt ? ` (${source.publishedAt})` : ""}</a></li>)}</ul> : selectedCenter.sourceUrl ? <a href={selectedCenter.sourceUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--color-primary)] underline underline-offset-2">Official source</a> : null}
+              {!hasSourceDetails ? <p>No sources or updates are listed for this center.</p> : null}
+            </div>
+          </details>
+        </div>
       </div>
     </dialog> : null}
   </div>;
