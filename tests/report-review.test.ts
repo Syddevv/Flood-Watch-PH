@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseReviewDecision, reviewEvidenceSummary } from "@/lib/report-review";
+import { getReviewDecisionBlockReason, parseReviewDecision, reviewEvidenceSummary } from "@/lib/report-review";
 
 const base = { verificationStatus: "verified", expectedReviewVersion: 2, expectedUpdatedAt: "2026-10-18T10:00:00.000Z", reason: "Photo and location evidence reviewed." };
 
@@ -21,4 +21,10 @@ test("evidence summary never turns a photo into onsite eligibility", () => {
   assert.deepEqual(reviewEvidenceSummary({ imageUrl: "photo", onsiteEligibleAt: null, gpsCapturedAt: null, photoCapturedAt: null, confirmationCount: 2 }), {
     hasPhoto: true, onsiteEligible: false, hasGpsFix: false, hasCaptureTime: false, communityConfirmations: 2,
   });
+});
+
+test("review action explains a short reason and accepts empty public feedback", () => {
+  assert.match(getReviewDecisionBlockReason("unreviewed", { ...base, reason: "test", publicMessage: "test" }) ?? "", /at least 10 characters/);
+  assert.equal(getReviewDecisionBlockReason("unreviewed", { ...base, publicMessage: "" }), null);
+  assert.match(getReviewDecisionBlockReason("verified", base) ?? "", /different from the current/);
 });

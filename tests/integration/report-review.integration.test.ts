@@ -35,6 +35,14 @@ integrationTest("admin review is authorized, versioned, audited and removed from
     const first = await patch(adminTokens[0], { ...baseDecision, verificationStatus: "verified", publicMessage: "Report reviewed by an administrator." });
     assert.equal(first.status, 200);
     assert.equal((await first.json()).data.reviewVersion, 2);
+    const firstSaved = await db.floodReport.findUniqueOrThrow({ where: { id: reportId } });
+    assert.equal(firstSaved.verificationStatus, "verified");
+    assert.equal(firstSaved.reviewedByUserId, adminIds[0]);
+    assert.ok(firstSaved.reviewedAt);
+    assert.equal(firstSaved.reviewPublicMessage, "Report reviewed by an administrator.");
+    const internalReason = await db.adminOperationalAction.findFirstOrThrow({ where: { targetType: "FloodReport", targetId: reportId, actionType: "verification" } });
+    assert.equal(internalReason.note, baseDecision.reason);
+    assert.equal(internalReason.visibility, "internal");
     assert.equal((await patch(adminTokens[1], { ...baseDecision, verificationStatus: "disputed", reason: "Location needs another check." })).status, 409);
     assert.equal(await db.adminOperationalAction.count({ where: { targetType: "FloodReport", targetId: reportId, actionType: "verification" } }), 1);
 
