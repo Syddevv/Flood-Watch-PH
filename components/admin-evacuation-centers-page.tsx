@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { ArrowUpRight, Building2, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { currentCenterOpeningStatus, centerOpeningLabel } from "@/lib/emergency-resources";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { AdminEvacuationCenterDialog } from "@/components/admin-evacuation-center-dialog";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { formatUiLabel } from "@/lib/ui-labels";
 
@@ -29,7 +30,9 @@ export type AdminCenter = {
   adminEvidenceUrl: string | null; duplicateReviewNotes: string | null;
 };
 
-export function AdminEvacuationCentersPage() {
+type EditorSelection = { mode: "create" } | { mode: "edit"; id: string } | null;
+
+export function AdminEvacuationCentersPage({ initialCenterId, initialCreate = false }: { initialCenterId?: string; initialCreate?: boolean }) {
   const [search, setSearch] = useState("");
   const [city, setCity] = useState("");
   const [verificationStatus, setVerificationStatus] = useState("");
@@ -40,6 +43,11 @@ export function AdminEvacuationCentersPage() {
   const [pageSize, setPageSize] = useState(24);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [editor, setEditor] = useState<EditorSelection>(initialCenterId ? { mode: "edit", id: initialCenterId } : initialCreate ? { mode: "create" } : null);
+  const editTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -54,13 +62,45 @@ export function AdminEvacuationCentersPage() {
         setCenters(payload.data.centers);
         setTotal(payload.data.total);
         setPageSize(payload.data.pageSize);
+        setError(null);
       })
       .catch((cause) => {
         if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Unable to load centers.");
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [search, city, verificationStatus, archived, page]);
+  }, [search, city, verificationStatus, archived, page, refreshKey]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  function closeEditor() {
+    setEditor(null);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("center") || url.searchParams.has("new")) {
+      url.searchParams.delete("center");
+      url.searchParams.delete("new");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    requestAnimationFrame(() => (editTriggerRef.current?.isConnected ? editTriggerRef.current : searchRef.current)?.focus());
+  }
+
+  function savedCenter(center: AdminCenter, created: boolean) {
+    setCenters((current) => created ? [center, ...current].slice(0, pageSize) : current.map((item) => item.id === center.id ? center : item));
+    setNotice(`${center.name} ${created ? "added" : "saved"}.`);
+    closeEditor();
+    setRefreshKey((value) => value + 1);
+  }
+
+  function archivedCenter(center: AdminCenter) {
+    setCenters((current) => current.filter((item) => item.id !== center.id));
+    setNotice(`${center.name} ${center.isArchived ? "archived" : "restored"}.`);
+    closeEditor();
+    setRefreshKey((value) => value + 1);
+  }
 
   const filterClass = "h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm";
   return (
@@ -71,10 +111,10 @@ export function AdminEvacuationCentersPage() {
           <h2 className="mt-2 text-3xl font-bold tracking-tight">Evacuation Centers</h2>
           <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">Manage source verification and current availability separately.</p>
         </div>
-        <div className="flex gap-3"><Link href="/admin/emergency-contacts" className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-semibold">Manage contacts</Link><Link href="/admin/data/new" className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Add center</Link></div>
+        <div className="flex gap-3"><Link href="/admin/emergency-contacts" className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-semibold">Manage contacts</Link><button type="button" onClick={(event) => { editTriggerRef.current = event.currentTarget; setEditor({ mode: "create" }); setNotice(null); }} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Add center</button></div>
       </header>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
-        <label className="grid gap-1 text-xs font-medium text-[var(--color-muted-foreground)]">Search centers<input value={search} onChange={(event) => { setLoading(true); setError(null); setSearch(event.target.value); setPage(1); }} placeholder="Name or address" className={filterClass} /></label>
+        <label className="grid gap-1 text-xs font-medium text-[var(--color-muted-foreground)]">Search centers<input ref={searchRef} value={search} onChange={(event) => { setLoading(true); setError(null); setSearch(event.target.value); setPage(1); }} placeholder="Name or address" className={filterClass} /></label>
         <label className="grid gap-1 text-xs font-medium text-[var(--color-muted-foreground)]">Municipality or city<select value={city} onChange={(event) => { setLoading(true); setError(null); setCity(event.target.value); setPage(1); }} className={filterClass}>
           <option value="">All municipalities and cities</option>
           {BULACAN_LOCALITIES.map((locality) => <option key={locality.code} value={locality.name}>{locality.name}</option>)}
@@ -89,6 +129,7 @@ export function AdminEvacuationCentersPage() {
         </select></label>
         <label className="flex h-10 items-center gap-2 text-sm"><input type="checkbox" checked={archived} onChange={(event) => { setLoading(true); setError(null); setArchived(event.target.checked); setPage(1); }} />Archived</label>
       </div>
+      {notice ? <div role="status" className="fixed bottom-4 right-4 z-[var(--layer-toast)] max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm shadow-lg">{notice}</div> : null}
       {loading ? <p role="status">Loading centers…</p> : error ? <p role="alert" className="text-[var(--color-danger)]">{error}</p> : (
         <>
           <p className="text-sm text-[var(--color-muted-foreground)]">{total} record{total === 1 ? "" : "s"}</p>
@@ -111,7 +152,7 @@ export function AdminEvacuationCentersPage() {
                       <p>Identity: {formatUiLabel(center.verificationStatus)}</p>
                       {openingStatus !== "unknown" ? <p className="mt-1">{centerOpeningLabel({ openingStatus })}</p> : null}
                     </div>
-                    <Link href={`/admin/data/${center.id}`} className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Manage Center <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link>
+                    <button type="button" onClick={(event) => { editTriggerRef.current = event.currentTarget; setEditor({ mode: "edit", id: center.id }); setNotice(null); }} className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Manage Center <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></button>
                   </div>
                 </article>;
               })}
@@ -127,6 +168,7 @@ export function AdminEvacuationCentersPage() {
           </nav> : null}
         </>
       )}
+      {editor ? <AdminEvacuationCenterDialog key={editor.mode === "edit" ? editor.id : "new"} centerId={editor.mode === "edit" ? editor.id : undefined} onClose={closeEditor} onSaved={savedCenter} onArchived={archivedCenter} /> : null}
     </div>
   );
 }
