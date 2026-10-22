@@ -12,7 +12,7 @@ export type ReportActionLoadingState = {
 export const REPORT_ACTION_MESSAGES = {
   confirmedSuccess: "Thanks. Your confirmation helps others nearby.",
   resolvedSuccess: "Thanks. Your update helps mark this area as receding.",
-  duplicate: "You have already submitted this update from this browser.",
+  duplicate: "You have already confirmed this report.",
   undoSuccess: "Your action was undone.",
   error: "Unable to update this report. Please try again.",
 } as const;

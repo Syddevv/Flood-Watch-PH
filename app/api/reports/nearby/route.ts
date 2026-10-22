@@ -4,9 +4,11 @@ import { INCIDENT_MATCH_RADIUS_METERS } from "@/lib/incident-config";
 import { createBoundingBox, calculateDistanceMeters } from "@/lib/report-geo";
 import {
   deriveReportLifecycleStatus,
+  isEligiblePublicReport,
   isActiveLifecycleStatus,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
+import { getAdminSettings } from "@/lib/admin-settings-store";
 import { prisma } from "@/lib/prisma";
 import { serializeReportRecord, type ReportIdentity } from "@/lib/report-api";
 import { getReportIdentityFromRequest } from "@/lib/report-identity";
@@ -108,10 +110,10 @@ type NearbyReportDistanceEntry = {
   distanceMeters: number;
 };
 
-function reconcileNearbyReport(report: NearbyReportRecord): NearbyReportRecord {
+function reconcileNearbyReport(report: NearbyReportRecord, settings: Awaited<ReturnType<typeof getAdminSettings>>, now: Date): NearbyReportRecord {
   return {
     ...report,
-    status: deriveReportLifecycleStatus(report),
+    status: deriveReportLifecycleStatus(report, now, settings),
   };
 }
 
@@ -129,6 +131,8 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const identity = await getReportIdentityFromRequest(request);
+    const settings = await getAdminSettings();
+    const now = new Date();
     const latitude = Number(searchParams.get("lat"));
     const longitude = Number(searchParams.get("lng"));
     const radiusMeters = clampRadiusMeters(searchParams.get("radiusMeters"));
@@ -163,11 +167,11 @@ export async function GET(request: Request) {
       take: 100,
     })) as NearbyReportRecord[];
 
-    const reconciledReports = reports.map(reconcileNearbyReport);
+    const reconciledReports = reports.map((report) => reconcileNearbyReport(report, settings, now));
 
     const nearbyReports = reconciledReports
       .filter((report: NearbyReportRecord) =>
-        report.verificationStatus !== "rejected" &&
+        isEligiblePublicReport(report, now, settings) &&
         isActiveLifecycleStatus(report.status as ReportLifecycleStatus) &&
         isWithinBulacan(report.latitude, report.longitude),
       )

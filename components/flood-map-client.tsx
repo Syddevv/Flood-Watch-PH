@@ -3,6 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
+import { useAuthSession } from "@/components/auth-session-provider";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -419,6 +420,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
   const hasConfirmed = Boolean(confirmedReportIds[marker.reportId]);
   const hasResolved = Boolean(resolvedReportIds[marker.reportId]);
   const isResolved = marker.report.status === "Resolved";
+  const { user: authUser } = useAuthSession();
 
   return (
     <div className="w-[276px] space-y-2.5">
@@ -489,6 +491,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
         ) : null}
       </div>
 
+      {marker.report.status === "Likely Receded" ? <p className="text-[0.72rem] leading-4 text-slate-600">Flooding may have subsided. Current conditions have not been reconfirmed.</p> : null}
       <div className="grid grid-cols-2 gap-2 text-[0.74rem] text-slate-600">
         <div className="rounded-[10px] bg-slate-100 px-2.5 py-2">
           <div className="flex items-center gap-1.5">
@@ -544,10 +547,10 @@ const ReportPopupContent = memo(function ReportPopupContent({
         <button
           type="button"
           onClick={() => onConfirmReport(marker.reportId)}
-          disabled={actionBusy || hasConfirmed || isResolved}
+          disabled={!authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor}
           className={cn(
             "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] px-2 text-[0.7rem] font-semibold",
-            actionBusy || hasConfirmed || isResolved
+            !authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor
               ? "bg-slate-100 text-slate-500"
               : "bg-blue-600 text-white",
           )}
@@ -562,13 +565,14 @@ const ReportPopupContent = memo(function ReportPopupContent({
             })}
           </span>
         </button>
+        {marker.report.isOriginalAuthor ? <span className="col-span-2 text-[0.68rem] text-slate-500">You cannot confirm your own report.</span> : null}
         <button
           type="button"
           onClick={() => onResolveReport(marker.reportId)}
-          disabled={actionBusy || hasResolved || isResolved}
+          disabled={!authUser || actionBusy || hasResolved || isResolved}
           className={cn(
             "col-span-2 inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] border px-2 text-[0.7rem] font-semibold",
-            actionBusy || hasResolved || isResolved
+            !authUser || actionBusy || hasResolved || isResolved
               ? "border-slate-200 bg-slate-100 text-slate-500"
               : "border-slate-200 bg-white text-slate-700",
           )}
@@ -583,6 +587,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
             })}
           </span>
         </button>
+        {!authUser ? <a href="/login?next=/flood-map" className="col-span-2 text-[0.68rem] font-medium text-slate-600 underline">Log in to confirm or mark reports as receded.</a> : null}
       </div>
     </div>
   );

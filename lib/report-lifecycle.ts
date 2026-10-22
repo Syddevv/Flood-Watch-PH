@@ -1,4 +1,5 @@
 import type { IncidentReportStatus } from "@/lib/types";
+import { ADMIN_SETTINGS_DEFAULTS, type AdminSettingsValues } from "@/lib/admin-settings-config";
 
 export type ReportLifecycleStatus = IncidentReportStatus | "Archived";
 
@@ -14,9 +15,8 @@ type ReportLifecycleInput = {
   archivedAt?: Date | string | null;
 };
 
-const RESOLVED_ARCHIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
-const LOW_MODERATE_ARCHIVE_WINDOW_MS = 12 * 60 * 60 * 1000;
-const HIGH_CRITICAL_ARCHIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+export type ReportVisibilitySettings = Pick<AdminSettingsValues, "publicReportVisibilityHours" | "showLikelyRecededReports" | "autoArchiveExpiredReports">;
+export const DEFAULT_REPORT_VISIBILITY_SETTINGS: ReportVisibilitySettings = ADMIN_SETTINGS_DEFAULTS;
 
 function toDate(value: Date | string | null | undefined) {
   if (!value) {
@@ -25,23 +25,6 @@ function toDate(value: Date | string | null | undefined) {
 
   const parsed = value instanceof Date ? value : new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function normalizeSeverity(value: string) {
-  switch (value) {
-    case "Critical":
-    case "critical":
-    case "severe":
-      return "critical";
-    case "High":
-    case "high":
-      return "high";
-    case "Moderate":
-    case "moderate":
-      return "moderate";
-    default:
-      return "low";
-  }
 }
 
 export function getLastActivityDate(report: ReportLifecycleInput) {
@@ -53,60 +36,20 @@ export function getLastActivityDate(report: ReportLifecycleInput) {
   );
 }
 
-export function shouldArchiveResolvedReport(
-  report: Pick<ReportLifecycleInput, "resolvedAt" | "archivedAt">,
-  now: Date,
-) {
-  if (toDate(report.archivedAt)) {
-    return false;
-  }
-
-  const resolvedAt = toDate(report.resolvedAt);
-  if (!resolvedAt) {
-    return false;
-  }
-
-  return now.getTime() - resolvedAt.getTime() >= RESOLVED_ARCHIVE_WINDOW_MS;
-}
-
-export function shouldAutoArchiveInactiveReport(
-  report: Pick<
-    ReportLifecycleInput,
-    "severity" | "lastActivityAt" | "updatedAt" | "createdAt" | "resolvedAt" | "archivedAt"
-  >,
-  now: Date,
-) {
-  if (toDate(report.archivedAt) || toDate(report.resolvedAt)) {
-    return false;
-  }
-
-  const lastActivityAt =
-    toDate(report.lastActivityAt) ??
-    toDate(report.updatedAt) ??
-    toDate(report.createdAt);
-
-  if (!lastActivityAt) {
-    return false;
-  }
-
-  const archiveWindowMs =
-    normalizeSeverity(report.severity) === "high" ||
-    normalizeSeverity(report.severity) === "critical"
-      ? HIGH_CRITICAL_ARCHIVE_WINDOW_MS
-      : LOW_MODERATE_ARCHIVE_WINDOW_MS;
-
-  return now.getTime() - lastActivityAt.getTime() >= archiveWindowMs;
+export function hasReportVisibilityExpired(report: Pick<ReportLifecycleInput, "createdAt">, now = new Date(), settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS) {
+  const createdAt = toDate(report.createdAt);
+  return !createdAt || now.getTime() - createdAt.getTime() >= settings.publicReportVisibilityHours * 60 * 60 * 1000;
 }
 
 export function deriveReportLifecycleStatus(
   report: ReportLifecycleInput,
   now = new Date(),
+  settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS,
 ): ReportLifecycleStatus {
   if (
     toDate(report.archivedAt) ||
     report.status === "Archived" ||
-    shouldArchiveResolvedReport(report, now) ||
-    shouldAutoArchiveInactiveReport(report, now)
+    (settings.autoArchiveExpiredReports && hasReportVisibilityExpired(report, now, settings))
   ) {
     return "Archived";
   }
@@ -133,10 +76,11 @@ export function deriveReportLifecycleStatus(
 export function applyReportLifecycleUpdates(
   report: ReportLifecycleInput,
   now = new Date(),
+  settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS,
 ) {
   const resolvedAt = toDate(report.resolvedAt);
   const archivedAt = toDate(report.archivedAt);
-  const nextStatus = deriveReportLifecycleStatus(report, now);
+  const nextStatus = deriveReportLifecycleStatus(report, now, settings);
   const updates: {
     status: ReportLifecycleStatus;
     resolvedAt?: Date | null;
@@ -159,8 +103,9 @@ export function applyReportLifecycleUpdates(
 export function getLifecyclePersistencePatch(
   report: ReportLifecycleInput,
   now = new Date(),
+  settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS,
 ) {
-  const nextLifecycle = applyReportLifecycleUpdates(report, now);
+  const nextLifecycle = applyReportLifecycleUpdates(report, now, settings);
   const currentResolvedAt = toDate(report.resolvedAt);
   const currentArchivedAt = toDate(report.archivedAt);
   const patch: {
@@ -198,6 +143,14 @@ export function isVisiblePublicLifecycleStatus(status: ReportLifecycleStatus) {
   return status !== "Archived";
 }
 
+export function isEligiblePublicReport(report: ReportLifecycleInput & { verificationStatus?: string | null }, now = new Date(), settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS) {
+  const status = deriveReportLifecycleStatus(report, now, settings);
+  return report.verificationStatus === "verified" &&
+    !hasReportVisibilityExpired(report, now, settings) &&
+    isVisiblePublicLifecycleStatus(status) &&
+    (settings.showLikelyRecededReports || status !== "Likely Receded");
+}
+
 export function matchesLifecycleFilter(
   status: ReportLifecycleStatus,
   filter?: string,
@@ -207,7 +160,7 @@ export function matchesLifecycleFilter(
   }
 
   if (filter === "active") {
-    return isActiveLifecycleStatus(status);
+    return isActiveLifecycleStatus(status) || status === "Likely Receded";
   }
 
   if (filter === "receded") {

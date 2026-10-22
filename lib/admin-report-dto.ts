@@ -1,4 +1,5 @@
 import { deriveReportLifecycleStatus } from "@/lib/report-lifecycle";
+import type { ReportVisibilitySettings } from "@/lib/report-lifecycle";
 import { reviewEvidenceSummary } from "@/lib/report-review";
 
 type AdminReportRecord = {
@@ -28,7 +29,7 @@ type AdminReportRecord = {
   incident?: { reportCount: number } | null;
 };
 
-export function toAdminReportDto(report: AdminReportRecord) {
+export function toAdminReportDto(report: AdminReportRecord, settings?: ReportVisibilitySettings) {
   return {
     id: report.id,
     title: report.title,
@@ -37,7 +38,7 @@ export function toAdminReportDto(report: AdminReportRecord) {
     longitude: report.longitude,
     category: report.category,
     severity: report.severity,
-    publicStatus: deriveReportLifecycleStatus(report),
+    publicStatus: deriveReportLifecycleStatus(report, new Date(), settings),
     verificationStatus: report.verificationStatus,
     reviewVersion: report.reviewVersion,
     reviewedAt: report.reviewedAt?.toISOString() ?? null,

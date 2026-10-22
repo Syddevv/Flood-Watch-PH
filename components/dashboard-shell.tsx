@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, SquareStack, X } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
@@ -177,6 +178,7 @@ function FloodMapUndoToast({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>{toast.message}</div>
+            {toast.message === "Please log in to confirm flood reports." ? <Link href="/login?next=/" className="font-semibold underline">Log in</Link> : null}
             {undoAvailable ? (
               <div className="flex items-center gap-3">
                 <div className="text-[0.78rem] font-medium opacity-75">
@@ -511,7 +513,7 @@ export function DashboardShell({
           return;
         }
 
-        const nextReports = payload.data.map(mapReportToIncident);
+        const nextReports = payload.data.filter((report: ReportRecord) => report.verificationStatus === "verified").map(mapReportToIncident);
         setFloodMapReports(nextReports);
 
         if (typeof window !== "undefined") {
@@ -519,8 +521,7 @@ export function DashboardShell({
           const nextResolved: Record<string, boolean> = {};
 
           for (const report of nextReports) {
-            nextConfirmed[report.id] =
-              localStorage.getItem(buildStoredActionKey("confirmed", report.id)) === "true";
+            nextConfirmed[report.id] = Boolean(report.hasConfirmed);
             nextResolved[report.id] =
               localStorage.getItem(buildStoredActionKey("resolved", report.id)) === "true";
           }
@@ -1175,6 +1176,14 @@ export function DashboardShell({
     if (floodMapConfirmedReportIds[reportId]) {
       return;
     }
+    if (!authUser) {
+      setFloodMapToast({ tone: "error", message: "Please log in to confirm flood reports." });
+      return;
+    }
+    if (floodMapReports.find((report) => report.id === reportId)?.isOriginalAuthor) {
+      setFloodMapToast({ tone: "error", message: "You cannot confirm your own report." });
+      return;
+    }
 
     setFloodMapActionLoading({ reportId, type: "confirmed" });
 
@@ -1200,7 +1209,7 @@ export function DashboardShell({
       console.error("Failed to confirm report from flood map.", error);
       if (
         error instanceof Error &&
-        error.message === "This report has already been updated from this browser."
+        error.message === "You have already confirmed this report."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
@@ -1215,7 +1224,7 @@ export function DashboardShell({
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message === "This report has already been updated from this browser."
+            ? error.message === "You have already confirmed this report."
               ? REPORT_ACTION_MESSAGES.duplicate
               : error.message
             : REPORT_ACTION_MESSAGES.error,
@@ -1227,6 +1236,10 @@ export function DashboardShell({
 
   async function handleResolveFloodMapReport(reportId: string) {
     if (floodMapResolvedReportIds[reportId]) {
+      return;
+    }
+    if (!authUser) {
+      setFloodMapToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
       return;
     }
 
@@ -1514,7 +1527,7 @@ export function DashboardShell({
               communityReportsError={floodMapReportLoadError}
               onViewCommunityReport={openFloodMapReportDetails}
               onViewAlert={openWeatherAlertViewer}
-              communityReportsDisclaimer="Community reports may be unverified."
+              communityReportsDisclaimer="Community reports shown here are admin verified."
               className="hidden md:flex"
             />
           ) : null}
@@ -1576,7 +1589,7 @@ export function DashboardShell({
           communityReportsError={floodMapReportLoadError}
           onViewCommunityReport={openFloodMapReportDetails}
           onViewAlert={openWeatherAlertViewer}
-          communityReportsDisclaimer="Community reports may be unverified."
+          communityReportsDisclaimer="Community reports shown here are admin verified."
         />
       ) : null}
 

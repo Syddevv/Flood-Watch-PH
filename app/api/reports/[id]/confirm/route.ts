@@ -1,8 +1,12 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth-session";
+import { getAdminSettings } from "@/lib/admin-settings-store";
+import { accountConfirmationKey } from "@/lib/report-confirmation-identity";
 import { syncIncidentAggregate } from "@/lib/incident-sync";
 import {
   deriveReportLifecycleStatus,
   getLifecyclePersistencePatch,
+  isEligiblePublicReport,
 } from "@/lib/report-lifecycle";
 import {
   isPrismaUniqueConstraintError,
@@ -10,10 +14,7 @@ import {
   prisma,
   type PrismaTransactionClient,
 } from "@/lib/prisma";
-import {
-  getReportSessionHashFromRequest,
-  REPORT_ACTION_UNDO_WINDOW_MS,
-} from "@/lib/report-session";
+import { REPORT_ACTION_UNDO_WINDOW_MS } from "@/lib/report-session";
 import { protectApiRequest } from "@/lib/request-security";
 import { reportListInclude, serializeReportRecord, type PublicReportRecord } from "@/lib/report-api";
 
@@ -37,16 +38,16 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const sessionHash = getReportSessionHashFromRequest(request);
-
-    if (!sessionHash) {
-      return errorResponse("A valid report session is required for this action.", 401);
-    }
+    const user = await getAuthenticatedUserFromRequest(request);
+    if (!user) return errorResponse("Please log in to confirm flood reports.", 401);
+    const confirmationKey = accountConfirmationKey(user.id);
+    const settings = await getAdminSettings();
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
       select: {
         id: true,
+        userId: true,
         severity: true,
         status: true,
         verificationStatus: true,
@@ -61,11 +62,13 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
 
-    if (!report || report.verificationStatus === "rejected") {
+    if (!report || report.verificationStatus !== "verified") {
       return errorResponse("Flood report not found.", 404);
     }
+    if (report.userId === user.id) return errorResponse("You cannot confirm your own report.", 403);
+    if (!isEligiblePublicReport(report, new Date(), settings)) return errorResponse("This report is no longer available for confirmation.", 400);
 
-    const currentLifecycleStatus = deriveReportLifecycleStatus(report);
+    const currentLifecycleStatus = deriveReportLifecycleStatus(report, new Date(), settings);
     if (currentLifecycleStatus === "Archived") {
       return errorResponse("This report is no longer active.", 400);
     }
@@ -76,9 +79,11 @@ export async function POST(request: Request, context: RouteContext) {
 
     const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       await lockFloodReportForUpdate(tx, id);
-      const currentReview = await tx.floodReport.findUnique({ where: { id }, select: { verificationStatus: true } });
-      if (currentReview?.verificationStatus === "rejected") return "rejected" as const;
-      const lifecyclePatch = getLifecyclePersistencePatch(report);
+      const currentReview = await tx.floodReport.findUnique({ where: { id } });
+      if (currentReview?.verificationStatus !== "verified") return "rejected" as const;
+      if (currentReview.userId === user.id) return "forbidden" as const;
+      if (!isEligiblePublicReport(currentReview, new Date(), settings) || deriveReportLifecycleStatus(currentReview, new Date(), settings) === "Resolved") return "unavailable" as const;
+      const lifecyclePatch = getLifecyclePersistencePatch(currentReview, new Date(), settings);
       if (Object.keys(lifecyclePatch).length > 0) {
         await tx.floodReport.update({
           where: { id },
@@ -90,7 +95,7 @@ export async function POST(request: Request, context: RouteContext) {
         data: {
           reportId: id,
           confirmationType: "confirmed",
-          ipHash: sessionHash,
+          ipHash: confirmationKey,
         },
       });
 
@@ -104,7 +109,7 @@ export async function POST(request: Request, context: RouteContext) {
         },
       });
 
-      const nextPatch = getLifecyclePersistencePatch(nextReport);
+      const nextPatch = getLifecyclePersistencePatch(nextReport, new Date(), settings);
       if (Object.keys(nextPatch).length > 0) await tx.floodReport.update({ where: { id }, data: nextPatch });
 
       await syncIncidentAggregate(tx, report.incidentId);
@@ -113,11 +118,13 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     if (updatedReport === "rejected") return errorResponse("Flood report not found.", 404);
+    if (updatedReport === "forbidden") return errorResponse("You cannot confirm your own report.", 403);
+    if (updatedReport === "unavailable") return errorResponse("This report is no longer available for confirmation.", 400);
 
-    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }));
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { userId: user.id }));
   } catch (error) {
     if (isPrismaUniqueConstraintError(error)) {
-      return errorResponse("This report has already been updated from this browser.", 409);
+      return errorResponse("You have already confirmed this report.", 409);
     }
 
     console.error("Failed to confirm report.", error);
@@ -139,16 +146,16 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const sessionHash = getReportSessionHashFromRequest(request);
-
-    if (!sessionHash) {
-      return errorResponse("A valid report session is required for this action.", 401);
-    }
+    const user = await getAuthenticatedUserFromRequest(request);
+    if (!user) return errorResponse("Please log in to confirm flood reports.", 401);
+    const confirmationKey = accountConfirmationKey(user.id);
+    const settings = await getAdminSettings();
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
       select: {
         id: true,
+        userId: true,
         severity: true,
         status: true,
         confirmationCount: true,
@@ -165,8 +172,9 @@ export async function DELETE(request: Request, context: RouteContext) {
     if (!report) {
       return errorResponse("Flood report not found.", 404);
     }
+    if (report.userId === user.id) return errorResponse("You cannot confirm your own report.", 403);
 
-    const currentLifecycleStatus = deriveReportLifecycleStatus(report);
+    const currentLifecycleStatus = deriveReportLifecycleStatus(report, new Date(), settings);
     if (currentLifecycleStatus === "Archived" || currentLifecycleStatus === "Resolved") {
       return errorResponse("This report can no longer be updated.", 400);
     }
@@ -178,7 +186,7 @@ export async function DELETE(request: Request, context: RouteContext) {
         where: {
           reportId: id,
           confirmationType: "confirmed",
-          ipHash: sessionHash,
+          ipHash: confirmationKey,
         },
         orderBy: {
           createdAt: "desc",
@@ -224,11 +232,12 @@ export async function DELETE(request: Request, context: RouteContext) {
         where: { id },
         data: {
           confirmationCount,
+          status: "Needs More Confirmation",
           lastActivityAt,
         },
       });
 
-      const nextPatch = getLifecyclePersistencePatch(nextReport);
+      const nextPatch = getLifecyclePersistencePatch(nextReport, new Date(), settings);
       if (Object.keys(nextPatch).length > 0) await tx.floodReport.update({ where: { id }, data: nextPatch });
 
       await syncIncidentAggregate(tx, report.incidentId);
@@ -244,7 +253,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("Undo window has expired.", 400);
     }
 
-    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }));
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { userId: user.id }));
   } catch (error) {
     console.error("Failed to undo report confirmation.", error);
     return errorResponse("Something went wrong while undoing the confirmation.");

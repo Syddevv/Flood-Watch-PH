@@ -7,11 +7,15 @@ test("settings load defaults and persisted values", () => {
   assert.deepEqual(settingsFromRows([]), ADMIN_SETTINGS_DEFAULTS);
   assert.equal(settingsFromRows([{ key: "recentReportHours", value: "24" }]).recentReportHours, 24);
   assert.equal(settingsFromRows([{ key: "highSeverityAlerts", value: "false" }]).highSeverityAlerts, false);
+  assert.equal(settingsFromRows([{ key: "publicReportVisibilityHours", value: "48" }]).publicReportVisibilityHours, 48);
+  assert.equal(settingsFromRows([{ key: "showLikelyRecededReports", value: "false" }]).showLikelyRecededReports, false);
+  assert.equal(settingsFromRows([{ key: "autoArchiveExpiredReports", value: "false" }]).autoArchiveExpiredReports, false);
 });
 
 test("settings reject unknown keys and invalid values", () => {
   assert.equal(parseAdminSettings({ ...ADMIN_SETTINGS_DEFAULTS, recentReportHours: 12 }), null);
   assert.equal(parseAdminSettings({ ...ADMIN_SETTINGS_DEFAULTS, centerUpdateAlerts: "false" }), null);
+  assert.equal(parseAdminSettings({ ...ADMIN_SETTINGS_DEFAULTS, publicReportVisibilityHours: 36 }), null);
   assert.equal(parseAdminSettings({ ...ADMIN_SETTINGS_DEFAULTS, disableVerification: true }), null);
 });
 

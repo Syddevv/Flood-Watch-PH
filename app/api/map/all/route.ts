@@ -5,11 +5,13 @@ import { getPublicEvacuationCenters } from "@/lib/public-evacuation-query";
 import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import {
   deriveReportLifecycleStatus,
-  isVisiblePublicLifecycleStatus,
+  isEligiblePublicReport,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
+import { getAdminSettings } from "@/lib/admin-settings-store";
+import { archiveExpiredReports } from "@/lib/report-expiration";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
 
@@ -101,6 +103,9 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
+    const settings = await getAdminSettings();
+    const now = new Date();
+    await archiveExpiredReports(settings, now);
     const parsedFilters = parseReportFilters(searchParams);
 
     if (parsedFilters.error) {
@@ -126,19 +131,19 @@ export async function GET(request: Request) {
 
     const reconciledReports = reports.map((report) => ({
       ...report,
-      status: deriveReportLifecycleStatus(report),
+      status: deriveReportLifecycleStatus(report, now, settings),
     }));
 
     const filteredReports = reconciledReports
       .filter((report: MapReportRecord) => {
-        if (report.verificationStatus === "rejected") return false;
+        if (report.verificationStatus !== "verified") return false;
         if (!isWithinBulacan(report.latitude, report.longitude)) {
           return false;
         }
 
         const lifecycleStatus = report.status as ReportLifecycleStatus;
 
-        if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+        if (!isEligiblePublicReport(report, now, settings)) {
           return false;
         }
 

@@ -1,5 +1,8 @@
 export const ADMIN_SETTINGS_DEFAULTS = {
   recentReportHours: 72,
+  publicReportVisibilityHours: 24,
+  showLikelyRecededReports: true,
+  autoArchiveExpiredReports: true,
   newReportAlerts: true,
   highSeverityAlerts: true,
   pendingReportReminders: false,
@@ -9,6 +12,9 @@ export const ADMIN_SETTINGS_DEFAULTS = {
 
 export type AdminSettingsValues = {
   recentReportHours: 24 | 48 | 72 | 168;
+  publicReportVisibilityHours: 12 | 24 | 48 | 72;
+  showLikelyRecededReports: boolean;
+  autoArchiveExpiredReports: boolean;
   newReportAlerts: boolean;
   highSeverityAlerts: boolean;
   pendingReportReminders: boolean;
@@ -24,8 +30,9 @@ export function parseAdminSettings(input: unknown): AdminSettingsValues | null {
   if (Object.keys(value).length !== ADMIN_SETTINGS_KEYS.length ||
     Object.keys(value).some((key) => !ADMIN_SETTINGS_KEYS.includes(key as keyof AdminSettingsValues))) return null;
   if (![24, 48, 72, 168].includes(value.recentReportHours as number) ||
+    ![12, 24, 48, 72].includes(value.publicReportVisibilityHours as number) ||
     ![30, 60, 180, 360].includes(value.reminderMinutes as number) ||
-    ["newReportAlerts", "highSeverityAlerts", "pendingReportReminders", "centerUpdateAlerts"].some((key) => typeof value[key] !== "boolean")) return null;
+    ["newReportAlerts", "highSeverityAlerts", "pendingReportReminders", "centerUpdateAlerts", "showLikelyRecededReports", "autoArchiveExpiredReports"].some((key) => typeof value[key] !== "boolean")) return null;
   return value as AdminSettingsValues;
 }
 

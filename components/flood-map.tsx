@@ -31,7 +31,7 @@ export const reportStatusFilterOptions = [
   { id: "active", label: "Active" },
   { id: "likely-receded", label: "Likely Receded" },
   { id: "resolved", label: "Resolved" },
-  { id: "all", label: "All" },
+  { id: "all", label: "All Reports" },
 ] as const;
 
 export type ReportStatusFilterId = (typeof reportStatusFilterOptions)[number]["id"];
@@ -54,7 +54,7 @@ export function matchesReportStatusFilter(
   }
 
   if (filter === "active") {
-    return isActiveLifecycleStatus(report.status);
+    return isActiveLifecycleStatus(report.status) || report.status === "Likely Receded";
   }
 
   if (filter === "likely-receded") {
@@ -237,7 +237,7 @@ export function FloodMap({
     },
     {
       id: "likely-receded-reports",
-      label: "Likely receded reports",
+      label: "Likely Receded · flooding may have subsided; unconfirmed",
       markerClassName:
         "bg-[var(--color-muted-foreground)] text-white shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-muted-foreground)_14%,transparent)] opacity-85",
       glyph: "R",

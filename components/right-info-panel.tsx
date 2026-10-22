@@ -329,7 +329,7 @@ export function RightInfoPanel({
   communityReportsError = null,
   onViewCommunityReport,
   onViewAlert,
-  communityReportsDisclaimer = "Community reports may be unverified.",
+  communityReportsDisclaimer = "Community reports shown here are admin verified.",
   className,
 }: RightInfoPanelProps) {
   return (

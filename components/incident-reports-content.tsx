@@ -194,6 +194,7 @@ function UndoToast({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>{toast.message}</div>
+            {toast.message === "Please log in to confirm flood reports." ? <Link href="/login?next=/incident-reports" className="font-semibold underline">Log in</Link> : null}
             {undoAvailable ? (
               <div className="flex items-center gap-3">
                 <div className="text-[0.78rem] font-medium opacity-75">
@@ -392,6 +393,7 @@ function ReportCard({
   hasResolved: boolean;
   actionLoadingId: string | null;
 }) {
+  const { user: authUser } = useAuthSession();
   const statusPresentation = getStatusPresentation(report.status);
   const freshnessBadge = getReportFreshnessBadge(report);
   const isResolved = report.status === "Resolved";
@@ -399,12 +401,12 @@ function ReportCard({
   const isBusy = actionLoadingId === report.id;
   const thumbnailUrl = report.photos[0]?.imageUrl;
   const activityLabel = getReportActivityLabel(report);
-  const canConfirm = !hasConfirmed && !isResolved && !isBusy;
-  const canResolve = !hasResolved && !isResolved && !isBusy;
-  const primaryOpensDetails = isResolved || hasConfirmed;
+  const canConfirm = Boolean(authUser) && !hasConfirmed && !isResolved && !isBusy && !report.isOriginalAuthor;
+  const canResolve = Boolean(authUser) && !hasResolved && !isResolved && !isBusy;
+  const primaryOpensDetails = isResolved || hasConfirmed || Boolean(report.isOriginalAuthor);
   const primaryActionLabel = isResolved
     ? "View details"
-    : hasConfirmed
+      : hasConfirmed || report.isOriginalAuthor
       ? "View details"
       : isBusy
         ? "Updating"
@@ -501,8 +503,11 @@ function ReportCard({
             <UserRound aria-hidden="true" className="h-3.25 w-3.25 shrink-0" />
             <span className="min-w-0 truncate">Reported by {report.reporter}</span>
           </div>
+          {isLikelyReceded ? <p className="mt-1 text-[0.7rem] leading-4 text-[var(--color-muted-foreground)]">Flooding may have subsided. Current conditions have not been reconfirmed.</p> : null}
         </div>
       </div>
+      {report.isOriginalAuthor ? <p className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">You cannot confirm your own report.</p> : null}
+      {!authUser ? <p className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]"><Link href="/login?next=/incident-reports" className="underline">Log in</Link> to confirm or mark reports as receded.</p> : null}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.74rem] leading-4 text-[var(--color-muted-foreground)]">
@@ -519,7 +524,7 @@ function ReportCard({
           <button
             type="button"
             onClick={canConfirm ? () => onConfirm(report.id) : () => onView(report)}
-            disabled={isBusy}
+            disabled={isBusy || (!authUser && !primaryOpensDetails)}
             className={cn(
               "inline-flex h-7 items-center justify-center gap-1.25 whitespace-nowrap rounded-[9px] px-2.5 text-[0.74rem] font-semibold leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]",
               isResolved || hasConfirmed
@@ -693,8 +698,7 @@ export function IncidentReportsContent() {
         const nextResolved: Record<string, boolean> = {};
 
         for (const report of nextReports) {
-          nextConfirmed[report.id] =
-            localStorage.getItem(buildStoredActionKey("confirmed", report.id)) === "true";
+          nextConfirmed[report.id] = Boolean(report.hasConfirmed);
           nextResolved[report.id] =
             localStorage.getItem(buildStoredActionKey("resolved", report.id)) === "true";
         }
@@ -937,6 +941,14 @@ export function IncidentReportsContent() {
     if (confirmedReportIds[reportId]) {
       return;
     }
+    if (!authUser) {
+      setToast({ tone: "error", message: "Please log in to confirm flood reports." });
+      return;
+    }
+    if (reports.find((report) => report.id === reportId)?.isOriginalAuthor) {
+      setToast({ tone: "error", message: "You cannot confirm your own report." });
+      return;
+    }
 
     const previousReports = reports;
     const previousConfirmedReportIds = confirmedReportIds;
@@ -982,7 +994,7 @@ export function IncidentReportsContent() {
       setReports(previousReports);
       if (
         error instanceof Error &&
-        error.message === "This report has already been updated from this browser."
+        error.message === "You have already confirmed this report."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("confirmed", reportId), "true");
@@ -999,7 +1011,7 @@ export function IncidentReportsContent() {
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message === "This report has already been updated from this browser."
+            ? error.message === "You have already confirmed this report."
               ? REPORT_ACTION_MESSAGES.duplicate
               : error.message
             : REPORT_ACTION_MESSAGES.error,
@@ -1011,6 +1023,10 @@ export function IncidentReportsContent() {
 
   async function handleResolveReport(reportId: string) {
     if (resolvedReportIds[reportId]) {
+      return;
+    }
+    if (!authUser) {
+      setToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
       return;
     }
 

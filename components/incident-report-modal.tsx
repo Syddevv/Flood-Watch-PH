@@ -35,6 +35,7 @@ import {
 import { formatCountLabel, formatRelativeTime } from "@/lib/reporting";
 import type { IncidentReport, WeatherLocationResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAuthSession } from "@/components/auth-session-provider";
 
 import type { ReportUpdateItem } from "@/lib/report-types";
 import {
@@ -162,6 +163,7 @@ export function IncidentReportModal({
   hasResolved,
   actionLoading,
 }: IncidentReportModalProps) {
+  const { user: authUser } = useAuthSession();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [nearbyWeather, setNearbyWeather] = useState<WeatherLocationResult | null>(null);
   const [nearbyWeatherLoading, setNearbyWeatherLoading] = useState(false);
@@ -373,8 +375,8 @@ export function IncidentReportModal({
   const confirmLoading = isReportActionLoading(actionLoading, report.id, "confirmed");
   const resolveLoading = isReportActionLoading(actionLoading, report.id, "resolved");
   const actionBusy = isReportActionLoading(actionLoading, report.id);
-  const confirmDisabled = actionBusy || hasConfirmed || isResolved;
-  const resolveDisabled = actionBusy || hasResolved || isResolved;
+  const confirmDisabled = !authUser || actionBusy || hasConfirmed || isResolved || report.isOriginalAuthor;
+  const resolveDisabled = !authUser || actionBusy || hasResolved || isResolved;
   const directionsUrl = buildReportDirectionsUrl(report);
   const evacuationCentersHref = buildReportEvacuationCentersHref(report);
   const communitySignal = getReportCommunitySignal(report);
@@ -509,6 +511,7 @@ export function IncidentReportModal({
                 <span className={cn("h-2 w-2 rounded-full", statusPresentation.dotClassName)} />
                 <span>{statusPresentation.label}</span>
               </span>
+              {report.status === "Likely Receded" ? <span className="w-full text-[0.72rem] text-[var(--color-muted-foreground)]">Flooding may have subsided. Current conditions have not been reconfirmed.</span> : null}
               <span
                 className={cn(
                   "rounded-full border px-2 py-0.75 text-[0.66rem] font-semibold md:px-2.5 md:py-1 md:text-[0.72rem]",
@@ -1052,6 +1055,7 @@ export function IncidentReportModal({
                   })}
                 </span>
               </button>
+              {report.isOriginalAuthor ? <p className="text-[0.7rem] text-[var(--color-muted-foreground)] min-[360px]:col-span-2">You cannot confirm your own report.</p> : null}
               <button
                 type="button"
                 aria-label="Mark water as receded for this report"
@@ -1072,6 +1076,7 @@ export function IncidentReportModal({
                   })}
                 </span>
               </button>
+              {!authUser ? <a href="/login" className="text-[0.72rem] font-medium text-[var(--color-muted-foreground)] underline min-[360px]:col-span-2">Log in to confirm or mark reports as receded.</a> : null}
 
               {onShareReport ? (
                 <button

@@ -1,4 +1,5 @@
 import { OUTSIDE_BULACAN_ERROR_MESSAGE, isWithinBulacan } from "@/lib/bulacan-scope";
+import { accountConfirmationKey } from "@/lib/report-confirmation-identity";
 import { uploadReportImageToCloudinary } from "@/lib/cloudinary";
 import {
   REPORT_MULTIPART_MAX_BYTES,
@@ -34,6 +35,7 @@ export type ReportUpdateRecord = {
 export type ReportConfirmationRecord = {
   confirmationType: string;
   createdAt: Date;
+  ipHash?: string | null;
 };
 
 export type ReportIdentity = {
@@ -93,6 +95,7 @@ export const reportDetailInclude = {
     select: {
       confirmationType: true,
       createdAt: true,
+      ipHash: true,
     },
   },
 } as const;
@@ -103,6 +106,7 @@ export const reportListInclude = {
     select: {
       confirmationType: true,
       createdAt: true,
+      ipHash: true,
     },
   },
 } as const;
@@ -171,6 +175,8 @@ export function serializeReportRecord<T extends PublicReportRecord>(
     onsiteEligible: Boolean(report.onsitePolicyVersion && report.onsiteEligibleAt),
     reviewFeedback: report.reviewPublicMessage ? { message: report.reviewPublicMessage, recordedAt: report.reviewedAt?.toISOString() ?? null } : null,
     isOwner: owner,
+    isOriginalAuthor: Boolean(report.userId && identity.userId === report.userId),
+    hasConfirmed: Boolean(identity.userId && confirmations.some((entry) => entry.confirmationType === "confirmed" && entry.ipHash === accountConfirmationKey(identity.userId!))),
     lastConfirmedAt: lastConfirmedAt?.toISOString() ?? null,
     lastResolvedConfirmationAt: lastResolvedConfirmationAt?.toISOString() ?? null,
   };

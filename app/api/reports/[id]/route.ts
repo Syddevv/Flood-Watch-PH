@@ -1,13 +1,15 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { getAdminSettings } from "@/lib/admin-settings-store";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 import {
   getLifecyclePersistencePatch,
+  hasReportVisibilityExpired,
+  isEligiblePublicReport,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
 import {
   REPORT_OWNER_FORBIDDEN_MESSAGE,
-  canAccessArchivedReport,
   isReportOwner,
   parseReportDetailsFormData,
   parseReportRequestFormData,
@@ -39,6 +41,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { id } = await context.params;
     const includeArchived = new URL(request.url).searchParams.get("includeArchived") === "true";
     const identity = await getReportIdentityFromRequest(request);
+    const settings = await getAdminSettings();
 
     const report = await prisma.floodReport.findUnique({
       where: { id },
@@ -49,11 +52,11 @@ export async function GET(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (report.verificationStatus === "rejected" && !isReportOwner(report, identity)) {
+    if (report.verificationStatus !== "verified" && !isReportOwner(report, identity)) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    const patch = getLifecyclePersistencePatch(report);
+    const patch = getLifecyclePersistencePatch(report, new Date(), settings);
     const reconciledReport =
       Object.keys(patch).length > 0
         ? await prisma.floodReport.update({
@@ -63,10 +66,9 @@ export async function GET(request: Request, context: RouteContext) {
           })
         : report;
 
-    if (
-      (reconciledReport.status as ReportLifecycleStatus) === "Archived" &&
-      !canAccessArchivedReport(reconciledReport, identity, includeArchived)
-    ) {
+    const ownerCanView = isReportOwner(reconciledReport, identity) &&
+      (includeArchived || ((reconciledReport.status as ReportLifecycleStatus) !== "Archived" && !hasReportVisibilityExpired(reconciledReport, new Date(), settings)));
+    if (!isEligiblePublicReport(reconciledReport, new Date(), settings) && !ownerCanView) {
       return errorResponse("Flood report not found.", 404);
     }
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuthSession } from "@/components/auth-session-provider";
 import {
   AlertTriangle,
   LoaderCircle,
@@ -58,7 +60,7 @@ function ReportToast({
         )}
       >
         <div className="flex items-start justify-between gap-3">
-          <div>{toast.message}</div>
+          <div>{toast.message}{toast.message === "Please log in to confirm flood reports." ? <Link href="/login" className="ml-2 font-semibold underline">Log in</Link> : null}</div>
           <button
             type="button"
             aria-label="Dismiss notification"
@@ -75,6 +77,7 @@ function ReportToast({
 
 export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
   const router = useRouter();
+  const { user: authUser } = useAuthSession();
   const reportSessionReady = useReportSessionReady();
   const [report, setReport] = useState<IncidentReport | null>(null);
   const [updates, setUpdates] = useState<ReportUpdateItem[]>([]);
@@ -140,7 +143,7 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
 
         if (typeof window !== "undefined") {
           setHasConfirmed(
-            localStorage.getItem(buildStoredActionKey("confirmed", nextReport.id)) === "true",
+            Boolean(nextReport.hasConfirmed),
           );
           setHasResolved(
             localStorage.getItem(buildStoredActionKey("resolved", nextReport.id)) === "true",
@@ -202,6 +205,14 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
     if (hasConfirmed) {
       return;
     }
+    if (!authUser) {
+      setToast({ tone: "error", message: "Please log in to confirm flood reports." });
+      return;
+    }
+    if (report?.isOriginalAuthor) {
+      setToast({ tone: "error", message: "You cannot confirm your own report." });
+      return;
+    }
 
     setActionLoading({ reportId: nextReportId, type: "confirmed" });
 
@@ -227,7 +238,7 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
       console.error("Failed to confirm public report.", error);
       if (
         error instanceof Error &&
-        error.message === "This report has already been updated from this browser."
+        error.message === "You have already confirmed this report."
       ) {
         if (typeof window !== "undefined") {
           localStorage.setItem(buildStoredActionKey("confirmed", nextReportId), "true");
@@ -239,7 +250,7 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
         tone: "error",
         message:
           error instanceof Error && error.message
-            ? error.message === "This report has already been updated from this browser."
+            ? error.message === "You have already confirmed this report."
               ? REPORT_ACTION_MESSAGES.duplicate
               : error.message
             : REPORT_ACTION_MESSAGES.error,
@@ -251,6 +262,10 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
 
   async function handleResolveReport(nextReportId: string) {
     if (hasResolved) {
+      return;
+    }
+    if (!authUser) {
+      setToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
       return;
     }
 

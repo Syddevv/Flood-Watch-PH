@@ -119,17 +119,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
   const confirmationCount = report.confirmationCount ?? 0;
   const resolvedCount = report.resolvedCount ?? 0;
   const severityTone = getReportSeverityTone(report.severity);
-  const derivedStatus = deriveCommunityStatus({
-    status: report.status,
-    severity: report.severity,
-    confirmationCount,
-    resolvedCount,
-    createdAt,
-    updatedAt,
-    lastActivityAt,
-    resolvedAt: report.resolvedAt,
-    archivedAt: report.archivedAt,
-  });
+  const derivedStatus = report.status === "Archived" ? "Resolved" : report.status === "Likely Resolved" ? "Likely Receded" : report.status === "Active" || report.status === "Monitoring" ? deriveCommunityStatus({ status: report.status, severity: report.severity, confirmationCount, resolvedCount, createdAt, updatedAt, lastActivityAt, resolvedAt: report.resolvedAt, archivedAt: report.archivedAt }) : report.status;
 
   return {
     id: report.id,
@@ -168,6 +158,8 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
     lastResolvedConfirmationAt: report.lastResolvedConfirmationAt ?? null,
     sourceType: report.sourceType,
     isOwner: Boolean(report.isOwner),
+    isOriginalAuthor: Boolean(report.isOriginalAuthor),
+    hasConfirmed: Boolean(report.hasConfirmed),
     sourceCategory: getSourceCategoryFromReportType(report.sourceType),
     sourceLabel: getSourceLabelFromReportType(report.sourceType),
     resolvedAgo:

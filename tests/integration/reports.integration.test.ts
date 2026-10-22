@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 
 import { OUTSIDE_BULACAN_ERROR_MESSAGE } from "@/lib/bulacan-scope";
 
@@ -10,6 +12,7 @@ import {
   integrationTest,
   startTestServer,
   stopServer,
+  testDatabaseUrl,
 } from "./test-server";
 
 async function submitReport(
@@ -47,18 +50,14 @@ integrationTest(
 
     let reportId = "";
     let ownerCookie = "";
+    const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: testDatabaseUrl! }) });
 
     try {
 
-      // Creating a report now requires real authentication (Priority 1);
-      // the other/third sessions never create anything - they only
-      // confirm/resolve/attempt-delete an existing report - so they stay
-      // anonymous, which also exercises the dual-mode ownership check
-      // (a real account's report vs. anonymous-session confirmers).
+      // Anonymous visitors may read reports but cannot confirm or mark them receded.
       ownerCookie = await createAuthenticatedSession(baseUrl, ownerAddress);
       const otherCookie = await createSession(baseUrl, otherAddress);
       const thirdAddress = `integration-third-${runId}`;
-      const thirdCookie = await createSession(baseUrl, thirdAddress);
 
       const bypassAddress = `integration-onsite-bypass-${runId}`;
       const bypassCookie = await createAuthenticatedSession(baseUrl, bypassAddress);
@@ -109,6 +108,9 @@ integrationTest(
       assert.equal(reportPayload.data?.isOwner, true);
       assert.ok(reportPayload.data?.id);
       reportId = reportPayload.data.id;
+      await db.floodReport.update({ where: { id: reportId }, data: { verificationStatus: "verified" } });
+      const otherAuthCookie = await createAuthenticatedSession(baseUrl, `integration-confirm-${runId}`);
+      const thirdAuthCookie = await createAuthenticatedSession(baseUrl, `integration-third-confirm-${runId}`);
 
       const otherDelete = await fetch(`${baseUrl}/api/reports/${reportId}`, {
         method: "DELETE",
@@ -209,11 +211,13 @@ integrationTest(
           method: "POST",
           headers: {
             Origin: baseUrl,
-            Cookie: otherCookie,
+            Cookie: otherAuthCookie,
             "X-Forwarded-For": otherAddress,
           },
         });
 
+      assert.equal((await fetch(`${baseUrl}/api/reports/${reportId}/confirm`, { method: "POST", headers: { Origin: baseUrl, Cookie: otherCookie } })).status, 401);
+      assert.equal((await fetch(`${baseUrl}/api/reports/${reportId}/confirm`, { method: "POST", headers: { Origin: baseUrl, Cookie: ownerCookie } })).status, 403);
       assert.equal((await confirmRequest()).status, 200);
       assert.equal((await confirmRequest()).status, 409);
 
@@ -221,7 +225,7 @@ integrationTest(
         method: "POST",
         headers: {
           Origin: baseUrl,
-          Cookie: thirdCookie,
+          Cookie: thirdAuthCookie,
           "X-Forwarded-For": thirdAddress,
         },
       });
@@ -232,7 +236,7 @@ integrationTest(
           method: "DELETE",
           headers: {
             Origin: baseUrl,
-            Cookie: otherCookie,
+            Cookie: otherAuthCookie,
             "X-Forwarded-For": otherAddress,
           },
         }),
@@ -240,7 +244,7 @@ integrationTest(
           method: "DELETE",
           headers: {
             Origin: baseUrl,
-            Cookie: thirdCookie,
+            Cookie: thirdAuthCookie,
             "X-Forwarded-For": thirdAddress,
           },
         }),
@@ -265,15 +269,16 @@ integrationTest(
           },
         });
 
-      assert.equal((await resolveRequest(otherCookie, otherAddress)).status, 200);
-      assert.equal((await resolveRequest(thirdCookie, thirdAddress)).status, 200);
+      assert.equal((await resolveRequest(otherCookie, otherAddress)).status, 401);
+      assert.equal((await resolveRequest(otherAuthCookie, otherAddress)).status, 200);
+      assert.equal((await resolveRequest(thirdAuthCookie, thirdAddress)).status, 200);
 
       const [firstResolveUndo, secondResolveUndo] = await Promise.all([
         fetch(`${baseUrl}/api/reports/${reportId}/resolve`, {
           method: "DELETE",
           headers: {
             Origin: baseUrl,
-            Cookie: otherCookie,
+            Cookie: otherAuthCookie,
             "X-Forwarded-For": otherAddress,
           },
         }),
@@ -281,7 +286,7 @@ integrationTest(
           method: "DELETE",
           headers: {
             Origin: baseUrl,
-            Cookie: thirdCookie,
+            Cookie: thirdAuthCookie,
             "X-Forwarded-For": thirdAddress,
           },
         }),
@@ -342,6 +347,7 @@ integrationTest(
         }).catch(() => undefined);
       }
       await stopServer(server);
+      await db.$disconnect();
     }
   },
 );

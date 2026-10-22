@@ -297,6 +297,8 @@ export type IncidentReport = {
   lastResolvedConfirmationAt?: string | null;
   sourceType: "Community" | "Official" | "System";
   isOwner: boolean;
+  isOriginalAuthor?: boolean;
+  hasConfirmed?: boolean;
   sourceCategory: Exclude<SourceCategory, "provider">;
   sourceLabel: SourceLabel;
   resolvedAgo?: string;

@@ -11,7 +11,7 @@ import { findNearestMatchingReport } from "@/lib/incident-matching";
 import { createBoundingBox } from "@/lib/report-geo";
 import {
   deriveReportLifecycleStatus,
-  isVisiblePublicLifecycleStatus,
+  isEligiblePublicReport,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
@@ -38,6 +38,7 @@ import { protectApiRequest } from "@/lib/request-security";
 import { validateOnsiteReportEvidence } from "@/lib/onsite-report-policy";
 import { logApiError } from "@/lib/structured-logger";
 import { createAdminNotifications, getAdminSettings } from "@/lib/admin-settings-store";
+import { archiveExpiredReports } from "@/lib/report-expiration";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -116,6 +117,7 @@ type ReportListRecord = {
   confirmations?: Array<{
     confirmationType: string;
     createdAt: Date;
+    ipHash: string | null;
   }>;
 };
 
@@ -166,10 +168,10 @@ function buildReportWhereClause(filters: {
   };
 }
 
-function reconcileReportLifecycle(report: ReportListRecord): ReportListRecord {
+function reconcileReportLifecycle(report: ReportListRecord, settings: Awaited<ReturnType<typeof getAdminSettings>>, now: Date): ReportListRecord {
   return {
     ...report,
-    status: deriveReportLifecycleStatus(report) as ReportLifecycleStatus,
+    status: deriveReportLifecycleStatus(report, now, settings) as ReportLifecycleStatus,
   };
 }
 
@@ -188,6 +190,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const parsedFilters = parseReportFilters(searchParams);
     const identity = await getReportIdentityFromRequest(request);
+    const settings = await getAdminSettings();
+    const now = new Date();
+    await archiveExpiredReports(settings, now);
 
     if (parsedFilters.error) {
       return errorResponse(parsedFilters.error, 400);
@@ -235,6 +240,7 @@ export async function GET(request: Request) {
         reportId: true,
         confirmationType: true,
         createdAt: true,
+        ipHash: true,
       },
     });
     const confirmationsByReportId = new Map<
@@ -247,6 +253,7 @@ export async function GET(request: Request) {
       existing.push({
         confirmationType: confirmation.confirmationType,
         createdAt: confirmation.createdAt,
+        ipHash: confirmation.ipHash,
       });
       confirmationsByReportId.set(confirmation.reportId, existing);
     }
@@ -258,17 +265,17 @@ export async function GET(request: Request) {
       }),
     );
 
-    const reconciledReports = reportsWithConfirmations.map(reconcileReportLifecycle);
+    const reconciledReports = reportsWithConfirmations.map((report) => reconcileReportLifecycle(report, settings, now));
 
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       if (!isWithinBulacan(report.latitude, report.longitude)) {
         return false;
       }
-      if (report.verificationStatus === "rejected" && !isReportOwner(report, identity)) return false;
+      if (report.verificationStatus !== "verified") return isReportOwner(report, identity);
 
       const lifecycleStatus = report.status as ReportLifecycleStatus;
 
-      if (!isVisiblePublicLifecycleStatus(lifecycleStatus)) {
+      if (!isEligiblePublicReport(report, now, settings)) {
         return canAccessArchivedReport(report, identity, includeArchived);
       }
 

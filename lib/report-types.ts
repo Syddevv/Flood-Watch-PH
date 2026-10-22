@@ -45,6 +45,8 @@ export type ReportRecord = {
   lastConfirmedAt?: string | null;
   lastResolvedConfirmationAt?: string | null;
   isOwner: boolean;
+  isOriginalAuthor?: boolean;
+  hasConfirmed?: boolean;
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
