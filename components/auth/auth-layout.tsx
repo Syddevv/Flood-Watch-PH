@@ -3,6 +3,9 @@ import { ArrowLeft } from "lucide-react";
 
 import { BrandMark } from "@/components/brand-mark";
 
+const DESKTOP_WAVE = "M47 -4C22 60 19 117 37 178C56 243 48 279 29 338C12 392 25 449 43 505C65 574 58 606 35 667C24 703 25 737 39 764";
+const MOBILE_WAVE = "M-4 22C105 3 165 12 252 28C337 43 391 27 465 15C541 2 590 8 657 21C742 37 809 18 891 12C945 8 980 15 1004 22";
+
 function AuthBrandPanel() {
   return (
     <div className="relative isolate flex min-h-[184px] flex-col items-center justify-center overflow-hidden bg-[linear-gradient(145deg,#07366e_0%,#1265b8_55%,#084586_100%)] px-6 pb-9 pt-5 text-center text-white lg:min-h-0 lg:px-12 lg:py-12">
@@ -42,10 +45,37 @@ function AuthBrandPanel() {
       </p>
 
       <svg className="pointer-events-none absolute bottom-[-1px] left-0 h-9 w-full lg:hidden" viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 27C151 -1 270 54 426 28S727 5 1000 28V60H0Z" fill="var(--color-surface)" />
+        <defs>
+          <filter id="auth-wave-glow-mobile" x="-10%" y="-100%" width="120%" height="300%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
+          <linearGradient id="auth-wave-edge-mobile" x1="0" y1="0" x2="1" y2="0">
+            <stop stopColor="#cceeff" stopOpacity="0.14" />
+            <stop offset="0.46" stopColor="#f1fbff" stopOpacity="0.32" />
+            <stop offset="1" stopColor="#b7e7ff" stopOpacity="0.17" />
+          </linearGradient>
+        </defs>
+        <path d={MOBILE_WAVE} fill="none" stroke="#a4e4ff" strokeOpacity="0.18" strokeWidth="14" filter="url(#auth-wave-glow-mobile)" />
+        <path d={MOBILE_WAVE} fill="none" stroke="#b9ebff" strokeOpacity="0.12" strokeWidth="5" />
+        <path d={`${MOBILE_WAVE}L1004 60H-4Z`} fill="var(--color-surface)" />
+        <path d={MOBILE_WAVE} fill="none" stroke="url(#auth-wave-edge-mobile)" strokeWidth="1.2" />
       </svg>
       <svg className="pointer-events-none absolute right-[-1px] top-0 hidden h-full w-[74px] lg:block" viewBox="0 0 74 760" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M45 0C7 110 70 180 40 290S8 443 41 533S75 681 37 760H74V0Z" fill="var(--color-surface)" />
+        <defs>
+          <filter id="auth-wave-glow-desktop" x="-100%" y="-10%" width="300%" height="120%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <linearGradient id="auth-wave-edge-desktop" x1="0" y1="0" x2="0" y2="1">
+            <stop stopColor="#cceeff" stopOpacity="0.14" />
+            <stop offset="0.38" stopColor="#f1fbff" stopOpacity="0.34" />
+            <stop offset="0.74" stopColor="#b7e7ff" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#e0f5ff" stopOpacity="0.25" />
+          </linearGradient>
+        </defs>
+        <path d={DESKTOP_WAVE} fill="none" stroke="#a4e4ff" strokeOpacity="0.18" strokeWidth="18" filter="url(#auth-wave-glow-desktop)" />
+        <path d={DESKTOP_WAVE} fill="none" stroke="#b9ebff" strokeOpacity="0.11" strokeWidth="6" />
+        <path d={`${DESKTOP_WAVE}L74 764V-4Z`} fill="var(--color-surface)" />
+        <path d={DESKTOP_WAVE} fill="none" stroke="url(#auth-wave-edge-desktop)" strokeWidth="1.2" />
       </svg>
     </div>
   );
