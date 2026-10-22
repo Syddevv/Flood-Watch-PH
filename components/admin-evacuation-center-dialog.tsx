@@ -280,8 +280,8 @@ export function AdminEvacuationCenterDialog({ centerId, onClose, onSaved, onArch
             </section>
 
             <details ref={mapRef} className="rounded-lg border border-[var(--color-border)] px-3 py-3">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><MapPin aria-hidden="true" className="h-4 w-4" />Map Location</span>{draft.latitude && draft.longitude ? <span className="text-xs font-normal text-[var(--color-muted-foreground)]">Location available</span> : null}</summary>
-              <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">Exact coordinates are required to display this center on the map.</p>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><MapPin aria-hidden="true" className="h-4 w-4" />Map Location</span>{draft.latitude && draft.longitude ? <span className="text-xs font-normal text-[var(--color-muted-foreground)]">Coordinates entered</span> : null}</summary>
+              <p className="mt-3 text-xs leading-5 text-[var(--color-muted-foreground)]">Saving exact Bulacan coordinates places this center on the admin Live Operations Map. The public Flood Map also requires Facility Verification set to Official Publication Found or Verified, an official HTTPS source URL, and the matching source research or last checked date. Coordinates alone do not publish a center.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">{input("Latitude", "latitude", "number")}{input("Longitude", "longitude", "number")}</div>
             </details>
 
