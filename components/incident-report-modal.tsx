@@ -420,12 +420,12 @@ export function IncidentReportModal({
           </button>
 
           {currentPhoto?.imageUrl ? (
-            <div className="relative h-[clamp(180px,52vw,240px)] shrink-0 overflow-hidden rounded-t-[18px] rounded-b-none bg-[var(--color-panel)] md:aspect-[16/8.4] md:h-auto md:rounded-none">
+            <div className="relative h-[clamp(180px,52vw,240px)] shrink-0 overflow-hidden rounded-t-[18px] rounded-b-none bg-slate-950 md:aspect-[16/8.4] md:h-auto md:rounded-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentPhoto.imageUrl}
                 alt={currentPhoto.label}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
               />
 
             {photos.length > 1 ? (
