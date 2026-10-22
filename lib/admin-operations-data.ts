@@ -2,6 +2,7 @@ import "server-only";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { MONITORING_REPORT_STATUSES, RECENT_REPORT_WINDOW_MS } from "@/lib/admin-operations-policy";
+import { getAdminSettings } from "@/lib/admin-settings-store";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { currentCenterOpeningStatus } from "@/lib/emergency-resources";
 import { prisma } from "@/lib/prisma";
@@ -37,6 +38,7 @@ export type OperationsCenter = {
 
 export type OperationsSnapshot = {
   fetchedAt: string;
+  recentReportHours: number;
   summary: {
     reports: number;
     awaitingVerification: number;
@@ -77,8 +79,10 @@ function toReport(report: {
 
 export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> {
   const fetchedAt = new Date();
-  const recentSince = new Date(fetchedAt.getTime() - RECENT_REPORT_WINDOW_MS);
+  const { recentReportHours } = await getAdminSettings();
+  const recentSince = new Date(fetchedAt.getTime() - recentReportHours * 60 * 60 * 1000);
   const recentReportWhere = { archivedAt: null, createdAt: { gte: recentSince, lte: fetchedAt }, status: { in: activeStatuses }, verificationStatus: { not: "rejected" } };
+  const verifiedConditionWhere = { ...recentReportWhere, createdAt: { gte: new Date(fetchedAt.getTime() - RECENT_REPORT_WINDOW_MS), lte: fetchedAt }, verificationStatus: "verified" };
   const pendingWhere = { ...recentReportWhere, verificationStatus: "unreviewed" };
   const [
     reports, awaitingVerification, verifiedReports, activeVerifiedConditions, activeVerifiedHigh,
@@ -87,8 +91,8 @@ export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> 
     prisma.floodReport.count(),
     prisma.floodReport.count({ where: { archivedAt: null, verificationStatus: "unreviewed" } }),
     prisma.floodReport.count({ where: { verificationStatus: "verified" } }),
-    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, reports: { some: { ...recentReportWhere, verificationStatus: "verified" } } } }),
-    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, severity: { in: ["High", "Critical"] }, reports: { some: { ...recentReportWhere, verificationStatus: "verified" } } } }),
+    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, reports: { some: verifiedConditionWhere } } }),
+    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, severity: { in: ["High", "Critical"] }, reports: { some: verifiedConditionWhere } } }),
     prisma.evacuationCenter.count({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } } }),
     prisma.evacuationCenter.findMany({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], select: { id: true, name: true, address: true, barangay: true, city: true, verificationStatus: true, status: true, availabilityConfirmedAt: true, estimatedCapacity: true, latitude: true, longitude: true, updatedAt: true } }),
     prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: { not: "rejected" } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 501, select: reportSelect }),
@@ -118,6 +122,7 @@ export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> 
 
   return {
     fetchedAt: fetchedAt.toISOString(),
+    recentReportHours,
     summary: {
       reports, awaitingVerification, verifiedReports, activeVerifiedConditions, activeVerifiedHigh, centers,
       municipalitiesWithCenters,

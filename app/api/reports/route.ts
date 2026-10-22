@@ -37,10 +37,24 @@ import { getReportIdentityFromRequest } from "@/lib/report-identity";
 import { protectApiRequest } from "@/lib/request-security";
 import { validateOnsiteReportEvidence } from "@/lib/onsite-report-policy";
 import { logApiError } from "@/lib/structured-logger";
+import { createAdminNotifications, getAdminSettings } from "@/lib/admin-settings-store";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const MAX_REPORTS_TO_PROCESS = 500;
+
+async function notifyNewReport(tx: PrismaTransactionClient, report: { id: string; title: string; locationName: string; severity: string; createdAt: Date }) {
+  const settings = await getAdminSettings(tx);
+  const detail = `${report.title} · ${report.locationName} · Submitted ${report.createdAt.toISOString()} · Pending verification`;
+  if (settings.newReportAlerts) await createAdminNotifications(tx, {
+    type: "new_flood_report", title: "New flood report awaiting review", detail,
+    targetType: "FloodReport", targetId: report.id, dedupeKey: `new-report:${report.id}`,
+  });
+  if (settings.highSeverityAlerts && ["High", "Critical"].includes(report.severity)) await createAdminNotifications(tx, {
+    type: "high_severity_report", title: `${report.severity} severity report · unverified`, detail,
+    targetType: "FloodReport", targetId: report.id, priority: "urgent", dedupeKey: `high-report:${report.id}`,
+  });
+}
 
 function buildReportListResponse(
   data: ReportListRecord[],
@@ -493,6 +507,7 @@ export async function POST(request: Request) {
             }),
           ]);
 
+          await notifyNewReport(tx, createdReport);
           return {
             report: createdReport,
             incident: { id: updatedIncident.id, matchedExisting: true as const, contributingReportCount: updatedIncident.reportCount },
@@ -542,6 +557,7 @@ export async function POST(request: Request) {
           include: reportListInclude,
         });
 
+        await notifyNewReport(tx, createdReport);
         return {
           report: createdReport,
           incident: {

@@ -4,10 +4,11 @@ export const MONITORING_REPORT_STATUSES = ["Needs More Confirmation", "Confirmed
 export function isRecentMonitoringReport(
   report: { createdAt: string; status: string; verificationStatus: string },
   now: number,
+  windowMs = RECENT_REPORT_WINDOW_MS,
 ) {
   const submittedAt = Date.parse(report.createdAt);
   return Number.isFinite(submittedAt) && submittedAt <= now &&
-    submittedAt >= now - RECENT_REPORT_WINDOW_MS &&
+    submittedAt >= now - windowMs &&
     report.verificationStatus !== "rejected" &&
     MONITORING_REPORT_STATUSES.some((status) => status === report.status);
 }

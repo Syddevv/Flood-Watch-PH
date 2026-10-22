@@ -2,6 +2,7 @@ import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-respon
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { parseCenterPayload, parseOperationalConfirmation } from "@/lib/admin-evacuation";
 import { prisma } from "@/lib/prisma";
+import { createAdminNotifications, getAdminSettings } from "@/lib/admin-settings-store";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -43,6 +44,11 @@ export async function PATCH(request: Request, context: Context) {
     if (updated.count !== 1) return { error: "This center changed. Refresh before saving.", status: 409 } as const;
     const center = await tx.evacuationCenter.findUniqueOrThrow({ where: { id } });
     await tx.adminAuditLog.create({ data: { actorUserId: auth.user.id, action: "ADMIN_EVACUATION_CENTER_UPDATED", targetType: "EvacuationCenter", targetId: id, requestId: request.headers.get("x-request-id"), metadata: { previous: JSON.parse(JSON.stringify(current)), next: JSON.parse(JSON.stringify(center)), operationalConfirmation: confirmation.confirmedAt ? { at: confirmation.confirmedAt.toISOString(), evidenceUrl: confirmation.evidenceUrl, directNote: confirmation.directNote } : null } } });
+    if ((await getAdminSettings(tx)).centerUpdateAlerts) await createAdminNotifications(tx, {
+      type: "evacuation_center_updated", title: "Evacuation center updated",
+      detail: `${center.name} · ${center.city} · Status: ${center.status} · Verification: ${center.verificationStatus}`,
+      targetType: "EvacuationCenter", targetId: id, dedupeKey: `center-update:${id}:${center.updatedAt.toISOString()}`,
+    });
     return { center } as const;
   });
   if (result.error) return adminErrorResponse(request, result.error, result.status);

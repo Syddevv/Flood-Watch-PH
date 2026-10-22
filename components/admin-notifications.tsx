@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type Notification = { id: string; title: string; detail: string; targetType: string | null; targetId: string | null; readAt: string | null; createdAt: string };
@@ -43,6 +44,6 @@ export function AdminNotifications() {
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={unreadOnly} onChange={(event) => setUnreadOnly(event.target.checked)} />Unread only</label>
     {loading && !notifications.length && <p role="status">Loading notifications…</p>}
     {!loading && !visible.length && <p className="rounded-xl border border-[var(--color-border)] p-6 text-sm">No {unreadOnly ? "unread " : ""}notifications.</p>}
-    <ul className="space-y-3">{visible.map((item) => <li key={item.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"><div className="flex items-start gap-3"><Bell className="mt-1 h-4 w-4 shrink-0" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="rounded bg-[var(--color-primary)] px-2 py-0.5 text-xs text-white">New</span>}</div><p className="mt-1 text-sm">{item.detail}</p><time className="mt-1 block text-xs text-[var(--color-muted-foreground)]">{new Date(item.createdAt).toLocaleString("en-PH")}</time><div className="mt-3 flex flex-wrap gap-3">{!item.readAt && <button type="button" onClick={() => void markRead(item.id)} className="text-sm underline">Mark read</button>}</div></div></div></li>)}</ul>
+    <ul className="space-y-3">{visible.map((item) => <li key={item.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"><div className="flex items-start gap-3"><Bell className="mt-1 h-4 w-4 shrink-0" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="rounded bg-[var(--color-primary)] px-2 py-0.5 text-xs text-white">New</span>}</div><p className="mt-1 text-sm">{item.detail}</p><time className="mt-1 block text-xs text-[var(--color-muted-foreground)]">{new Date(item.createdAt).toLocaleString("en-PH")}</time><div className="mt-3 flex flex-wrap gap-3">{item.targetType === "FloodReport" && item.targetId ? <Link href={`/admin/reports/${item.targetId}`} className="text-sm font-semibold text-[var(--color-primary)] hover:underline">Review report →</Link> : null}{item.targetType === "EvacuationCenter" && item.targetId ? <Link href={`/admin/data/${item.targetId}`} className="text-sm font-semibold text-[var(--color-primary)] hover:underline">Manage center →</Link> : null}{!item.readAt && <button type="button" onClick={() => void markRead(item.id)} className="text-sm underline">Mark read</button>}</div></div></div></li>)}</ul>
   </div>;
 }

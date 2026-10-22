@@ -1,6 +1,7 @@
 import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { getAdminSettings } from "@/lib/admin-settings-store";
 import type { Prisma } from "@prisma/client";
 
 // Keep historical notices in the database, but omit retired rescue notices from active views and counts.
@@ -34,6 +35,21 @@ export async function GET(request: Request) {
   const auth = await requireProtectedAdminApi(request, { scope: "admin-notifications-list", limit: 120, windowMs: 60_000 });
   if (auth.response) return auth.response;
   try {
+    const settings = await getAdminSettings();
+    if (settings.pendingReportReminders) {
+      const pending = await prisma.floodReport.findMany({
+        where: { archivedAt: null, status: { in: ["Needs More Confirmation", "Confirmed by Community"] }, verificationStatus: "unreviewed", createdAt: { lte: new Date(Date.now() - settings.reminderMinutes * 60_000) } },
+        orderBy: { createdAt: "asc" }, take: 30,
+        select: { id: true, title: true, locationName: true, createdAt: true },
+      });
+      if (pending.length) await prisma.adminNotification.createMany({
+        data: pending.map((report) => ({ type: "pending_report_reminder", title: "Report still awaiting review",
+          detail: `${report.title} · ${report.locationName} · Submitted ${report.createdAt.toISOString()}`,
+          targetType: "FloodReport", targetId: report.id, recipientUserId: auth.user.id,
+          dedupeKey: `pending:${report.id}`, priority: "normal" })),
+        skipDuplicates: true,
+      });
+    }
     const [notifications, unreadCount] = await Promise.all([
       prisma.adminNotification.findMany({ where: { recipientUserId: auth.user.id, ...activeNotice }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
         select: { id: true, title: true, detail: true, type: true, targetType: true, targetId: true, priority: true, readAt: true, createdAt: true } }),

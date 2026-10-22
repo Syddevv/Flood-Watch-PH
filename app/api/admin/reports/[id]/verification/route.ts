@@ -33,6 +33,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     });
     if (decision.publicMessage) await recordAdminOperationalAction(tx, { targetType: "FloodReport", targetId: id, actionType: "review_feedback", actorUserId: auth.user.id, visibility: "public", note: decision.publicMessage, requestId });
     await tx.adminAuditLog.create({ data: { actorUserId: auth.user.id, action: "ADMIN_REPORT_VERIFICATION_CHANGED", targetType: "FloodReport", targetId: id, requestId, metadata: { previous: current.verificationStatus, next: decision.verificationStatus, incidentId: current.incidentId } } });
+    if (decision.verificationStatus !== "unreviewed") await tx.adminNotification.updateMany({
+      where: { type: "pending_report_reminder", targetType: "FloodReport", targetId: id, readAt: null }, data: { readAt: now },
+    });
     await syncIncidentAggregate(tx, current.incidentId, now);
     const report = await tx.floodReport.findUniqueOrThrow({ where: { id }, select: { id: true, verificationStatus: true, reviewVersion: true, updatedAt: true, reviewedAt: true, reviewedByUserId: true } });
     return { data: report } as const;
