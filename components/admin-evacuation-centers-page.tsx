@@ -5,6 +5,7 @@ import { currentCenterOpeningStatus, centerOpeningLabel } from "@/lib/emergency-
 import { useEffect, useState } from "react";
 
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 export type AdminCenter = {
   id: string; name: string; description: string | null; address: string;
@@ -57,7 +58,7 @@ export function AdminEvacuationCentersPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold tracking-[.18em] text-[var(--color-primary)]">BULACAN EMERGENCY OPERATIONS</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight">Evacuation centers</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight">Evacuation Centers</h2>
           <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">Manage source verification and current availability separately.</p>
         </div>
         <div className="flex gap-3"><Link href="/admin/emergency-contacts" className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-semibold">Manage contacts</Link><Link href="/admin/data/new" className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Add center</Link></div>
@@ -86,7 +87,7 @@ export function AdminEvacuationCentersPage() {
               {centers.map((center) => <article key={center.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
                 <h3 className="font-semibold">{center.name}</h3>
                 <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{center.address}, {center.city}</p>
-                <p className="mt-3 text-sm">Identity: {center.verificationStatus.replaceAll("_", " ")}</p>
+                <p className="mt-3 text-sm">Identity: {formatUiLabel(center.verificationStatus)}</p>
                 {center.externalKey ? <p className="text-xs">Imported: {center.externalKey}</p> : null}
                 {center.duplicateReviewNotes ? <p className="text-xs text-[var(--color-warning)]">Duplicate review: {center.duplicateReviewNotes}</p> : null}
                 <p className="text-sm">Opening status: {centerOpeningLabel({ openingStatus: currentCenterOpeningStatus(center.status, center.availabilityConfirmedAt) })}</p>

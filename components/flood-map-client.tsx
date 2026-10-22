@@ -49,6 +49,7 @@ import {
   type ReportActionLoadingState,
 } from "@/lib/report-actions";
 import { formatCountLabel } from "@/lib/reporting";
+import { formatUiLabel } from "@/lib/ui-labels";
 import {
   getStatusPresentation,
   severityBadgeClasses,
@@ -604,7 +605,7 @@ function CenterPopupContent({ marker }: { marker: EvacuationCenterMapMarker }) {
         {listingLabel ? <p className="mt-2 text-[0.8rem] font-semibold text-slate-700">Listing: {listingLabel}</p> : null}
         <p className="mt-1 text-[0.8rem] font-semibold text-slate-900">Opening status: {openingLabel}</p>
         {!marker.center.openingStatus || marker.center.openingStatus === "unknown" ? <p className="mt-1 text-[0.75rem] text-slate-700">Check opening before going.</p> : marker.center.availabilityConfirmedAt ? <p className="mt-1 text-[0.75rem] text-slate-700">Updated {formatOperationalUpdate(marker.center.availabilityConfirmedAt)}</p> : null}
-        <p className="text-[0.72rem] text-slate-500">{marker.center.facilityType?.replaceAll("_", " ") ?? "Facility type not recorded"} · {marker.center.locationProvenance ?? "Location reference; confirm locally"}</p>
+        <p className="text-[0.72rem] text-slate-500">{marker.center.facilityType ? formatUiLabel(marker.center.facilityType) : "Facility type not recorded"} · {marker.center.locationProvenance ?? "Location reference; confirm locally"}</p>
         <p className="text-[0.72rem] text-slate-500">Route safety unknown.</p>
         {marker.center.sourceUrl ? <a href={marker.center.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[0.72rem] text-blue-700 underline">Official source</a> : null}
       </div>

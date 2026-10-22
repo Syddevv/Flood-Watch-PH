@@ -2,11 +2,12 @@
 
 import type { PublicEmergencyContact } from "@/lib/types";
 import { formatLastVerified } from "@/lib/emergency-resources";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 export function PublicEmergencyContactCard({ contact }: { contact: PublicEmergencyContact }) {
   return <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
     <h3 className="font-semibold">{contact.agencyName}</h3>
-    <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{contact.description ?? contact.category}</p>
+    <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{contact.description ?? formatUiLabel(contact.category)}</p>
     {contact.preferred ? <p className="mt-2 text-xs font-semibold text-[var(--color-primary)]">Preferred provincial/local listing</p> : null}
     <div className="mt-3 space-y-1">{contact.phones.map((phone, index) => <div key={`${phone.raw}-${index}`} className="flex items-center gap-2">{phone.telUri ? <a href={phone.telUri} className="text-lg font-semibold text-[var(--color-primary)]">{phone.raw}</a> : <><span className="text-lg font-semibold">{phone.raw}</span><button type="button" onClick={() => navigator.clipboard?.writeText(phone.raw)} className="text-xs text-[var(--color-primary)] underline">Copy</button></>}</div>)}</div>
     <p className="mt-2 text-xs">{contact.isNational ? "National fallback" : contact.city ? `${contact.city}, Bulacan` : "Bulacan provincial"}</p>

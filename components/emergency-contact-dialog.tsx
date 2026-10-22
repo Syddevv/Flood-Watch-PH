@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { EMERGENCY_CONTACT_CATEGORIES } from "@/lib/emergency-contact-categories";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 export type ContactPhone = { raw: string; tel_uri: string | null };
 export type AdminContact = {
@@ -121,7 +122,7 @@ export function EmergencyContactDialog({ contact, onClose, onSaved }: Props) {
         <section className="space-y-3" aria-label="Basic information">
           {input("Agency Name", "agencyName")}
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className={labelClass}><span>Category</span><select className={fieldClass} value={draft.category} onChange={(event) => set("category", event.target.value)} aria-invalid={Boolean(fieldErrors.category)}>{EMERGENCY_CONTACT_CATEGORIES.map((category) => <option key={category} value={category}>{category.replaceAll("_", " ")}</option>)}</select>{fieldErrors.category ? <span className="text-xs text-[var(--color-danger)]">{fieldErrors.category}</span> : null}</label>
+            <label className={labelClass}><span>Category</span><select className={fieldClass} value={draft.category} onChange={(event) => set("category", event.target.value)} aria-invalid={Boolean(fieldErrors.category)}>{EMERGENCY_CONTACT_CATEGORIES.map((category) => <option key={category} value={category}>{formatUiLabel(category)}</option>)}</select>{fieldErrors.category ? <span className="text-xs text-[var(--color-danger)]">{fieldErrors.category}</span> : null}</label>
             <label className={labelClass}><span>City / Municipality</span><select className={fieldClass} value={draft.city ?? ""} onChange={(event) => set("city", event.target.value || null)} aria-invalid={Boolean(fieldErrors.city)}><option value="" disabled={Boolean(contact.city)}>Provincial / not specified</option>{BULACAN_LOCALITIES.map((locality) => <option key={locality.code} value={locality.name}>{locality.name}</option>)}</select>{fieldErrors.city ? <span className="text-xs text-[var(--color-danger)]">{fieldErrors.city}</span> : null}</label>
           </div>
         </section>

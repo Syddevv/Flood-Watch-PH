@@ -188,6 +188,45 @@ select {
   font: inherit;
 }
 
+select:not([multiple]) {
+  appearance: none;
+  min-width: 0;
+  padding-inline-end: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.875rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+  color-scheme: light;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+:root.dark select:not([multiple]),
+[data-theme="dark"] select:not([multiple]) {
+  color-scheme: dark;
+}
+
+select:not([multiple]):hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+}
+
+select:not([multiple]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+select:not([multiple]):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+select option,
+select optgroup {
+  background-color: var(--color-surface);
+  color: var(--color-foreground);
+}
+
 button {
   cursor: pointer;
 }
@@ -331,13 +370,6 @@ button {
 }
 
 .floodwatch-form-select {
-  color: var(--color-foreground);
-  color-scheme: dark;
-}
-
-.floodwatch-form-select option,
-.floodwatch-form-select optgroup {
-  background: var(--color-surface);
   color: var(--color-foreground);
 }
 

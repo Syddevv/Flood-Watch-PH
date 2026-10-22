@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import type { AdminCenter } from "@/components/admin-evacuation-centers-page";
 import { CENTER_FACILITIES, CENTER_SOURCE_TYPES, CENTER_STATUSES, CENTER_VERIFICATION_STATUSES } from "@/lib/admin-evacuation";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 type Draft = {
   name: string; description: string; address: string; barangay: string;
@@ -84,7 +85,7 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
     <label className="grid gap-1 text-sm"><span>{label}</span>
       <select className="h-10 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3" value={String(draft[key])} onChange={(event) => set(key, event.target.value)}>
         <option value="">Select</option>
-        {options.map((option) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}
+        {options.map((option) => <option key={option} value={option}>{formatUiLabel(option)}</option>)}
       </select>
     </label>
   );
@@ -166,7 +167,7 @@ export function AdminEvacuationCenterDetail({ centerId }: { centerId?: string })
       {field("Description", "description")}{field("Internal note", "notes")}
       {field("Correction evidence URL", "adminEvidenceUrl", "url")}{field("Duplicate review notes", "duplicateReviewNotes")}
       <fieldset className="md:col-span-2"><legend className="text-sm">Facilities</legend><div className="mt-2 flex flex-wrap gap-3">
-        {CENTER_FACILITIES.map((facility) => <label key={facility} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={draft.facilities.includes(facility)} onChange={(event) => set("facilities", event.target.checked ? [...draft.facilities, facility] : draft.facilities.filter((item) => item !== facility))} />{facility.replaceAll("_", " ")}</label>)}
+        {CENTER_FACILITIES.map((facility) => <label key={facility} className="flex items-center gap-1 text-sm"><input type="checkbox" checked={draft.facilities.includes(facility)} onChange={(event) => set("facilities", event.target.checked ? [...draft.facilities, facility] : draft.facilities.filter((item) => item !== facility))} />{formatUiLabel(facility)}</label>)}
       </div></fieldset>
       <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={draft.confirmAvailability} onChange={(event) => set("confirmAvailability", event.target.checked)} />Record a current operational update (Open means accepting evacuees now).</label>
       {draft.confirmAvailability ? <div className="grid gap-3 md:col-span-2 md:grid-cols-2">

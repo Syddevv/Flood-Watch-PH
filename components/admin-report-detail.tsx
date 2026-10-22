@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { ADMIN_REPORT_STATUS_TRANSITIONS, type AdminReportStatus } from "@/lib/admin-contracts";
 import { getReviewDecisionBlockReason, MIN_REVIEW_REASON_LENGTH, parseReviewDecision, REPORT_VERIFICATION_STATES } from "@/lib/report-review";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 type Action = { id: string; actionType: string; previousValue: string | null; nextValue: string | null; visibility: string; note: string | null; actorName: string; createdAt: string };
 type Detail = {
@@ -140,9 +141,9 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
             <p className={"mt-2 flex items-start gap-2 text-sm " + mutedClass}><MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{report.locationName}</p>
             <dl className="mt-5 grid gap-x-5 gap-y-4 border-t border-[var(--color-border)] pt-5 sm:grid-cols-2 lg:grid-cols-3">
               <InfoField label="Reporter">{report.user?.fullName ?? "Reporter information unavailable"}</InfoField>
-              <InfoField label="Admin verification"><span className="capitalize">{report.verificationStatus}</span></InfoField>
+              <InfoField label="Admin verification">{formatUiLabel(report.verificationStatus)}</InfoField>
               <InfoField label="Community confirmation">{report.confirmationCount} confirmed · {report.resolvedCount} receded</InfoField>
-              <InfoField label="Operational / public status">{report.adminStatus.replaceAll("_", " ")} / {report.publicStatus}</InfoField>
+              <InfoField label="Operational / public status">{formatUiLabel(report.adminStatus)} / {report.publicStatus}</InfoField>
               <InfoField label="Submitted">{time(report.createdAt)}</InfoField>
               <InfoField label="Last reviewed">{time(report.reviewedAt)}{report.reviewer ? " by " + (report.reviewer.displayName ?? report.reviewer.email) : ""}</InfoField>
             </dl>
@@ -161,7 +162,7 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
               <InfoField label="Barangay">{report.user?.barangay ?? "Unavailable"}</InfoField>
               <InfoField label="City / Municipality">{report.user?.cityMunicipality ?? "Unavailable"}</InfoField>
               <InfoField label="Province">{report.user?.province ?? "Unavailable"}</InfoField>
-              <InfoField label="Account Verification">{report.user?.emailVerificationStatus ?? "Unavailable"}</InfoField>
+              <InfoField label="Account Verification">{report.user?.emailVerificationStatus ? formatUiLabel(report.user.emailVerificationStatus) : "Unavailable"}</InfoField>
               <InfoField label="Submitted">{time(report.createdAt)}</InfoField>
             </dl>
           </section>
@@ -189,9 +190,9 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
             <div className="mt-5 border-t border-[var(--color-border)] pt-4">
               <h3 className="text-sm font-semibold">Incident context</h3>
               <p className={"mt-1 break-all text-xs " + mutedClass}>Incident {report.incidentId} · {report.incident.reportCount} included reports</p>
-              {relatedReports.length ? <ul className="mt-3 space-y-2">{relatedReports.map((entry) => <li key={entry.id} className="rounded-lg border border-[var(--color-border)] p-3 text-xs"><Link href={"/admin/reports/" + entry.id} className="font-medium text-[var(--color-primary)] hover:underline">{entry.title}</Link><p className={"mt-1 " + mutedClass}>{entry.locationName} · {entry.verificationStatus}</p></li>)}</ul> : null}
+              {relatedReports.length ? <ul className="mt-3 space-y-2">{relatedReports.map((entry) => <li key={entry.id} className="rounded-lg border border-[var(--color-border)] p-3 text-xs"><Link href={"/admin/reports/" + entry.id} className="font-medium text-[var(--color-primary)] hover:underline">{entry.title}</Link><p className={"mt-1 " + mutedClass}>{entry.locationName} · {formatUiLabel(entry.verificationStatus)}</p></li>)}</ul> : null}
               <h4 className="mt-4 text-xs font-semibold">Other reports within 500 m</h4>
-              {report.nearbyReports.length ? <ul className="mt-2 space-y-2">{report.nearbyReports.map((entry) => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-[var(--color-border)] p-3 text-xs"><Link href={"/admin/reports/" + entry.id} className="font-medium text-[var(--color-primary)] hover:underline">{entry.title}</Link><span className={mutedClass}>{entry.distanceMeters} m · {entry.verificationStatus}</span></li>)}</ul> : <p className={"mt-2 text-xs " + mutedClass}>No nearby reports found.</p>}
+              {report.nearbyReports.length ? <ul className="mt-2 space-y-2">{report.nearbyReports.map((entry) => <li key={entry.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-[var(--color-border)] p-3 text-xs"><Link href={"/admin/reports/" + entry.id} className="font-medium text-[var(--color-primary)] hover:underline">{entry.title}</Link><span className={mutedClass}>{entry.distanceMeters} m · {formatUiLabel(entry.verificationStatus)}</span></li>)}</ul> : <p className={"mt-2 text-xs " + mutedClass}>No nearby reports found.</p>}
               <p className={"mt-4 text-xs leading-5 " + mutedClass}>Capture metadata is evidence to review, not proof of physical presence. Related reports share this incident; review their locations before deciding.</p>
             </div>
           </section>
@@ -199,9 +200,9 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
 
         <aside className="min-w-0 space-y-5" aria-label="Review actions">
           <section className={panelClass} aria-labelledby="verification-title">
-            <h2 id="verification-title" className="text-base font-semibold">Verification decision</h2>
+            <h2 id="verification-title" className="text-base font-semibold">Verification Decision</h2>
             <p className={"mt-1 text-xs leading-5 " + mutedClass}>Record evidence in an internal reason. Optional public feedback is shown separately and must contain no private details.</p>
-            <label className="mt-4 block text-sm font-medium">Decision<select disabled={Boolean(saving)} value={reviewState} onChange={(event) => setReviewState(event.target.value)} className={fieldClass}>{REPORT_VERIFICATION_STATES.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
+            <label className="mt-4 block text-sm font-medium">Decision<select disabled={Boolean(saving)} value={reviewState} onChange={(event) => setReviewState(event.target.value)} className={fieldClass}>{REPORT_VERIFICATION_STATES.map((value) => <option key={value} value={value}>{formatUiLabel(value)}</option>)}</select></label>
             <label className="mt-4 block text-sm font-medium">Internal evidence/reason<textarea disabled={Boolean(saving)} value={reason} onChange={(event) => setReason(event.target.value)} onBlur={() => setReasonTouched(true)} rows={4} maxLength={2000} className={fieldClass} placeholder="Describe the photo, location, or other evidence reviewed" aria-invalid={reasonTouched && reasonTooShort} /></label>
             <p className={"mt-1 text-xs " + (reasonTouched && reasonTooShort ? "text-red-300" : mutedClass)}>{reasonTooShort ? "At least " + MIN_REVIEW_REASON_LENGTH + " characters are required (" + reason.trim().length + "/" + MIN_REVIEW_REASON_LENGTH + ")." : "Internal reason is recorded for the audit history."}</p>
             <label className="mt-4 block text-sm font-medium">Public feedback (optional)<textarea disabled={Boolean(saving)} value={publicMessage} onChange={(event) => setPublicMessage(event.target.value)} rows={2} maxLength={500} className={fieldClass} placeholder="A safe explanation visible to the reporter" aria-invalid={Boolean(publicError)} /></label>
@@ -213,10 +214,10 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
           </section>
 
           <section className={panelClass} aria-labelledby="operational-status-title">
-            <h2 id="operational-status-title" className="text-sm font-semibold">Operational status</h2>
+            <h2 id="operational-status-title" className="text-sm font-semibold">Operational Status</h2>
             <p className={"mt-1 text-xs leading-5 " + mutedClass}>Operational status tracks response progress separately from evidence verification.</p>
-            <p className="mt-3 text-xs">Current: <strong>{report.adminStatus.replaceAll("_", " ")}</strong> · Public: {report.publicStatus}</p>
-            <label className="mt-3 block text-sm font-medium">Status<select disabled={Boolean(saving)} value={operationState} onChange={(event) => setOperationState(event.target.value)} className={fieldClass}>{allowedOperations.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
+            <p className="mt-3 text-xs">Current: <strong>{formatUiLabel(report.adminStatus)}</strong> · Public: {report.publicStatus}</p>
+            <label className="mt-3 block text-sm font-medium">Status<select disabled={Boolean(saving)} value={operationState} onChange={(event) => setOperationState(event.target.value)} className={fieldClass}>{allowedOperations.map((value) => <option key={value} value={value}>{formatUiLabel(value)}</option>)}</select></label>
             <button type="button" disabled={Boolean(saving) || Boolean(statusDisabledReason)} onClick={() => { if (["resolved", "closed"].includes(operationState) && !window.confirm("Confirm " + operationState + "?")) return; void mutate("status", { status: operationState, expectedUpdatedAt: report.updatedAt }, "Operational status updated."); }} className="mt-3 min-h-11 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--color-panel)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{saving === "status" ? "Saving status…" : "Save status"}</button>
             {!saving && statusDisabledReason ? <p className={"mt-2 text-xs " + mutedClass}>{statusDisabledReason}</p> : null}
             <ActionFeedback feedback={feedback} scope="status" />
@@ -235,7 +236,7 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <section className={panelClass} aria-labelledby="review-history-title"><h2 id="review-history-title" className="text-sm font-semibold">Review and operational history</h2>{report.actions.length ? <ol className="mt-4 space-y-4">{report.actions.map((action) => <li key={action.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-medium">{action.actionType.replaceAll("_", " ")}{action.previousValue || action.nextValue ? ": " + (action.previousValue ?? "") + " → " + (action.nextValue ?? "") : ""}</p>{action.note ? <p className={"mt-1 whitespace-pre-wrap break-words " + mutedClass}>{action.note}</p> : null}<time className={"mt-1 block text-xs " + mutedClass}>{time(action.createdAt)} · {action.actorName} · {action.visibility}</time></li>)}</ol> : <p className={"mt-3 text-sm " + mutedClass}>No review or operational actions have been recorded.</p>}</section>
+        <section className={panelClass} aria-labelledby="review-history-title"><h2 id="review-history-title" className="text-sm font-semibold">Review and operational history</h2>{report.actions.length ? <ol className="mt-4 space-y-4">{report.actions.map((action) => <li key={action.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-medium">{formatUiLabel(action.actionType)}{action.previousValue || action.nextValue ? ": " + (action.previousValue ? formatUiLabel(action.previousValue) : "") + " → " + (action.nextValue ? formatUiLabel(action.nextValue) : "") : ""}</p>{action.note ? <p className={"mt-1 whitespace-pre-wrap break-words " + mutedClass}>{action.note}</p> : null}<time className={"mt-1 block text-xs " + mutedClass}>{time(action.createdAt)} · {action.actorName} · {formatUiLabel(action.visibility)}</time></li>)}</ol> : <p className={"mt-3 text-sm " + mutedClass}>No review or operational actions have been recorded.</p>}</section>
         <section className={panelClass} aria-labelledby="community-activity-title"><h2 id="community-activity-title" className="text-sm font-semibold">Community activity</h2><p className={"mt-1 text-xs " + mutedClass}>Community confirmations are separate from admin verification.</p>{report.confirmations.length ? <ul className="mt-4 space-y-2 text-sm">{report.confirmations.map((entry) => <li key={entry.id} className="rounded-lg border border-[var(--color-border)] p-3">{entry.confirmationType}<time className={"mt-1 block text-xs " + mutedClass}>{time(entry.createdAt)}</time></li>)}</ul> : <p className={"mt-3 text-sm " + mutedClass}>No community confirmations recorded.</p>}</section>
       </div>
     </div>

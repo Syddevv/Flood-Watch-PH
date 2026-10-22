@@ -7,6 +7,7 @@ import { useEmergencyContacts } from "@/components/use-emergency-contacts";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { matchesContactGroup, resolveContactGroups, type ContactGroup } from "@/lib/emergency-contact-directory";
 import { formatLastVerified } from "@/lib/emergency-resources";
+import { formatUiLabel } from "@/lib/ui-labels";
 
 const inputClass = "min-h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-lg text-[var(--color-foreground)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]";
 const outlineButton = "inline-flex min-h-12 items-center justify-center rounded-xl border border-[var(--color-border)] px-5 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]";
@@ -17,7 +18,7 @@ function coverage(group: ContactGroup) {
 }
 
 function serviceLabel(category: string) {
-  return category.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return formatUiLabel(category);
 }
 
 function PhoneAction({ phone, agency, prominent = false }: {

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { buildCenterMapHref, buildDirectionsUrl, calculateDistanceKm, centerListingLabel, centerOpeningLabel, formatLastVerified, formatOperationalUpdate, hasCenterCoordinates } from "@/lib/emergency-resources";
+import { formatUiLabel } from "@/lib/ui-labels";
 import type { PublicEmergencyContact, PublicEvacuationCenter } from "@/lib/types";
 
 type Point = { latitude: number; longitude: number };
@@ -206,7 +207,7 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
       <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><SlidersHorizontal aria-hidden="true" className="size-4" />More filters<ChevronDown aria-hidden="true" className="ml-auto size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" /></summary>
       <div className="grid gap-4 border-t border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <label className="grid gap-1.5 text-sm font-medium">Facility type
-          <select value={facilityType} onChange={(event) => setFacilityType(event.target.value)} className="min-h-11 min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><option value="">All types</option>{facilityTypes.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select>
+          <select value={facilityType} onChange={(event) => setFacilityType(event.target.value)} className="min-h-11 min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"><option value="">All types</option>{facilityTypes.map((type) => <option key={type} value={type}>{formatUiLabel(type)}</option>)}</select>
         </label>
         <button type="button" onClick={() => { setLoading(true); setError(null); setRefreshKey((value) => value + 1); }} className="min-h-11 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:border-[var(--color-primary)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">Refresh list</button>
       </div>
@@ -240,14 +241,14 @@ export function EvacuationCentersContent({ contacts }: { contacts: PublicEmergen
           <section aria-label="Facility information">
             <h3 className="mb-3 text-sm font-semibold">Facility information</h3>
             <dl className="space-y-2.5">
-              <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Facility type</dt><dd>{selectedCenter.facilityType ? <>{selectedCenter.facilityType.replaceAll("_", " ")}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</> : "Not listed"}</dd></div>
+              <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Facility type</dt><dd>{selectedCenter.facilityType ? <>{formatUiLabel(selectedCenter.facilityType)}{selectedCenter.permanent === true ? " · Permanent facility" : selectedCenter.permanent === false ? " · Temporary-use site" : ""}</> : "Not listed"}</dd></div>
               <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Listing</dt><dd>{centerListingLabel(selectedCenter) ?? "Listing not confirmed"}</dd></div>
               <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Opening status</dt><dd>{centerOpeningLabel(selectedCenter)}</dd></div>
               {selectedCenter.address ? <div className="grid gap-0.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-3"><dt className="text-[var(--color-muted-foreground)]">Address</dt><dd className="wrap-break-word">{selectedCenter.address}</dd></div> : null}
             </dl>
             {selectedCenter.openingStatus === "unknown" ? <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">Check with the local DRRMO before going.</p> : selectedCenter.availabilityConfirmedAt ? <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">Operational update: {formatOperationalUpdate(selectedCenter.availabilityConfirmedAt)}</p> : null}
             {selectedCenter.estimatedCapacity != null || selectedCenter.capacityFamilies != null ? <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted-foreground)]"><span className="font-semibold">Historical or planned capacity:</span> {[selectedCenter.estimatedCapacity != null ? `${selectedCenter.estimatedCapacity} people` : null, selectedCenter.capacityFamilies != null ? `${selectedCenter.capacityFamilies} families` : null].filter(Boolean).join(" · ")}. This is not a count of available spaces.</p> : null}
-            {selectedCenter.facilities.length ? <p className="mt-2 text-xs text-[var(--color-muted-foreground)]"><span className="font-semibold">Listed facilities:</span> {selectedCenter.facilities.join(", ").replaceAll("_", " ")}</p> : null}
+            {selectedCenter.facilities.length ? <p className="mt-2 text-xs text-[var(--color-muted-foreground)]"><span className="font-semibold">Listed facilities:</span> {selectedCenter.facilities.map(formatUiLabel).join(", ")}</p> : null}
           </section>
 
           <section aria-label="Location actions" className="border-t border-[var(--color-border)] pt-5">
