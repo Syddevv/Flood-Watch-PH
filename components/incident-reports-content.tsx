@@ -33,7 +33,6 @@ import { validateReportImageFile } from "@/lib/report-image-validation";
 import {
   deriveReportLifecycleStatus,
   isActiveLifecycleStatus,
-  isRecededLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import type { IncidentReport } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -402,7 +401,7 @@ function ReportCard({
   const thumbnailUrl = report.photos[0]?.imageUrl;
   const activityLabel = getReportActivityLabel(report);
   const canConfirm = Boolean(authUser) && !hasConfirmed && !isResolved && !isBusy && !report.isOriginalAuthor;
-  const canResolve = Boolean(authUser) && !hasResolved && !isResolved && !isBusy;
+  const canResolve = Boolean(authUser) && !hasResolved && !isResolved && !isBusy && !report.isOriginalAuthor;
   const primaryOpensDetails = isResolved || hasConfirmed || Boolean(report.isOriginalAuthor);
   const primaryActionLabel = isResolved
     ? "View details"
@@ -506,7 +505,7 @@ function ReportCard({
           {isLikelyReceded ? <p className="mt-1 text-[0.7rem] leading-4 text-[var(--color-muted-foreground)]">Flooding may have subsided. Current conditions have not been reconfirmed.</p> : null}
         </div>
       </div>
-      {report.isOriginalAuthor ? <p className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">You cannot confirm your own report.</p> : null}
+      {report.isOriginalAuthor ? <p className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]">You cannot vote on your own report.</p> : null}
       {!authUser ? <p className="mt-1 text-[0.7rem] text-[var(--color-muted-foreground)]"><Link href="/login?next=/incident-reports" className="underline">Log in</Link> to confirm or mark reports as receded.</p> : null}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -843,7 +842,7 @@ export function IncidentReportsContent() {
   const resolvedReports = useMemo(
     () =>
       reports
-        .filter((report) => isRecededLifecycleStatus(report.status))
+        .filter((report) => report.status === "Likely Receded" && report.verificationStatus === "verified")
         .sort(compareReportsByPriority),
     [reports],
   );
@@ -1027,6 +1026,10 @@ export function IncidentReportsContent() {
     }
     if (!authUser) {
       setToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
+      return;
+    }
+    if (reports.find((report) => report.id === reportId)?.isOriginalAuthor) {
+      setToast({ tone: "error", message: "You cannot mark your own report as receded." });
       return;
     }
 

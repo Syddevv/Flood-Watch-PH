@@ -270,6 +270,7 @@ integrationTest(
         });
 
       assert.equal((await resolveRequest(otherCookie, otherAddress)).status, 401);
+      assert.equal((await resolveRequest(ownerCookie, ownerAddress)).status, 403);
       assert.equal((await resolveRequest(otherAuthCookie, otherAddress)).status, 200);
       assert.equal((await resolveRequest(thirdAuthCookie, thirdAddress)).status, 200);
 

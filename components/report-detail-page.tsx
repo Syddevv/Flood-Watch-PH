@@ -268,6 +268,10 @@ export function ReportDetailPage({ reportId }: ReportDetailPageProps) {
       setToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
       return;
     }
+    if (report?.isOriginalAuthor) {
+      setToast({ tone: "error", message: "You cannot mark your own report as receded." });
+      return;
+    }
 
     setActionLoading({ reportId: nextReportId, type: "resolved" });
 

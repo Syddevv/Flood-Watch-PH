@@ -1242,6 +1242,10 @@ export function DashboardShell({
       setFloodMapToast({ tone: "error", message: "Please log in to mark flood reports as receded." });
       return;
     }
+    if (floodMapReports.find((report) => report.id === reportId)?.isOriginalAuthor) {
+      setFloodMapToast({ tone: "error", message: "You cannot mark your own report as receded." });
+      return;
+    }
 
     setFloodMapActionLoading({ reportId, type: "resolved" });
 

@@ -376,7 +376,7 @@ export function IncidentReportModal({
   const resolveLoading = isReportActionLoading(actionLoading, report.id, "resolved");
   const actionBusy = isReportActionLoading(actionLoading, report.id);
   const confirmDisabled = !authUser || actionBusy || hasConfirmed || isResolved || report.isOriginalAuthor;
-  const resolveDisabled = !authUser || actionBusy || hasResolved || isResolved;
+  const resolveDisabled = !authUser || actionBusy || hasResolved || isResolved || report.isOriginalAuthor;
   const directionsUrl = buildReportDirectionsUrl(report);
   const evacuationCentersHref = buildReportEvacuationCentersHref(report);
   const communitySignal = getReportCommunitySignal(report);
@@ -1055,7 +1055,7 @@ export function IncidentReportModal({
                   })}
                 </span>
               </button>
-              {report.isOriginalAuthor ? <p className="text-[0.7rem] text-[var(--color-muted-foreground)] min-[360px]:col-span-2">You cannot confirm your own report.</p> : null}
+              {report.isOriginalAuthor ? <p className="text-[0.7rem] text-[var(--color-muted-foreground)] min-[360px]:col-span-2">You cannot vote on your own report.</p> : null}
               <button
                 type="button"
                 aria-label="Mark water as receded for this report"

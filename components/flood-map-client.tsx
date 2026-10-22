@@ -565,14 +565,14 @@ const ReportPopupContent = memo(function ReportPopupContent({
             })}
           </span>
         </button>
-        {marker.report.isOriginalAuthor ? <span className="col-span-2 text-[0.68rem] text-slate-500">You cannot confirm your own report.</span> : null}
+        {marker.report.isOriginalAuthor ? <span className="col-span-2 text-[0.68rem] text-slate-500">You cannot vote on your own report.</span> : null}
         <button
           type="button"
           onClick={() => onResolveReport(marker.reportId)}
-          disabled={!authUser || actionBusy || hasResolved || isResolved}
+          disabled={!authUser || actionBusy || hasResolved || isResolved || marker.report.isOriginalAuthor}
           className={cn(
             "col-span-2 inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] border px-2 text-[0.7rem] font-semibold",
-            !authUser || actionBusy || hasResolved || isResolved
+            !authUser || actionBusy || hasResolved || isResolved || marker.report.isOriginalAuthor
               ? "border-slate-200 bg-slate-100 text-slate-500"
               : "border-slate-200 bg-white text-slate-700",
           )}

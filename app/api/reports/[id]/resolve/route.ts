@@ -46,6 +46,7 @@ export async function POST(request: Request, context: RouteContext) {
       where: { id },
       select: {
         id: true,
+        userId: true,
         severity: true,
         status: true,
         verificationStatus: true,
@@ -63,6 +64,9 @@ export async function POST(request: Request, context: RouteContext) {
     if (!report || report.verificationStatus === "rejected") {
       return errorResponse("Flood report not found.", 404);
     }
+    if (report.userId === user.id) {
+      return errorResponse("You cannot mark your own report as receded.", 403);
+    }
 
     const currentLifecycleStatus = deriveReportLifecycleStatus(report, new Date(), settings);
     if (currentLifecycleStatus === "Archived" || currentLifecycleStatus === "Resolved") {
@@ -71,8 +75,9 @@ export async function POST(request: Request, context: RouteContext) {
 
     const updatedReport = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       await lockFloodReportForUpdate(tx, id);
-      const currentReview = await tx.floodReport.findUnique({ where: { id }, select: { verificationStatus: true } });
+      const currentReview = await tx.floodReport.findUnique({ where: { id }, select: { verificationStatus: true, userId: true } });
       if (currentReview?.verificationStatus === "rejected") return "rejected" as const;
+      if (currentReview?.userId === user.id) return "forbidden" as const;
       const lifecyclePatch = getLifecyclePersistencePatch(report, new Date(), settings);
       if (Object.keys(lifecyclePatch).length > 0) {
         await tx.floodReport.update({
@@ -115,6 +120,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     if (updatedReport === "rejected") return errorResponse("Flood report not found.", 404);
+    if (updatedReport === "forbidden") return errorResponse("You cannot mark your own report as receded.", 403);
 
     return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { userId: user.id }));
   } catch (error) {
