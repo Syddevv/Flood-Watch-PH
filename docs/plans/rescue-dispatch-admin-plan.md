@@ -61,6 +61,8 @@ Use a new branch for each approved phase, as requested for earlier phased work. 
 
 **Acceptance:** Admin can manage and select organizations; contact and acknowledgement are separate persisted facts; reassignment retains old attempts; the request remains active after a failed attempt. No service is contacted by the app.
 
+**Directory UI refinement (22 October 2026):** `/admin/responders` now uses a compact card list and a shared add/edit modal with labeled capability choices and searchable multi-municipality coverage. The configured database currently lacks `20261024_rescue_dispatch_foundation`; the directory API returns a specific setup error until that additive migration is reviewed and deployed. No migration was run against the configured database during this UI change. Phase 3 remains unstarted.
+
 ## Phase 3 — Lifecycle and dispatch management
 
 **Central policy:** Extend `lib/rescue-contracts.ts` and `lib/rescue-service.ts`; do not rely on hidden UI controls for enforcement. New states are `received`, `under_review`, `awaiting_responder`, `responder_confirmed`, `dispatched`, `en_route`, `on_scene`, `resolved`, `closed`. Exceptional terminal outcomes: `cancelled`, `duplicate`, `referred`, `unable_to_contact`. Keep historical `triaged`, `assigned`, `completed`, `rejected` readable and accepted by DB constraints. Do not silently relabel old rows or backfill fictional assignments. Show them as legacy; define explicit admin reconciliation transitions for open cases, with reason/event, while legacy terminal cases stay terminal. Any change to old direct `assigned → en_route` action must be coordinated with the admin UI and tests in this phase so clients cannot create an unverified new dispatch.

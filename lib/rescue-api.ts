@@ -22,6 +22,9 @@ export async function readRescueJson(request: Request): Promise<unknown> {
 
 export function rescueApiError(request: Request, error: unknown) {
   if (error instanceof RescueError) return adminErrorResponse(request, error.message, error.status);
+  if (error && typeof error === "object" && "code" in error && error.code === "P2021" && "meta" in error && error.meta && typeof error.meta === "object" && "modelName" in error.meta && ["ResponderOrganization", "RescueAssignment"].includes(String(error.meta.modelName))) {
+    return adminErrorResponse(request, "Responder directory setup is incomplete. Apply the rescue dispatch foundation migration.", 503);
+  }
   // Database errors can include row values; never log contact, location or needs.
   console.error("Rescue API persistence failure", error instanceof Error ? error.name : "unknown");
   return adminErrorResponse(request, "Rescue service is temporarily unavailable.", 503);

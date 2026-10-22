@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseCoordinationAction, parseResponderOrganization } from "@/lib/rescue-dispatch-data";
+import { parseCoordinationAction, parseNewResponderOrganization, parseResponderOrganization } from "@/lib/rescue-dispatch-data";
+import { RESPONDER_CAPABILITIES } from "@/lib/responder-options";
 
 const valid = {
   name: "Demo rescue office",
@@ -21,6 +22,19 @@ test("organization data validates Bulacan coverage and defaults to unknown avail
   assert.throws(() => parseResponderOrganization({ ...valid, coverageLocalityCodes: ["0301408000"] }));
   assert.throws(() => parseResponderOrganization({ ...valid, capabilityCodes: ["Boat!"] }));
   assert.throws(() => parseResponderOrganization({ ...valid, availability: "available" }));
+});
+
+test("new organizations accept labeled capability codes and validated availability in one write", () => {
+  const capabilityCodes = RESPONDER_CAPABILITIES.map((option) => option.code);
+  const parsed = parseNewResponderOrganization({ ...valid, capabilityCodes, officialPhone: "test-only-number", availability: "available", contactVerified: true });
+  assert.deepEqual(parsed.capabilityCodes, capabilityCodes);
+  assert.equal(parsed.availability, "available");
+  assert.ok(parsed.lastContactVerifiedAt instanceof Date);
+  assert.throws(() => parseNewResponderOrganization({ ...valid, availability: "available" }));
+  assert.throws(() => parseNewResponderOrganization({ ...valid, availability: "available", contactVerified: true }));
+  assert.throws(() => parseNewResponderOrganization({ ...valid, contactVerified: true }));
+  assert.throws(() => parseNewResponderOrganization({ ...valid, availability: "live" }));
+  assert.throws(() => parseNewResponderOrganization({ ...valid, active: false }));
 });
 
 test("coordination actions require versions, private notes, and explicit outcomes", () => {
