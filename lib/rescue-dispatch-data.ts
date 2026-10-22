@@ -52,13 +52,25 @@ export function parseResponderOrganization(value: unknown) {
   };
 }
 
+export function parseNewResponderOrganization(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new RescueError("Invalid responder organization.", 400);
+  const { availability = "unknown", contactVerified = false, ...details } = value as Record<string, unknown>;
+  const data = parseResponderOrganization(details);
+  if (typeof availability !== "string" || !["available", "busy", "unavailable", "unknown"].includes(availability)) throw new RescueError("Invalid availability.", 400);
+  if (typeof contactVerified !== "boolean") throw new RescueError("Invalid contact verification.", 400);
+  if (contactVerified && !data.officialPhone && !data.secondaryContact) throw new RescueError("Record a contact method before confirming its verification.", 400);
+  if (contactVerified && !data.officialPhone && !data.secondaryContact) throw new RescueError("Record a contact method before confirming its verification.", 400);
+  if (availability === "available" && (!contactVerified || (!data.officialPhone && !data.secondaryContact))) throw new RescueError("Confirm a recorded contact method before marking available.", 400);
+  return { ...data, availability, ...(contactVerified ? { lastContactVerifiedAt: new Date() } : {}) };
+}
+
 async function requireAdmin(db: PrismaClient, actorId: string) {
   const actor = await db.user.findUnique({ where: { id: actorId }, select: { role: true } });
   if (actor?.role !== "admin") throw new RescueError("Administrator access required.", 403);
 }
 
 export async function createResponderOrganization(db: PrismaClient, actorId: string, input: unknown) {
-  const data = parseResponderOrganization(input);
+  const data = parseNewResponderOrganization(input);
   await requireAdmin(db, actorId);
   return db.responderOrganization.create({ data });
 }
@@ -101,6 +113,8 @@ export async function updateResponderOrganization(db: PrismaClient, actorId: str
   if (input.contactVerified !== undefined && typeof input.contactVerified !== "boolean") throw new RescueError("Invalid contact verification.", 400);
   if (availability === "available" && current.availability !== "available" && input.contactVerified !== true) throw new RescueError("Confirm current contact information before marking available.", 400);
   const parsed = parseResponderOrganization(Object.fromEntries(["name", "type", "homeLocalityCode", "coverageLocalityCodes", "capabilityCodes", "contactOffice", "contactPerson", "officialPhone", "secondaryContact", "preferredChannel", "demo"].map((key) => [key, key in input ? input[key] : current[key as keyof typeof current]])));
+  if (input.contactVerified === true && !parsed.officialPhone && !parsed.secondaryContact) throw new RescueError("Record a contact method before confirming its verification.", 400);
+  if (input.contactVerified === true && !parsed.officialPhone && !parsed.secondaryContact) throw new RescueError("Record a contact method before confirming its verification.", 400);
   if (availability === "available" && !parsed.officialPhone && !parsed.secondaryContact) throw new RescueError("An available organization needs a recorded contact method.", 400);
   const contactChanged = ["contactOffice", "contactPerson", "officialPhone", "secondaryContact"].some((key) => key in input && parsed[key as keyof typeof parsed] !== current[key as keyof typeof current]);
   return db.responderOrganization.update({ where: { id }, data: { ...parsed, availability, ...(input.active === undefined ? {} : { active: input.active }), ...(input.contactVerified === true ? { lastContactVerifiedAt: new Date() } : contactChanged ? { lastContactVerifiedAt: null } : {}) } });
