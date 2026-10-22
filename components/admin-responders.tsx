@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { MapPin, Plus, Search, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { Building2, Check, LoaderCircle, MapPin, Plus, Search, X } from "lucide-react";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { RESPONDER_CAPABILITIES, RESPONDER_TYPES, responderCapabilityLabel } from "@/lib/responder-options";
 
@@ -29,16 +29,40 @@ const draftFrom = (row: Organization): Draft => ({
   preferredChannel: row.preferredChannel ?? "", contactVerified: false,
 });
 const field = "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15";
+const modalField = "mt-1.5 h-10 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-3 text-sm outline-none transition-colors placeholder:text-[var(--color-muted-foreground)] hover:border-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 disabled:opacity-60";
 const localityName = (code: string) => BULACAN_LOCALITIES.find((place) => place.code === code)?.name ?? code;
 const availabilityLabel = (value: string) => value === "unknown" ? "Unknown" : value.charAt(0).toUpperCase() + value.slice(1);
 
-function LocalityPicker({ id, label, selected, excluded, onSelect, error }: {
-  id: string; label: string; selected?: string; excluded?: string[]; onSelect: (code: string) => void; error?: string;
+function LocalityPicker({ id, label, required = false, selected, excluded, onSelect, error }: {
+  id: string; label: string; required?: boolean; selected?: string; excluded?: string[]; onSelect: (code: string) => void; error?: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const choices = BULACAN_LOCALITIES.filter((place) => !excluded?.includes(place.code) && place.name.toLowerCase().includes(query.toLowerCase())).slice(0, 12);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties | null>(null);
+  const matches = BULACAN_LOCALITIES.filter((place) => !excluded?.includes(place.code) && place.name.toLowerCase().includes(query.toLowerCase()));
+  const choices = matches.slice(0, 7);
+  useEffect(() => {
+    if (!open) return;
+    function positionMenu() {
+      const input = inputRef.current;
+      const viewport = input?.closest("[data-responder-scroll]");
+      if (!input || !viewport) return;
+      const inputBounds = input.getBoundingClientRect();
+      const viewportBounds = viewport.getBoundingClientRect();
+      const below = Math.max(0, viewportBounds.bottom - inputBounds.bottom - 6);
+      const above = Math.max(0, inputBounds.top - viewportBounds.top - 6);
+      const desiredHeight = choices.length ? Math.min(260, choices.length * 34 + (matches.length > choices.length ? 32 : 12)) : 44;
+      const placeAbove = below < desiredHeight && above > below;
+      const height = Math.min(desiredHeight, placeAbove ? above : below);
+      setMenuStyle({ position: "fixed", left: inputBounds.left, width: inputBounds.width, top: placeAbove ? inputBounds.top - height - 4 : inputBounds.bottom + 4, maxHeight: height });
+    }
+    positionMenu();
+    document.addEventListener("scroll", positionMenu, true);
+    window.addEventListener("resize", positionMenu);
+    return () => { document.removeEventListener("scroll", positionMenu, true); window.removeEventListener("resize", positionMenu); };
+  }, [open, choices.length, matches.length]);
   function choose(code: string) { onSelect(code); setQuery(""); setOpen(false); setActive(0); }
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") { setOpen(false); event.stopPropagation(); return; }
@@ -48,14 +72,18 @@ function LocalityPicker({ id, label, selected, excluded, onSelect, error }: {
     }
     if (event.key === "Enter" && open && choices[active]) { event.preventDefault(); choose(choices[active].code); }
   }
-  return <div className="relative min-w-0">
-    <label htmlFor={id} className="text-sm font-medium">{label}</label>
-    <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-options`} aria-activedescendant={open && choices[active] ? `${id}-option-${choices[active].code}` : undefined} aria-invalid={Boolean(error)} value={query} onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} placeholder="Search Bulacan municipality" autoComplete="off" className={field} />
-    {open && <div id={`${id}-options`} role="listbox" className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-xl">
-      {choices.length ? choices.map((place, index) => <button key={place.code} id={`${id}-option-${place.code}`} type="button" role="option" aria-selected={index === active} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(place.code)} className={`block w-full rounded-md px-3 py-2 text-left text-sm ${index === active ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "hover:bg-[var(--color-panel)]"}`}>{place.name}</button>) : <p className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]">No matching municipality.</p>}
+  return <div className="min-w-0">
+    <label htmlFor={id} className="text-xs font-semibold">{label}{required && <> <span aria-hidden="true" className="text-[var(--color-primary)]">*</span></>}</label>
+    <div className="relative">
+      <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-4 size-4 text-[var(--color-muted-foreground)]" />
+      <input ref={inputRef} id={id} role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-options`} aria-activedescendant={open && choices[active] ? `${id}-option-${choices[active].code}` : undefined} aria-required={required} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} value={query} onChange={(event) => { setQuery(event.target.value); setActive(0); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} placeholder="Search Bulacan municipality" autoComplete="off" className={`${modalField} pl-9`} />
+    </div>
+    {open && menuStyle && <div id={`${id}-options`} role="listbox" aria-label={label} style={menuStyle} className="z-[calc(var(--layer-modal)+1)] overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-lg">
+      {choices.length ? choices.map((place, index) => <button key={place.code} id={`${id}-option-${place.code}`} type="button" role="option" aria-selected={place.code === selected} onPointerDown={(event) => event.preventDefault()} onClick={() => choose(place.code)} className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm transition-colors ${index === active ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "hover:bg-[var(--color-panel)]"}`}>{place.name}{place.code === selected && <Check aria-hidden="true" className="size-4 text-[var(--color-primary)]" />}</button>) : <p className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]">No matching municipality.</p>}
+      {matches.length > choices.length && <p className="px-3 py-1 text-xs text-[var(--color-muted-foreground)]">Type to narrow the results.</p>}
     </div>}
-    {selected && <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Selected: {localityName(selected)}</p>}
-    {error && <p className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>}
+    {selected && <p className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">Selected: {localityName(selected)}</p>}
+    {error && <p id={`${id}-error`} className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>}
   </div>;
 }
 
@@ -118,7 +146,6 @@ function OrganizationModal({ organization, onClose, onSaved }: {
     if (!draft.name.trim()) errors.name = "Enter an organization name.";
     if (!draft.homeLocalityCode) errors.homeLocalityCode = "Choose a Bulacan municipality.";
     if (draft.contactVerified && !draft.officialPhone.trim() && !draft.secondaryContact.trim()) errors.officialPhone = "Record a contact method before confirming it was checked.";
-    if (draft.contactVerified && !draft.officialPhone.trim() && !draft.secondaryContact.trim()) errors.officialPhone = "Record a contact method before confirming it was checked.";
     if (draft.availability === "available" && !draft.officialPhone.trim() && !draft.secondaryContact.trim()) errors.officialPhone = "Record a contact method before marking available.";
     if (draft.availability === "available" && !organization?.lastContactVerifiedAt && !draft.contactVerified) errors.contactVerified = "Confirm that the contact information was checked.";
     if (Object.keys(errors).length) { setFieldErrors(errors); return; }
@@ -148,33 +175,40 @@ function OrganizationModal({ organization, onClose, onSaved }: {
   const typeOptions = RESPONDER_TYPES.some((option) => option.code === draft.type) ? RESPONDER_TYPES : [...RESPONDER_TYPES, { code: draft.type, label: draft.type.replaceAll("_", " ") }];
   const knownCodes = new Set<string>(RESPONDER_CAPABILITIES.map((option) => option.code));
   const capabilityOptions = [...RESPONDER_CAPABILITIES, ...draft.capabilityCodes.filter((code) => !knownCodes.has(code)).map((code) => ({ code, label: responderCapabilityLabel(code) }))];
-  return <div className="fixed inset-0 z-[var(--layer-modal)] grid place-items-center bg-black/65 p-3 sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
-    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="responder-modal-title" onKeyDown={onDialogKeyDown} className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl">
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-5 py-4"><div><h2 id="responder-modal-title" className="text-lg font-semibold">{organization ? "Manage organization" : "Add organization"}</h2><p className="text-xs text-[var(--color-muted-foreground)]">Admin-recorded information for simulated coordination.</p></div><button type="button" onClick={close} aria-label="Close organization form" className="rounded-lg p-2 hover:bg-[var(--color-panel)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"><X className="size-5" /></button></div>
+  return <div className="fixed inset-0 z-[var(--layer-modal)] grid place-items-center bg-black/65 p-2 sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="responder-modal-title" aria-describedby="responder-modal-description" onKeyDown={onDialogKeyDown} className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl sm:max-h-[88dvh]">
+      <header className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border)] px-4 py-3.5 sm:px-6">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-primary)]"><Building2 aria-hidden="true" className="size-[18px]" /></span>
+        <div className="min-w-0 flex-1"><h2 id="responder-modal-title" className="text-base font-semibold tracking-tight sm:text-lg">{organization ? "Manage Organization" : "Add Organization"}</h2><p id="responder-modal-description" className="text-xs text-[var(--color-muted-foreground)]">{organization ? "Update this responder organization for simulated rescue coordination." : "Register a responder organization for simulated rescue coordination."}</p></div>
+        <button type="button" onClick={close} aria-label="Close organization form" className="rounded-lg p-2 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-panel)] hover:text-[var(--color-foreground)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"><X className="size-5" /></button>
+      </header>
       <form onSubmit={(event) => void save(event)} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
-          <fieldset disabled={loading || busy} className="space-y-6">
+        <div data-responder-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
+          <fieldset disabled={loading || busy} className="space-y-5">
           {loading && <p role="status" className="text-sm">Loading organization…</p>}
           {error && <div role="alert" className="rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-surface)] p-3 text-sm text-[var(--color-danger-text)]"><p>{error}</p>{loadFailed && <button type="button" onClick={() => { setLoading(true); setLoadFailed(false); setError(""); setLoadKey((key) => key + 1); }} className="mt-1 font-semibold underline">Retry loading</button>}</div>}
-          <section className="space-y-3"><h3 className="text-sm font-semibold">Basic information</h3><div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium">Organization name<input value={draft.name} onChange={(event) => set("name", event.target.value)} maxLength={160} aria-invalid={Boolean(fieldErrors.name)} className={field} />{fieldErrors.name && <span className="text-xs text-[var(--color-danger)]">{fieldErrors.name}</span>}</label>
-            <label className="text-sm font-medium">Organization type<select value={draft.type} onChange={(event) => set("type", event.target.value)} className={field}>{typeOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}</select></label>
-            <LocalityPicker id="responder-home" label="Home municipality" selected={draft.homeLocalityCode} onSelect={(code) => { setDraft((current) => ({ ...current, homeLocalityCode: code, coverageLocalityCodes: [...new Set([...current.coverageLocalityCodes.filter((value) => value !== current.homeLocalityCode), code])] })); setFieldErrors((current) => ({ ...current, homeLocalityCode: "" })); }} error={fieldErrors.homeLocalityCode} />
-            <fieldset className="sm:col-span-2"><legend className="text-sm font-medium">Rescue capabilities</legend><div className="mt-2 flex flex-wrap gap-2">{capabilityOptions.map((option) => <label key={option.code} className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium ${draft.capabilityCodes.includes(option.code) ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)]"}`}><input type="checkbox" className="sr-only" checked={draft.capabilityCodes.includes(option.code)} onChange={(event) => set("capabilityCodes", event.target.checked ? [...draft.capabilityCodes, option.code] : draft.capabilityCodes.filter((code) => code !== option.code))} />{option.label}</label>)}</div></fieldset>
-          </div></section>
-          <section className="space-y-3 border-t border-[var(--color-border)] pt-5"><h3 className="text-sm font-semibold">Operational information</h3>
-            <LocalityPicker id="responder-coverage" label="Add coverage municipality" excluded={draft.coverageLocalityCodes} onSelect={(code) => set("coverageLocalityCodes", [...new Set([...draft.coverageLocalityCodes, code])])} />
-            <div className="flex flex-wrap gap-2">{draft.coverageLocalityCodes.map((code) => <span key={code} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-panel)] px-2.5 py-1 text-xs">{localityName(code)}{code !== draft.homeLocalityCode && <button type="button" onClick={() => set("coverageLocalityCodes", draft.coverageLocalityCodes.filter((value) => value !== code))} aria-label={`Remove ${localityName(code)} coverage`} className="rounded-full p-0.5 hover:bg-[var(--color-muted-surface)]"><X className="size-3" /></button>}</span>)}</div>
-            <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm font-medium">Recorded availability<select value={draft.availability} onChange={(event) => set("availability", event.target.value)} className={field}>{["unknown", "available", "busy", "unavailable"].map((value) => <option key={value} value={value}>{availabilityLabel(value)}</option>)}</select></label><label className="text-sm font-medium">Preferred communication<select value={draft.preferredChannel} onChange={(event) => set("preferredChannel", event.target.value)} className={field}><option value="">Not recorded</option><option value="phone">Phone</option><option value="sms_logged">Logged SMS</option><option value="radio">Radio</option><option value="other">Other</option></select></label></div>
-            <p className="text-xs text-[var(--color-muted-foreground)]">Availability is recorded by an admin and is not a live readiness signal.</p>
+          <section className="space-y-3.5" aria-labelledby="responder-organization-heading">
+            <h3 id="responder-organization-heading" className="text-sm font-semibold">Organization details</h3>
+            <div className="grid gap-x-3 gap-y-3.5 sm:grid-cols-5">
+              <label className="min-w-0 text-xs font-semibold sm:col-span-3">Organization name <span aria-hidden="true" className="text-[var(--color-primary)]">*</span><input value={draft.name} onChange={(event) => set("name", event.target.value)} maxLength={160} aria-required="true" aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "responder-name-error" : undefined} className={modalField} />{fieldErrors.name && <span id="responder-name-error" className="mt-1 block text-xs text-[var(--color-danger)]">{fieldErrors.name}</span>}</label>
+              <label className="min-w-0 text-xs font-semibold sm:col-span-2">Organization type<select value={draft.type} onChange={(event) => set("type", event.target.value)} className={modalField}>{typeOptions.map((option) => <option key={option.code} value={option.code}>{option.label}</option>)}</select></label>
+              <div className="sm:col-span-5"><LocalityPicker id="responder-home" label="Home municipality" required selected={draft.homeLocalityCode} onSelect={(code) => { setDraft((current) => ({ ...current, homeLocalityCode: code, coverageLocalityCodes: [...new Set([...current.coverageLocalityCodes.filter((value) => value !== current.homeLocalityCode), code])] })); setFieldErrors((current) => ({ ...current, homeLocalityCode: "" })); }} error={fieldErrors.homeLocalityCode} /></div>
+              <fieldset className="min-w-0 sm:col-span-5"><legend className="text-xs font-semibold">Rescue capabilities</legend><div className="mt-2 flex flex-wrap gap-1.5">{capabilityOptions.map((option) => { const selected = draft.capabilityCodes.includes(option.code); return <label key={option.code} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)] ${selected ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "border-[var(--color-border)] hover:border-[var(--color-muted-foreground)]"}`}><input type="checkbox" className="sr-only" checked={selected} onChange={(event) => set("capabilityCodes", event.target.checked ? [...draft.capabilityCodes, option.code] : draft.capabilityCodes.filter((code) => code !== option.code))} />{selected && <Check aria-hidden="true" className="size-3.5" />}{option.label}</label>; })}</div></fieldset>
+            </div>
           </section>
-          <section className="space-y-3 border-t border-[var(--color-border)] pt-5"><h3 className="text-sm font-semibold">Contact information</h3><div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium">Contact office<input value={draft.contactOffice} onChange={(event) => set("contactOffice", event.target.value)} maxLength={160} className={field} /></label>
-            <label className="text-sm font-medium">Contact person<input value={draft.contactPerson} onChange={(event) => set("contactPerson", event.target.value)} maxLength={160} className={field} /></label>
-            <label className="text-sm font-medium">Official contact number<input value={draft.officialPhone} onChange={(event) => set("officialPhone", event.target.value)} maxLength={80} aria-invalid={Boolean(fieldErrors.officialPhone)} className={field} />{fieldErrors.officialPhone && <span className="text-xs text-[var(--color-danger)]">{fieldErrors.officialPhone}</span>}</label>
-            <label className="text-sm font-medium">Secondary contact<input value={draft.secondaryContact} onChange={(event) => set("secondaryContact", event.target.value)} maxLength={160} className={field} /></label>
+          <section className="space-y-3.5 border-t border-[var(--color-border)] pt-4" aria-labelledby="responder-coverage-heading"><h3 id="responder-coverage-heading" className="text-sm font-semibold">Coverage &amp; availability</h3>
+            <LocalityPicker id="responder-coverage" label="Add coverage municipality" excluded={draft.coverageLocalityCodes} onSelect={(code) => set("coverageLocalityCodes", [...new Set([...draft.coverageLocalityCodes, code])])} />
+            {draft.coverageLocalityCodes.length > 0 && <div className="flex flex-wrap gap-1.5" aria-label="Coverage municipalities">{draft.coverageLocalityCodes.map((code) => <span key={code} className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] py-1 pl-2.5 pr-1.5 text-xs">{localityName(code)}{code === draft.homeLocalityCode ? <span className="pl-1 text-[var(--color-muted-foreground)]">Home</span> : <button type="button" onClick={() => set("coverageLocalityCodes", draft.coverageLocalityCodes.filter((value) => value !== code))} aria-label={`Remove ${localityName(code)} coverage`} className="rounded-full p-1 transition-colors hover:bg-[var(--color-muted-surface)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)]"><X aria-hidden="true" className="size-3" /></button>}</span>)}</div>}
+            <div className="grid gap-3 sm:grid-cols-2"><label className="min-w-0 text-xs font-semibold">Recorded availability<select value={draft.availability} onChange={(event) => set("availability", event.target.value)} aria-describedby="responder-availability-help" className={modalField}>{["unknown", "available", "busy", "unavailable"].map((value) => <option key={value} value={value}>{availabilityLabel(value)}</option>)}</select></label><label className="min-w-0 text-xs font-semibold">Preferred communication<select value={draft.preferredChannel} onChange={(event) => set("preferredChannel", event.target.value)} className={modalField}><option value="">Not recorded</option><option value="phone">Phone</option><option value="sms_logged">Logged SMS</option><option value="radio">Radio</option><option value="other">Other</option></select></label></div>
+            <p id="responder-availability-help" className="text-xs text-[var(--color-muted-foreground)]">Admin-recorded status, not live availability.</p>
+          </section>
+          <section className="space-y-3.5 border-t border-[var(--color-border)] pt-4" aria-labelledby="responder-contact-heading"><h3 id="responder-contact-heading" className="text-sm font-semibold">Contact information</h3><div className="grid gap-3 sm:grid-cols-2">
+            <label className="min-w-0 text-xs font-semibold">Contact office<input value={draft.contactOffice} onChange={(event) => set("contactOffice", event.target.value)} maxLength={160} className={modalField} /></label>
+            <label className="min-w-0 text-xs font-semibold">Contact person<input value={draft.contactPerson} onChange={(event) => set("contactPerson", event.target.value)} maxLength={160} className={modalField} /></label>
+            <label className="min-w-0 text-xs font-semibold">Official contact number<input value={draft.officialPhone} onChange={(event) => set("officialPhone", event.target.value)} maxLength={80} aria-invalid={Boolean(fieldErrors.officialPhone)} aria-describedby={fieldErrors.officialPhone ? "responder-phone-error" : undefined} className={modalField} />{fieldErrors.officialPhone && <span id="responder-phone-error" className="mt-1 block text-xs text-[var(--color-danger)]">{fieldErrors.officialPhone}</span>}</label>
+            <label className="min-w-0 text-xs font-semibold">Secondary contact<input value={draft.secondaryContact} onChange={(event) => set("secondaryContact", event.target.value)} maxLength={160} className={modalField} /></label>
           </div></section>
-          <section className="space-y-3 border-t border-[var(--color-border)] pt-5"><h3 className="text-sm font-semibold">Simulation settings</h3>
+          <section className="space-y-2 border-t border-[var(--color-border)] pt-4" aria-labelledby="responder-simulation-heading"><h3 id="responder-simulation-heading" className="text-xs font-semibold">Simulation settings</h3>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.demo} onChange={(event) => set("demo", event.target.checked)} />Demo organization</label>
             {organization && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.active} onChange={(event) => set("active", event.target.checked)} />Active directory entry</label>}
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={draft.contactVerified} onChange={(event) => set("contactVerified", event.target.checked)} />I verified the recorded contact information now</label>
@@ -183,7 +217,7 @@ function OrganizationModal({ organization, onClose, onSaved }: {
           </section>
           </fieldset>
         </div>
-        <div className="flex shrink-0 justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4"><button type="button" onClick={close} className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm">Cancel</button><button type="submit" disabled={busy || loading || loadFailed} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : organization ? "Save changes" : "Add organization"}</button></div>
+        <footer className="flex shrink-0 justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:px-6"><button type="button" onClick={close} className="min-h-10 rounded-lg border border-[var(--color-border)] px-4 text-sm font-medium transition-colors hover:bg-[var(--color-panel)] focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] sm:min-w-24">Cancel</button><button type="submit" disabled={busy || loading || loadFailed} className="inline-flex min-h-10 min-w-36 items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50">{busy && <LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />}{busy ? "Saving…" : organization ? "Save changes" : "Add Organization"}</button></footer>
       </form>
     </div>
   </div>;
