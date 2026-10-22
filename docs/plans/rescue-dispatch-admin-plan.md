@@ -1,6 +1,6 @@
 # Admin-managed rescue dispatch: admin and shared-data plan
 
-**Status:** Phase 1 implemented on `feat/rescue-dispatch-phase1-foundation`, 21 October 2026; review pending. Phases 2–6 have not started. See [Phase 1 report](rescue-dispatch-phase1-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
+**Status:** Phase 1 merged. Phase 2 implemented on `feat/rescue-dispatch-phase2-coordination`; database-backed verification pending. Phases 3–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md) and [Phase 2 report](rescue-dispatch-phase2-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
 
 ## Current architecture and invariants
 
@@ -54,10 +54,10 @@ Use a new branch for each approved phase, as requested for earlier phased work. 
 
 **Pages/components:** Add `/admin/responders` and a directory component in the current shell navigation. Add a Responder Coordination section to `/admin/rescue-requests/[id]` with coverage/capability/contact review and manual attempt form. Keep contact data out of queue/export and public DTOs. Indicate demo organizations and unknown availability. No responder-facing UI.
 
-- [ ] Build directory CRUD, filters and activate/deactivate controls with useful empty, error and loading states.
-- [ ] Add organization selection, channel, contact attempt and acknowledgement actions with server validation.
-- [ ] Add decline/unreachable/reassignment flow and chronological event display; prevent duplicate pending attempts.
-- [ ] Test admin/non-admin access, invalid coverage/contact data, duplicate clicks, stale request versions, declined attempt/reassignment and zero external sends.
+- [x] Build directory CRUD, filters and activate/deactivate controls with useful empty, error and loading states.
+- [x] Add organization selection, channel, contact attempt and acknowledgement actions with server validation.
+- [x] Add decline/unreachable/reassignment flow and chronological event display; prevent duplicate pending attempts.
+- [ ] Run database-backed tests for admin/non-admin access, invalid coverage/contact data, duplicate clicks, stale request versions, declined attempt/reassignment and zero external sends. The integration test is written; this workspace lacks `TEST_DATABASE_URL` and a running PostgreSQL engine.
 
 **Acceptance:** Admin can manage and select organizations; contact and acknowledgement are separate persisted facts; reassignment retains old attempts; the request remains active after a failed attempt. No service is contacted by the app.
 

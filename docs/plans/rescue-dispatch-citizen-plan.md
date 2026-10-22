@@ -1,6 +1,6 @@
 # Admin-managed rescue dispatch: citizen experience plan
 
-**Status:** Phase 1 foundation review passed on `feat/rescue-dispatch-phase1-foundation`, 21 October 2026; review pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 2–6 have not started. See [Phase 1 report](rescue-dispatch-phase1-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
+**Status:** Phase 1 foundation merged; Phase 2 coordination privacy implemented on `feat/rescue-dispatch-phase2-coordination`, with database-backed verification pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 3–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md) and [Phase 2 report](rescue-dispatch-phase2-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
 
 ## Current architecture and functionality to preserve
 
@@ -67,8 +67,8 @@ Each approved phase uses a new branch. After implementation, check its completed
 
 ### Phase 2 — Coordination privacy
 
-- [ ] Verify organization directory and contact attempts appear only in admin API/UI; public response contains no contact details or attempt notes.
-- [ ] Ensure admin-recorded acceptance has a separate event from organization selection and simulated-contact disclosure.
+- [ ] Run the database-backed owner/privacy integration test to verify organization directory and contact attempts appear only in admin API/UI; public response contains no contact details or attempt notes. The allowlist and test are implemented.
+- [x] Ensure admin-recorded acceptance has a separate event from organization selection and simulated-contact disclosure.
 
 **Acceptance:** Citizen sees no fabricated “dispatched” state merely because an organization was selected.
 

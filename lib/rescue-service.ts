@@ -99,7 +99,7 @@ export async function listRescueRequests(userId: string, params: URLSearchParams
 export async function getRescueRequest(id: string, userId: string, admin = false) {
   const record = await prisma.rescueRequest.findFirst({ where: { id, ...(admin ? {} : { requesterUserId: userId }) }, include: { events } });
   if (!record) throw new RescueError("Rescue request not found.", 404);
-  return toRescueDto(record, admin);
+  return { ...toRescueDto(record, admin), ...(admin ? { assignments: await prisma.rescueAssignment.findMany({ where: { requestId: id }, include: { organization: true }, orderBy: [{ selectedAt: "asc" }, { id: "asc" }] }) } : {}) };
 }
 
 export async function correctRescueRequest(id: string, userId: string, raw: unknown) {
@@ -167,9 +167,9 @@ export async function actOnRescueRequest(id: string, actorId: string, raw: unkno
   });
 }
 
-// Phase 1 data seam; protected admin routes are added in Phase 2.
+// Keep the Phase 1 internal helpers available to existing callers.
 export const createRescueResponderOrganization = (actorId: string, input: unknown) =>
   persistResponderOrganization(prisma, actorId, input);
 
-export const selectRescueResponderAssignment = (actorId: string, requestId: string, organizationId: string, expectedVersion: number) =>
-  persistResponderAssignment(prisma, actorId, requestId, organizationId, expectedVersion);
+export const selectRescueResponderAssignment = (actorId: string, requestId: string, organizationId: string, expectedVersion: number, overrideReason?: string) =>
+  persistResponderAssignment(prisma, actorId, requestId, organizationId, expectedVersion, overrideReason);

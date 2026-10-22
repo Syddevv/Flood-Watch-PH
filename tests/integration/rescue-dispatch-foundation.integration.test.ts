@@ -42,8 +42,8 @@ integrationTest("rescue dispatch foundation preserves legacy rows and serializes
     await assert.rejects(db.rescueRequestEvent.create({ data: { requestId, source: "admin", eventType: "invalid_actor", visibility: "internal" } }));
 
     const attempts = await Promise.allSettled([
-      selectResponderAssignment(db, adminId, requestId, firstOrg.id, 1),
-      selectResponderAssignment(db, adminId, requestId, secondOrg.id, 1),
+      selectResponderAssignment(db, adminId, requestId, firstOrg.id, 1, "Demo availability is unknown."),
+      selectResponderAssignment(db, adminId, requestId, secondOrg.id, 1, "Demo availability is unknown."),
     ]);
     assert.equal(attempts.filter((attempt) => attempt.status === "fulfilled").length, 1);
     assert.equal(attempts.filter((attempt) => attempt.status === "rejected").length, 1);
@@ -55,7 +55,7 @@ integrationTest("rescue dispatch foundation preserves legacy rows and serializes
     await assert.rejects(selectResponderAssignment(db, citizenId, requestId, firstOrg.id, 2), { status: 403 });
     await assert.rejects(selectResponderAssignment(db, adminId, requestId, firstOrg.id, 1), { status: 409 });
     await db.rescueAssignment.update({ where: { id: active.id }, data: { endedAt: new Date(), status: "ended", endReason: "Test reassignment" } });
-    await selectResponderAssignment(db, adminId, requestId, active.organizationId === firstOrg.id ? secondOrg.id : firstOrg.id, 2);
+    await selectResponderAssignment(db, adminId, requestId, active.organizationId === firstOrg.id ? secondOrg.id : firstOrg.id, 2, "Demo availability is unknown.");
     assert.equal(await db.rescueAssignment.count({ where: { requestId } }), 2);
     assert.equal(await db.rescueAssignment.count({ where: { requestId, endedAt: null } }), 1);
     const selectedEvents = await db.rescueRequestEvent.findMany({ where: { requestId, eventType: "organization_selected" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });

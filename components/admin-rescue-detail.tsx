@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { RESCUE_TRANSITIONS, TERMINAL_RESCUE_STATUSES, type RescueStatus } from "@/lib/rescue-contracts";
+import { AdminRescueCoordination, type CoordinationAssignment } from "@/components/admin-rescue-coordination";
 
 type Event = { id: string; eventType: string; previousStatus: string | null; nextStatus: string | null; previousPriority: string | null; nextPriority: string | null; createdAt: string; visibility: string; reason: string | null; note: string | null; actorUserId: string };
 type Detail = {
@@ -15,7 +16,7 @@ type Detail = {
   description: string; locationName: string; localityCode: string; barangay: string;
   locationUncertainty: string; latitude: number | null; longitude: number | null;
   caseOwnerUserId: string | null; confirmedTeamReference: string | null; outcome: string | null;
-  events: Event[];
+  events: Event[]; assignments?: CoordinationAssignment[];
 };
 type Operator = { id: string; displayName: string | null; email: string };
 type Envelope<T> = { data?: T; error?: string };
@@ -141,6 +142,7 @@ export function AdminRescueDetail({ id }: { id: string }) {
         </>}
       </section>
     </div>
+    <AdminRescueCoordination requestId={request.id} version={request.version} status={request.status} localityCode={request.localityCode} assignments={request.assignments ?? []} disabled={busy || needsReview || stale} onSaved={() => refresh(true)} />
     <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-lg font-semibold">Event history</h3><ol className="mt-4 space-y-4">{request.events.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-border)] pl-4 text-sm"><p className="font-semibold">{event.eventType.replaceAll("_", " ")}{event.previousStatus !== event.nextStatus ? ` · ${event.previousStatus ?? "start"} → ${event.nextStatus ?? "unknown"}` : ""}</p><p className="text-xs text-[var(--color-muted-foreground)]">{new Date(event.createdAt).toLocaleString("en-PH")} · {event.visibility === "internal" ? "Internal only" : "Requester-visible"}</p>{event.reason && <p className="mt-1 whitespace-pre-wrap">Reason: {event.reason}</p>}{event.note && <p className="mt-1 whitespace-pre-wrap">{event.note}</p>}</li>)}</ol></section>
   </div>;
 }
