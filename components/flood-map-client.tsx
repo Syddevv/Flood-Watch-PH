@@ -432,6 +432,7 @@ const ReportPopupContent = memo(function ReportPopupContent({
           <div className="mt-0.5 line-clamp-1 text-[0.76rem] text-slate-600">
             {marker.report.location}
           </div>
+          <div className="mt-1 line-clamp-1 text-[0.74rem] text-slate-700">Reported by {marker.report.reporter}</div>
         </div>
         {thumbnailUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */

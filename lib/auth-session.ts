@@ -15,6 +15,7 @@ export type AuthenticatedUser = {
   id: string;
   email: string;
   displayName: string | null;
+  fullName: string | null;
   role: string;
 };
 
@@ -34,6 +35,7 @@ export async function getAuthenticatedUserFromToken(token: string | null | undef
     id: session.user.id,
     email: session.user.email,
     displayName: session.user.displayName,
+    fullName: session.user.fullName,
     role: session.user.role,
   } satisfies AuthenticatedUser;
 }

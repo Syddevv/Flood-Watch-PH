@@ -15,7 +15,7 @@ import {
   REPORT_ACTION_UNDO_WINDOW_MS,
 } from "@/lib/report-session";
 import { protectApiRequest } from "@/lib/request-security";
-import { serializeReportRecord, type PublicReportRecord } from "@/lib/report-api";
+import { reportListInclude, serializeReportRecord, type PublicReportRecord } from "@/lib/report-api";
 
 type RouteContext = {
   params: Promise<{
@@ -108,24 +108,16 @@ export async function POST(request: Request, context: RouteContext) {
       });
 
       const nextPatch = getLifecyclePersistencePatch(nextReport);
-      const finalReport =
-        Object.keys(nextPatch).length === 0
-          ? nextReport
-          : await tx.floodReport.update({
-              where: { id },
-              data: nextPatch,
-            });
+      if (Object.keys(nextPatch).length > 0) await tx.floodReport.update({ where: { id }, data: nextPatch });
 
       await syncIncidentAggregate(tx, report.incidentId);
 
-      return finalReport;
+      return tx.floodReport.findUniqueOrThrow({ where: { id }, include: reportListInclude });
     });
 
     if (updatedReport === "rejected") return errorResponse("Flood report not found.", 404);
 
-    return successResponse(
-      serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }),
-    );
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }));
   } catch (error) {
     if (isPrismaUniqueConstraintError(error)) {
       return errorResponse("This report has already been updated from this browser.", 409);
@@ -241,17 +233,11 @@ export async function DELETE(request: Request, context: RouteContext) {
       });
 
       const nextPatch = getLifecyclePersistencePatch(nextReport);
-      const finalReport =
-        Object.keys(nextPatch).length === 0
-          ? nextReport
-          : await tx.floodReport.update({
-              where: { id },
-              data: nextPatch,
-            });
+      if (Object.keys(nextPatch).length > 0) await tx.floodReport.update({ where: { id }, data: nextPatch });
 
       await syncIncidentAggregate(tx, report.incidentId);
 
-      return finalReport;
+      return tx.floodReport.findUniqueOrThrow({ where: { id }, include: reportListInclude });
     });
 
     if (!updatedReport) {
@@ -262,9 +248,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       return errorResponse("Undo window has expired.", 400);
     }
 
-    return successResponse(
-      serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }),
-    );
+    return successResponse(serializeReportRecord(updatedReport as PublicReportRecord, { sessionHash }));
   } catch (error) {
     console.error("Failed to undo water receded report.", error);
     return errorResponse("Something went wrong while undoing the water receded report.");

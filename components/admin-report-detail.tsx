@@ -17,7 +17,7 @@ type Detail = {
   imageUrl: string | null; verificationStatus: string; reviewVersion: number; updatedAt: string;
   reviewedAt: string | null; reviewer: { displayName: string | null; email: string } | null;
   createdAt: string; confirmationCount: number; resolvedCount: number;
-  user: { displayName: string | null; email: string } | null;
+  user: { id: string; fullName: string | null; email: string; fullAddress: string | null; barangay: string | null; cityMunicipality: string | null; province: string | null; emailVerificationStatus: string } | null;
   incident: { reportCount: number; reports: Array<{ id: string; title: string; verificationStatus: string; locationName: string }> };
   nearbyReports: Array<{ id: string; title: string; locationName: string; verificationStatus: string; distanceMeters: number }>;
   confirmations: Array<{ id: string; confirmationType: string; createdAt: string }>;
@@ -139,7 +139,7 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
             <h1 id="report-overview-title" className="text-xl font-semibold leading-tight sm:text-2xl">{report.title}</h1>
             <p className={"mt-2 flex items-start gap-2 text-sm " + mutedClass}><MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{report.locationName}</p>
             <dl className="mt-5 grid gap-x-5 gap-y-4 border-t border-[var(--color-border)] pt-5 sm:grid-cols-2 lg:grid-cols-3">
-              <InfoField label="Reporter">{report.user?.displayName ?? report.user?.email ?? "Legacy anonymous"}</InfoField>
+              <InfoField label="Reporter">{report.user?.fullName ?? "Reporter information unavailable"}</InfoField>
               <InfoField label="Admin verification"><span className="capitalize">{report.verificationStatus}</span></InfoField>
               <InfoField label="Community confirmation">{report.confirmationCount} confirmed · {report.resolvedCount} receded</InfoField>
               <InfoField label="Operational / public status">{report.adminStatus.replaceAll("_", " ")} / {report.publicStatus}</InfoField>
@@ -150,6 +150,20 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
               <h2 className="text-sm font-semibold">Incident description</h2>
               <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{report.description}</p>
             </div>
+          </section>
+
+          <section className={panelClass} aria-labelledby="reporter-information-title">
+            <h2 id="reporter-information-title" className="text-sm font-semibold">Reporter Information</h2>
+            <dl className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
+              <InfoField label="Full Name">{report.user?.fullName ?? "Reporter information unavailable"}</InfoField>
+              <InfoField label="Email Address">{report.user?.email ?? "Unavailable"}</InfoField>
+              <InfoField label="Registered Address">{report.user?.fullAddress ?? "Unavailable"}</InfoField>
+              <InfoField label="Barangay">{report.user?.barangay ?? "Unavailable"}</InfoField>
+              <InfoField label="City / Municipality">{report.user?.cityMunicipality ?? "Unavailable"}</InfoField>
+              <InfoField label="Province">{report.user?.province ?? "Unavailable"}</InfoField>
+              <InfoField label="Account Verification">{report.user?.emailVerificationStatus ?? "Unavailable"}</InfoField>
+              <InfoField label="Submitted">{time(report.createdAt)}</InfoField>
+            </dl>
           </section>
 
           <section className={panelClass} aria-labelledby="photo-evidence-title">

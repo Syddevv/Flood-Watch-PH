@@ -38,6 +38,7 @@ type NearbyReportRecord = {
   ownerSessionHash: string | null;
   userId: string | null;
   reportedByName: string | null;
+  user?: { fullName: string | null } | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
   resolvedCount: number;
@@ -55,6 +56,7 @@ type NearbyReportRecord = {
 };
 
 const nearbyInclude = {
+  user: { select: { fullName: true } },
   confirmations: {
     select: {
       confirmationType: true,

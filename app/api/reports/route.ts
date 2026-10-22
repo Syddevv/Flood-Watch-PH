@@ -88,6 +88,7 @@ type ReportListRecord = {
   ownerSessionHash: string | null;
   userId: string | null;
   reportedByName: string | null;
+  user?: { fullName: string | null } | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
   resolvedCount: number;
@@ -195,6 +196,7 @@ export async function GET(request: Request) {
     const reports = (await prisma.floodReport.findMany({
       where,
       include: {
+        user: { select: { fullName: true } },
         incident: {
           select: {
             reportCount: true,
@@ -346,6 +348,9 @@ export async function POST(request: Request) {
     if (!authenticatedUser) {
       return errorResponse("You must be signed in to submit a report.", 401);
     }
+    if (!authenticatedUser.fullName) {
+      return errorResponse("Add your full name to your profile before submitting a report. Visit /profile.", 403);
+    }
 
     const parsedFormData = await parseReportRequestFormData(request);
 
@@ -401,7 +406,6 @@ export async function POST(request: Request) {
       category,
       severity,
       locationName,
-      reportedByName,
       latitude,
       longitude,
       locationSource,
@@ -471,7 +475,7 @@ export async function POST(request: Request) {
                 onsitePolicyVersion,
                 onsiteEligibleAt: now,
                 userId: authenticatedUser.id,
-                reportedByName,
+                reportedByName: null,
                 sourceType: "Community",
                 confirmationCount: 0,
                 resolvedCount: 0,
@@ -528,7 +532,7 @@ export async function POST(request: Request) {
             onsitePolicyVersion,
             onsiteEligibleAt: now,
             userId: authenticatedUser.id,
-            reportedByName,
+            reportedByName: null,
             sourceType: "Community",
             confirmationCount: 0,
             resolvedCount: 0,

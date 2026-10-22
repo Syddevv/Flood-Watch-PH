@@ -10,27 +10,25 @@ export default function PrivacyPage() {
         <h1 className="mt-6 text-3xl font-semibold">Privacy Notice</h1>
         <p className="mt-3 leading-7 text-[var(--color-muted-foreground)]">
           Viewing the flood map and existing reports never requires an account. Submitting a
-          new flood report requires signing in with an email and password &mdash; that&apos;s
-          the only account information collected. Reporter display names and optional contact
-          details remain separate and are only shown when you choose to provide them.
+          new flood report requires a verified account with a registered full name.
+          Registration also collects an email and a verified Bulacan address.
         </p>
 
         <section className="mt-8 space-y-5 leading-7 text-[var(--color-muted-foreground)]">
           <div>
             <h2 className="font-semibold text-[var(--color-foreground)]">Public display</h2>
             <p>
-              Reporter names are not shown in public feeds, maps, nearby-report results,
-              or shared report links. Public reports are labeled as anonymous community reports
-              unless you choose to display a name.
+              Your registered full name appears publicly on reports you submit, including report
+              cards, maps, and shared links. Your email and residential address are not public.
+              Historical reports without a reliable linked account show reporter information as unavailable.
             </p>
           </div>
           <div>
             <h2 className="font-semibold text-[var(--color-foreground)]">Owner access</h2>
             <p>
-              The account (or, for reports submitted before accounts existed, the anonymous
-              browser session) that submitted a report can view its own submitted reporter name
-              while managing that report. Session cookies are HttpOnly and passwords are never
-              stored in plain text.
+              The linked account can manage its submitted reports. Historical reports retain
+              their original ownership rules. Session cookies are HttpOnly and passwords are
+              never stored in plain text.
             </p>
           </div>
           <div>
@@ -44,7 +42,7 @@ export default function PrivacyPage() {
           <div>
             <h2 className="font-semibold text-[var(--color-foreground)]">Your choices</h2>
             <p>
-              You may leave reporter details blank and submit anonymously. For deletion or
+              You can update your registered full name from your profile. For deletion or
               privacy questions, contact the Flood Watch project operator through the
               deployment’s published support channel.
             </p>

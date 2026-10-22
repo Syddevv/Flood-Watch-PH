@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     ...(filters.search ? { OR: [{ id: { contains: filters.search, mode: "insensitive" as const } }, { title: { contains: filters.search, mode: "insensitive" as const } }, { description: { contains: filters.search, mode: "insensitive" as const } }, { locationName: { contains: filters.search, mode: "insensitive" as const } }, { user: { email: { contains: filters.search, mode: "insensitive" as const } } }] } : {}),
     ...(filters.publicStatus === "archived" ? { archivedAt: { not: null } } : filters.publicStatus === "resolved" ? { status: "Resolved" } : filters.publicStatus === "active" ? { status: { in: ["Needs More Confirmation", "Confirmed by Community"] } } : {}),
   };
-  const include = { incident: { select: { reportCount: true } }, user: { select: { id: true, email: true, displayName: true } } } as const;
+  const include = { incident: { select: { reportCount: true } }, user: { select: { id: true, email: true, fullName: true } } } as const;
   let reports;
   let total;
   if (filters.sort === "severity") {
@@ -62,16 +62,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = await requireProtectedAdminApi(request, { scope: "admin-report-create", limit: 20, windowMs: 60_000 });
   if (auth.response) return auth.response;
+  if (!auth.user.fullName) return adminErrorResponse(request, "Add your full name to your profile before creating a report. Visit /profile.", 403);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const text = (key: string, max: number) => typeof body?.[key] === "string" ? String(body[key]).trim().slice(0, max) : "";
-  const title = text("title", 160), description = text("description", 5000), category = text("category", 80), severity = text("severity", 40), locationName = text("locationName", 240), reporterName = text("reporterName", 160);
+  const title = text("title", 160), description = text("description", 5000), category = text("category", 80), severity = text("severity", 40), locationName = text("locationName", 240);
   const latitude = Number(body?.latitude), longitude = Number(body?.longitude);
   if (!title || !description || !locationName || !isValidReportCategory(category) || !isValidReportSeverity(severity) || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return adminErrorResponse(request, "Invalid report details or coordinates.", 400);
   if (!isWithinBulacan(latitude, longitude)) return adminErrorResponse(request, OUTSIDE_BULACAN_ERROR_MESSAGE, 400);
   const now = new Date();
   const result = await prisma.$transaction(async (tx) => {
     const incident = await tx.incident.create({ data: { status: "Needs More Confirmation", representativeLatitude: latitude, representativeLongitude: longitude, locationName, severity, reportCount: 1, firstReportAt: now, lastActivityAt: now } });
-    const report = await tx.floodReport.create({ data: { title, description, category, severity, locationName, latitude, longitude, locationSource: "admin", reportedByName: reporterName || null, sourceType: "Official", lastActivityAt: now, incidentId: incident.id } });
+    const report = await tx.floodReport.create({ data: { title, description, category, severity, locationName, latitude, longitude, locationSource: "admin", userId: auth.user.id, sourceType: "Official", lastActivityAt: now, incidentId: incident.id } });
     await recordAdminOperationalAction(tx, { targetType: "FloodReport", targetId: report.id, actionType: "status_change", actorUserId: auth.user.id, previousValue: null, nextValue: "pending", note: "Created by administrator", requestId: request.headers.get("x-request-id") });
     return report;
   });

@@ -114,10 +114,11 @@ integrationTest(
         body: createReportForm({ titleSuffix: "registered" }),
       });
       const createPayload = (await createResponse.json()) as {
-        data?: { id: string; isOwner: boolean };
+        data?: { id: string; isOwner: boolean; reportedByName: string | null };
       };
       assert.equal(createResponse.status, 201);
       assert.equal(createPayload.data?.isOwner, true);
+      assert.equal(createPayload.data?.reportedByName, "Test Resident");
       if (createPayload.data?.id) {
         createdReportIds.push({ id: createPayload.data.id, cookie: registerCookie });
       }

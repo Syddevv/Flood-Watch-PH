@@ -25,7 +25,7 @@ export function createReportForm(
   form.set("category", "Flooding");
   form.set("severity", "High");
   form.set("locationName", "Poblacion, Calumpit");
-  form.set("reportedByName", "Automated integration test");
+  form.set("reportedByName", "Forged browser name must be ignored");
   form.set("latitude", latitude);
   form.set("longitude", longitude);
   form.set("locationSource", "gps");

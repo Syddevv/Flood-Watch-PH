@@ -133,6 +133,7 @@ function RegisterForm() {
       <p className="mt-2 text-[0.88rem] leading-6 text-[var(--color-muted-foreground)]">
         Create an account to submit and manage flood reports.
       </p>
+      <p className="mt-2 text-xs leading-5 text-[var(--color-muted-foreground)]">Your registered full name will appear publicly on reports you submit. Your email and residential address stay private.</p>
 
       <form onSubmit={handleSubmit} noValidate className="mt-7 grid gap-4">
         <AuthInput id="fullName" label="Full Name" autoComplete="name" required value={fullName}

@@ -24,7 +24,7 @@ type AdminReportRecord = {
   createdAt: Date;
   updatedAt: Date;
   lastActivityAt: Date;
-  user?: { id: string; email: string; displayName: string | null } | null;
+  user?: { id: string; email: string; fullName: string | null } | null;
   incident?: { reportCount: number } | null;
 };
 
@@ -47,7 +47,7 @@ export function toAdminReportDto(report: AdminReportRecord) {
     incidentReportCount: report.incident?.reportCount ?? 1,
     hasPhoto: Boolean(report.imageUrl),
     reporter: report.user
-      ? { id: report.user.id, email: report.user.email, displayName: report.user.displayName }
+      ? { id: report.user.id, email: report.user.email, fullName: report.user.fullName }
       : null,
     createdAt: report.createdAt.toISOString(),
     lastActivityAt: report.lastActivityAt.toISOString(),

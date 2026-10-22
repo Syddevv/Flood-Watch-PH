@@ -87,6 +87,7 @@ test("report details are normalized and parsed into typed values", () => {
   formData.set("severity", "High");
   formData.set("locationName", "  Marikina   City " );
   formData.set("reportedByName", "  Juan   Dela Cruz " );
+  formData.set("userId", "forged-user-id");
   formData.set("latitude", "14.916");
   formData.set("longitude", "120.766");
 
@@ -97,7 +98,6 @@ test("report details are normalized and parsed into typed values", () => {
       category: "Flooding",
       severity: "High",
       locationName: "Marikina City",
-      reportedByName: "Juan Dela Cruz",
       latitude: 14.916,
       longitude: 120.766,
       locationSource: "manual",

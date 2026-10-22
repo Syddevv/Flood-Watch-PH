@@ -196,6 +196,15 @@ instructions.
 
 ### Apply database migrations
 
+New flood reports now derive their public reporter name from the linked
+account's `User.fullName`. The report's `userId` relationship and the nullable
+full-name profile field already exist, so this update needs no new migration.
+Historical reports without a linked account and registered full name remain
+intact and display “Reporter information unavailable.” Existing accounts
+missing a full name can complete it at `/profile` before submitting another
+report. Reporter email and registered address are available only through the
+administrator report detail endpoint.
+
 New registrations require a current device fix inside the sourced OpenStreetMap
 Bulacan province polygon (`data/bulacan-boundary.json`, relation 1504656).
 The server checks accuracy and boundary distance, then uses the existing

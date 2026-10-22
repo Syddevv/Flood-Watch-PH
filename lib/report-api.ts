@@ -68,6 +68,7 @@ export type PublicReportRecord = {
   onsiteEligibleAt?: Date | null;
   ownerSessionHash?: string | null;
   userId?: string | null;
+  user?: { fullName: string | null } | null;
   reportedByName: string | null;
   sourceType: "Community" | "Official" | "System";
   confirmationCount: number;
@@ -82,6 +83,7 @@ export type PublicReportRecord = {
 };
 
 export const reportDetailInclude = {
+  user: { select: { fullName: true } },
   updates: {
     orderBy: {
       createdAt: "desc" as const,
@@ -96,6 +98,7 @@ export const reportDetailInclude = {
 } as const;
 
 export const reportListInclude = {
+  user: { select: { fullName: true } },
   confirmations: {
     select: {
       confirmationType: true,
@@ -151,6 +154,7 @@ export function serializeReportRecord<T extends PublicReportRecord>(
   const owner = isReportOwner(report, identity);
   delete safeReport.ownerSessionHash;
   delete safeReport.userId;
+  delete safeReport.user;
   delete safeReport.confirmations;
   delete safeReport.gpsLatitude;
   delete safeReport.gpsLongitude;
@@ -160,9 +164,7 @@ export function serializeReportRecord<T extends PublicReportRecord>(
   delete safeReport.reviewedAt;
   delete safeReport.reviewedByUserId;
   delete safeReport.reviewPublicMessage;
-  if (!owner) {
-    safeReport.reportedByName = null;
-  }
+  safeReport.reportedByName = report.user?.fullName?.trim() || null;
 
   return {
     ...safeReport,
@@ -256,7 +258,6 @@ export function parseReportDetailsFormData(formData: FormData, now: Date = new D
   const category = getOptionalText(formData.get("category"));
   const severity = getOptionalText(formData.get("severity"));
   const locationName = getOptionalText(formData.get("locationName"));
-  const reportedByName = getOptionalText(formData.get("reportedByName"));
   const rawLatitude = Number(formData.get("latitude"));
   const rawLongitude = Number(formData.get("longitude"));
   const forceNewIncident = formData.get("forceNewIncident") === "true";
@@ -324,10 +325,6 @@ export function parseReportDetailsFormData(formData: FormData, now: Date = new D
     return { error: OUTSIDE_BULACAN_ERROR_MESSAGE };
   }
 
-  if (reportedByName && reportedByName.length > 80) {
-    return { error: "Reported by name must not exceed 80 characters." };
-  }
-
   // `data` holds FloodReport columns only, so callers can spread it straight
   // into a Prisma create/update. `forceNewIncident` is a submission flag that
   // steers incident matching, not a column - it stays a sibling key.
@@ -338,7 +335,6 @@ export function parseReportDetailsFormData(formData: FormData, now: Date = new D
       category,
       severity,
       locationName,
-      reportedByName,
       latitude,
       longitude,
       locationSource,

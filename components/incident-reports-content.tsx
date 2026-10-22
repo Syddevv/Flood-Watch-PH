@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
@@ -17,6 +18,7 @@ import {
   Send,
   ThumbsUp,
   Trash2,
+  UserRound,
   Waves,
   X,
 } from "lucide-react";
@@ -98,9 +100,6 @@ type FormState = {
   severity: string;
   waterDepth: string;
   description: string;
-  reportedByName: string;
-  contactNumber: string;
-  submitAnonymously: boolean;
   photos: File[];
 };
 
@@ -138,9 +137,6 @@ const emptyFormState: FormState = {
   severity: REPORT_SEVERITIES[1],
   waterDepth: WATER_DEPTH_OPTIONS[4],
   description: "",
-  reportedByName: "",
-  contactNumber: "",
-  submitAnonymously: false,
   photos: [],
 };
 
@@ -501,6 +497,10 @@ function ReportCard({
             <MapPin className="h-3.25 w-3.25 shrink-0" />
             <span className="min-w-0 truncate">{report.location}</span>
           </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.76rem] leading-4 text-[var(--color-muted-foreground)]">
+            <UserRound aria-hidden="true" className="h-3.25 w-3.25 shrink-0" />
+            <span className="min-w-0 truncate">Reported by {report.reporter}</span>
+          </div>
         </div>
       </div>
 
@@ -608,6 +608,7 @@ export function IncidentReportsContent() {
     hasValidCoordinates &&
     !isWithinBulacan(Number(formState.latitude), Number(formState.longitude));
   const canSubmitReport =
+    Boolean(authUser?.fullName) &&
     formState.locationName.trim().length > 0 &&
     formState.description.trim().length > 0 &&
     hasValidCoordinates &&
@@ -1373,6 +1374,10 @@ export function IncidentReportsContent() {
   }
 
   async function handleSubmitReport(skipNearbyDuplicateCheck = false) {
+    if (!authUser?.fullName) {
+      setToast({ tone: "error", message: "Add your full name at /profile before submitting a report." });
+      return;
+    }
     if (!formState.locationName.trim()) {
       setToast({ tone: "error", message: "Location name is required." });
       return;
@@ -1437,10 +1442,6 @@ export function IncidentReportsContent() {
       requestBody.set("gpsLongitude", String(formState.gpsLongitude));
       requestBody.set("gpsAccuracyMeters", String(formState.gpsAccuracyMeters));
       requestBody.set("gpsCapturedAt", formState.gpsCapturedAt);
-
-      if (!formState.submitAnonymously && formState.reportedByName.trim()) {
-        requestBody.set("reportedByName", formState.reportedByName.trim());
-      }
 
       requestBody.set("image", selectedPhoto);
       requestBody.set("photoCapturedAt", formState.photoCapturedAt);
@@ -1625,7 +1626,7 @@ export function IncidentReportsContent() {
                     Sign in to submit a flood report
                   </div>
                   <p className="mx-auto mt-1.5 max-w-sm text-[0.86rem] leading-6 text-[var(--color-muted-foreground)]">
-                    Creating an account takes a moment and only requires an email and password.
+                    Creating an account requires your full name, email, password, and a verified Bulacan location.
                     Viewing the map and existing reports never requires signing in.
                   </p>
                   <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
@@ -1647,6 +1648,7 @@ export function IncidentReportsContent() {
                 </section>
               ) : (
                 <>
+              {authUser && !authUser.fullName ? <section className="rounded-[18px] border border-[var(--color-warning-border)] bg-[var(--color-warning-surface)] px-5 py-4 text-sm text-[var(--color-warning-text)]">Add your full name to your <Link href="/profile" className="font-semibold underline">profile</Link> before submitting a report.</section> : null}
               {updateContext ? (
                 <section className="rounded-[18px] border border-[var(--color-info-border)] bg-[var(--color-info-surface)] px-4 py-3.5 shadow-[var(--shadow-soft)]">
                   <div className="text-[0.88rem] font-semibold text-[var(--color-info-text)]">
@@ -1891,50 +1893,10 @@ export function IncidentReportsContent() {
               <FormSection
                 step="4"
                 title="Reporter information"
-                description="Add your name or contact number only if follow-up may be needed. You can still submit anonymously."
+                description="Your registered full name will be publicly displayed with this report. Your email and residential address remain private."
                 tone="muted"
-                optional
               >
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="grid gap-1.5">
-                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
-                      Reporter name
-                    </span>
-                    <input
-                      type="text"
-                      value={formState.reportedByName}
-                      onChange={(event) => updateFormState("reportedByName", event.target.value)}
-                      placeholder="Your name or organization"
-                      className="h-11 w-full rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
-                    />
-                  </label>
-                  <label className="grid gap-1.5">
-                    <span className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]">
-                      Contact number
-                    </span>
-                    <input
-                      type="text"
-                      value={formState.contactNumber}
-                      onChange={(event) => updateFormState("contactNumber", event.target.value)}
-                      placeholder="09xx xxx xxxx"
-                      className="h-11 w-full rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_78%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 text-[0.92rem] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[color:color-mix(in_srgb,var(--color-primary)_42%,transparent)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)]"
-                    />
-                  </label>
-                </div>
-
-                <label className="mt-4 flex items-start gap-3 rounded-[12px] border border-[color:color-mix(in_srgb,var(--color-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3.5 py-3 text-[0.88rem] text-[var(--color-foreground)]">
-                  <input
-                    type="checkbox"
-                    checked={formState.submitAnonymously}
-                    onChange={(event) =>
-                      updateFormState("submitAnonymously", event.target.checked)
-                    }
-                    className="mt-0.5 h-4 w-4 rounded border border-[var(--color-border)]"
-                  />
-                  <span>
-                    Reporter names are private and visible only to the original uploader. The public feed shows every report as anonymous.
-                  </span>
-                </label>
+                <p className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-3 text-sm font-medium">{authUser?.fullName ?? "Reporter information unavailable"}</p>
               </FormSection>
 
               {pendingNearbyDuplicate ? (

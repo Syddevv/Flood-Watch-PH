@@ -176,7 +176,7 @@ export function mapReportToIncident(report: ReportRecord): IncidentReport {
         : derivedStatus === "Likely Receded"
           ? `Likely receded ${formatRelativeTime(updatedAt)}`
           : undefined,
-    reporter: report.reportedByName ?? "Anonymous Community Reporter",
+    reporter: report.reportedByName ?? "Reporter information unavailable",
     sourceUnit: getSourceLabel(report.sourceType),
     officialSource:
       report.officialSourceName ||

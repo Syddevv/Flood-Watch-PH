@@ -640,14 +640,14 @@ export function IncidentReportModal({
             </div>
 
             <div className="mt-3 text-[0.76rem] text-[var(--color-muted-foreground)] md:hidden">
-              <span className="font-semibold text-[var(--color-foreground)]">{report.reporter}</span>
+              <span className="font-semibold text-[var(--color-foreground)]">Reported by {report.reporter}</span>
               <span> · </span>
               <span>{report.sourceLabel}</span>
             </div>
             <div className="mt-4 hidden grid-cols-1 gap-2.5 md:grid md:grid-cols-2">
               <div className="rounded-[14px] border border-[var(--color-border)] bg-[var(--color-panel)] px-3.5 py-3">
                 <div className="text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                  Reporter
+                  Reported by
                 </div>
                 <div className="mt-1 text-[0.86rem] font-medium text-[var(--color-foreground)]">
                   {report.reporter}

@@ -31,6 +31,7 @@ const mapReportSelect = {
   lastActivityAt: true,
   resolvedAt: true,
   archivedAt: true,
+  user: { select: { fullName: true } },
 } as const;
 const MAX_MAP_REPORTS = 500;
 
@@ -52,6 +53,7 @@ type MapReportRecord = {
   lastActivityAt: Date;
   resolvedAt: Date | null;
   archivedAt: Date | null;
+  user: { fullName: string | null } | null;
 };
 
 function getSeverityRank(severity: string) {
@@ -142,10 +144,10 @@ export async function GET(request: Request) {
 
         return matchesLifecycleFilter(lifecycleStatus, parsedFilters.filters.status);
       })
-      .map((report: MapReportRecord) => ({
-        ...report,
-        type: "flood_report" as const,
-      }))
+      .map((report: MapReportRecord) => {
+        const { user, ...publicReport } = report;
+        return { ...publicReport, reporterName: user?.fullName?.trim() || "Reporter information unavailable", type: "flood_report" as const };
+      })
       .sort((a, b) => {
         const statusRankDifference = getStatusRank(a.status) - getStatusRank(b.status);
         if (statusRankDifference !== 0) {
@@ -168,7 +170,7 @@ export async function GET(request: Request) {
     }));
 
     const lastUpdatedCandidates = [
-      ...filteredReports.map((report: MapReportRecord) => report.updatedAt.getTime()),
+      ...filteredReports.map((report) => report.updatedAt.getTime()),
       ...mappedEvacuationCenters
         .map((center) => center.updatedAt)
         .filter((updatedAt): updatedAt is string => Boolean(updatedAt))

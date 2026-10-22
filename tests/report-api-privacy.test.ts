@@ -35,15 +35,25 @@ function createReport(overrides: Record<string, unknown> = {}) {
 
 const legacyReport = createReport();
 
-test("reporter names are redacted from public report responses", () => {
+test("legacy free-text reporter names are never treated as verified identities", () => {
   assert.equal(
     serializeReportRecord(legacyReport, { sessionHash: "other-session" }).reportedByName,
     null,
   );
   assert.equal(
     serializeReportRecord(legacyReport, { sessionHash: "owner-session" }).reportedByName,
-    "Private Reporter",
+    null,
   );
+});
+
+test("linked registered full name is public while account fields and IDs stay private", () => {
+  const report = createReport({ userId: "user-1", user: { id: "user-1", fullName: "María Dela Cruz", email: "private@example.com", fullAddress: "Private Street" } });
+  const serialized = serializeReportRecord(report);
+  assert.equal(serialized.reportedByName, "María Dela Cruz");
+  assert.equal("user" in serialized, false);
+  assert.equal("userId" in serialized, false);
+  assert.equal(JSON.stringify(serialized).includes("private@example.com"), false);
+  assert.equal(JSON.stringify(serialized).includes("Private Street"), false);
 });
 
 test("a legacy report (session-hash only) is owned by matching session hash, not by any userId", () => {

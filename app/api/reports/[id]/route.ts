@@ -141,7 +141,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       category,
       severity,
       locationName,
-      reportedByName,
       latitude,
       longitude,
     } = parsedReport.data;
@@ -161,7 +160,6 @@ export async function PATCH(request: Request, context: RouteContext) {
         category,
         severity,
         locationName,
-        reportedByName,
         lastActivityAt: new Date(),
       },
       include: reportDetailInclude,
