@@ -1,7 +1,8 @@
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { EMERGENCY_CONTACT_CATEGORIES } from "@/lib/emergency-contact-categories";
 import { isSafeCenterSourceUrl } from "@/lib/public-evacuation-centers";
 
-const categories = new Set(["disaster_response", "fire", "hospital", "medical_assistance", "police", "rescue", "social_welfare", "Disaster Coordination", "Emergency Response", "Local Response"]);
+const categories = new Set<string>(EMERGENCY_CONTACT_CATEGORIES);
 const statuses = new Set(["official_publication_found", "verified", "needs_verification", "outdated"]);
 
 export function parseAdminContactPayload(body: unknown) {
@@ -20,7 +21,7 @@ export function parseAdminContactPayload(body: unknown) {
   const phones = value.phones;
   if (!agencyName || !categories.has(category) || (cityInput && !city) || !statuses.has(verificationStatus)) return { error: "Invalid agency, service, locality, or verification state." };
   if (!Array.isArray(phones) || phones.length === 0 || phones.length > 10 || phones.some((phone) =>
-    !phone || typeof phone !== "object" || typeof phone.raw !== "string" || !phone.raw.trim() || phone.raw.length > 40 ||
+    !phone || typeof phone !== "object" || typeof phone.raw !== "string" || !/^[+\d()\s-]{2,40}$/.test(phone.raw.trim()) || phone.raw.replace(/\D/g, "").length < 3 ||
     (phone.telUri != null && (typeof phone.telUri !== "string" || !/^tel:(?:\+\d{7,15}|\d{3})$/.test(phone.telUri))))) {
     return { error: "Enter at least one raw number; dial links must be supplied valid tel URIs." };
   }
