@@ -62,14 +62,14 @@ function LoginForm() {
 
   return (
     <AuthLayout>
-      <h1 className="text-[1.7rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)] sm:text-[1.85rem]">
+      <h1 className="text-[2rem] font-semibold tracking-[-0.035em] text-[var(--color-foreground)] sm:text-[2.2rem]">
         Welcome back
       </h1>
-      <p className="mt-2 text-[0.88rem] leading-6 text-[var(--color-muted-foreground)]">
-        Sign in to submit flood reports and manage the reports you&apos;ve filed.
+      <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
+        Sign in to your Flood Watch account.
       </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-7 grid gap-4">
+      <form onSubmit={handleSubmit} noValidate className="mt-8 grid gap-5">
         <AuthInput
           id="email"
           label="Email"
@@ -96,7 +96,7 @@ function LoginForm() {
         </AuthButton>
       </form>
 
-      <p className="mt-6 text-center text-[0.85rem] text-[var(--color-muted-foreground)]">
+      <p className="mt-7 text-center text-sm text-[var(--color-muted-foreground)]">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"

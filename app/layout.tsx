@@ -7,6 +7,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Flood Watch",
   description: "Community flood reports, weather, and emergency resources for Bulacan, Philippines.",
+  icons: {
+    icon: "/Flood Watch Warning Emblem.png",
+    apple: "/Flood Watch Warning Emblem.png",
+  },
 };
 
 export default function RootLayout({

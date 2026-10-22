@@ -20,6 +20,7 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [location, setLocation] = useState<{ token: string; fullAddress: string; streetAddress: string | null; barangay: string | null; cityMunicipality: string | null; postalCode: string | null } | null>(null);
@@ -73,7 +74,7 @@ function RegisterForm() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (submitting || !location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password)) return;
+    if (submitting || !location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password) || password !== confirmPassword) return;
     setError(null);
     setSubmitting(true);
 
@@ -126,16 +127,18 @@ function RegisterForm() {
   }
 
   return (
-    <AuthLayout>
-      <h1 className="text-[1.7rem] font-semibold tracking-[-0.02em] text-[var(--color-foreground)] sm:text-[1.85rem]">
+    <AuthLayout wide>
+      <h1 className="text-[2rem] font-semibold tracking-[-0.035em] text-[var(--color-foreground)] sm:text-[2.2rem]">
         Create your account
       </h1>
-      <p className="mt-2 text-[0.88rem] leading-6 text-[var(--color-muted-foreground)]">
+      <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
         Create an account to submit and manage flood reports.
       </p>
       <p className="mt-2 text-xs leading-5 text-[var(--color-muted-foreground)]">Your registered full name will appear publicly on reports you submit. Your email and residential address stay private.</p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-7 grid gap-4">
+      <form onSubmit={handleSubmit} noValidate className="mt-7 grid gap-5">
+        <div className="space-y-4">
+          <h2 className="border-b border-[var(--color-border)] pb-2 text-sm font-semibold text-[var(--color-foreground)]">Account information</h2>
         <AuthInput id="fullName" label="Full Name" autoComplete="name" required value={fullName}
           onChange={setFullName} placeholder="e.g. Juan Dela Cruz" maxLength={80}
           hint="Enter at least your given name and family name." />
@@ -159,44 +162,53 @@ function RegisterForm() {
           onChange={setPassword}
           hint="Use 10–200 characters with letters and a number or symbol."
         />
+        <PasswordInput
+          id="confirmPassword"
+          label="Confirm Password"
+          autoComplete="new-password"
+          required
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          error={confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined}
+          hint={confirmPassword && password === confirmPassword ? "Passwords match." : undefined}
+        />
+        </div>
 
-        <section aria-label="Current address" className="grid gap-3 rounded-lg border border-[var(--color-border)] p-3.5">
-          <h2 className="flex items-center gap-2 text-sm font-semibold"><MapPin aria-hidden="true" className="size-4" />Current Address</h2>
+        <section aria-label="Current address" className="grid gap-4 border-t border-[var(--color-border)] pt-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold"><MapPin aria-hidden="true" className="size-4 text-[var(--color-primary)]" />Location information</h2>
           <p className="text-xs text-[var(--color-muted-foreground)]">Your device location must be verified in Bulacan. You can add missing street details after detection.</p>
-          {location ? <div className="grid gap-1 text-xs leading-5 text-[var(--color-muted-foreground)]">
-            <p>Street: {location.streetAddress || streetAddress || "Unavailable"}</p>
-            <p>Barangay: {location.barangay || "Unavailable"}</p>
-            <p>City or municipality: {location.cityMunicipality || "Unavailable"}</p>
-            <p>Province: Bulacan · Postal code: {location.postalCode || "Unavailable"}</p>
-            <p>Country: Philippines</p>
-          </div> : <p className="text-xs text-[var(--color-muted-foreground)]">Address unavailable until location is detected.</p>}
+          {location ? <div className="grid gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-4 text-sm leading-5">
+            <p className="font-semibold text-[var(--color-foreground)]">{location.cityMunicipality || "Bulacan"}, Bulacan</p>
+            <p className="text-[var(--color-muted-foreground)]">{location.fullAddress}</p>
+            {location.barangay ? <p className="text-xs text-[var(--color-muted-foreground)]">Barangay {location.barangay}</p> : null}
+          </div> : <p className="text-xs text-[var(--color-muted-foreground)]">Your verified address will appear here after detection.</p>}
           {location && !location.streetAddress ? <AuthInput id="streetAddress" label="House number, street or subdivision" optional
             value={streetAddress} onChange={setStreetAddress} maxLength={120}
             hint="Add missing street details only. The verified location stays fixed." /> : null}
           <button type="button" onClick={detectLocation} disabled={locationState === "loading" || !registrationEmail(email)}
-            className="flex h-10 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] text-sm font-medium hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60">
+            className="flex h-[52px] items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] text-sm font-semibold hover:border-[var(--color-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60">
             {locationState === "loading" ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <MapPin aria-hidden="true" className="size-4" />}
             {locationState === "loading" ? "Detecting location..." : location ? "Detect My Location Again" : "Detect My Location"}
           </button>
           <div aria-live="polite" role="status" className={`text-xs ${locationState === "verified" ? "text-[var(--color-success-text)]" : ["outside", "denied", "unavailable"].includes(locationState) ? "text-[var(--color-warning-text)]" : "text-[var(--color-muted-foreground)]"}`}>
             {locationState === "verified" ? "Location verified — Bulacan, Philippines." :
-              locationState === "outside" ? "Registration is currently available only to residents registering from within Bulacan. Your current location appears to be outside our supported area." :
+              locationState === "outside" ? "Account registration is currently available only within Bulacan. You can still explore flood reports, weather updates, and evacuation information without an account." :
               locationState === "denied" ? "Location access is required to verify registration eligibility. Please enable location permission in your browser and try again." :
               locationState === "unavailable" ? locationMessage ?? "We couldn't verify your location accurately. Please move to an area with a stronger location signal and try again." :
               locationState === "loading" ? "Checking your location and address..." : ""}
           </div>
-          {locationState === "outside" ? <><p className="text-xs text-[var(--color-muted-foreground)]">You can still explore Flood Watch, view flood reports, check weather conditions, and find evacuation centers without an account.</p><Link href="/" className="text-center text-sm font-medium text-[var(--color-primary)] hover:underline">Continue as Guest</Link></> : null}
+          {locationState === "outside" ? <Link href="/" className="text-center text-sm font-semibold text-[var(--color-primary)] hover:underline">Continue browsing</Link> : null}
           {locationState === "denied" || locationState === "unavailable" ? <button type="button" onClick={detectLocation} className="text-left text-xs font-medium text-[var(--color-primary)] hover:underline">Try Again</button> : null}
         </section>
 
         {error ? <AuthAlert title="Unable to create your account" message={error} /> : null}
 
-        <AuthButton loading={submitting} disabled={!location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password)} loadingLabel="Creating account...">
+        <AuthButton loading={submitting} disabled={!location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password) || password !== confirmPassword} loadingLabel="Creating account...">
           Create account
         </AuthButton>
       </form>
 
-      <p className="mt-6 text-center text-[0.85rem] text-[var(--color-muted-foreground)]">
+      <p className="mt-7 text-center text-sm text-[var(--color-muted-foreground)]">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-[var(--color-primary)] hover:underline">
           Log in

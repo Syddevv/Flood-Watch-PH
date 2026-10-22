@@ -22,7 +22,7 @@ export function AuthButton({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        "floodwatch-primary-action flex h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[0.94rem] font-semibold transition-[filter,transform] duration-150 hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 disabled:active:scale-100",
+        "floodwatch-primary-action flex h-[52px] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] text-[0.95rem] font-semibold transition-[filter,transform] duration-150 hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 disabled:active:scale-100",
         className,
       )}
       {...rest}

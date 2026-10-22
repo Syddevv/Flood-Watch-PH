@@ -45,7 +45,7 @@ export function AuthInput({
       <div className="flex items-baseline justify-between gap-2">
         <label
           htmlFor={id}
-          className="text-[0.78rem] font-medium text-[var(--color-muted-foreground)]"
+          className="text-[0.84rem] font-semibold text-[var(--color-foreground)]"
         >
           {label}
         </label>
@@ -70,7 +70,7 @@ export function AuthInput({
           aria-invalid={Boolean(error)}
           aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
           className={cn(
-            "h-12 w-full rounded-[var(--radius-control)] border bg-[var(--color-surface)] px-3.5 text-[0.94rem] text-[var(--color-foreground)] outline-none transition-colors duration-150 placeholder:text-[color:color-mix(in_srgb,var(--color-muted-foreground)_70%,transparent)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)]",
+            "h-[52px] w-full rounded-[var(--radius-control)] border bg-[var(--color-surface)] px-3.5 text-[0.95rem] text-[var(--color-foreground)] outline-none transition-colors duration-150 placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)]",
             error
               ? "border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[color:color-mix(in_srgb,var(--color-danger)_18%,transparent)]"
               : "border-[var(--color-border)]",
