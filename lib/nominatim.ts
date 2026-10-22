@@ -112,7 +112,7 @@ export async function fetchNominatimReverse(
   try {
     return await getCachedNominatimReverse(latitude, longitude, zoom);
   } catch (error) {
-    console.error("Nominatim reverse geocode failed.", { latitude, longitude, zoom, error });
+    console.error("Nominatim reverse geocode failed.", { zoom, error });
     return null;
   }
 }

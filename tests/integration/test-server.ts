@@ -240,6 +240,7 @@ export async function createAnonymousSession(baseUrl: string, clientAddress: str
  */
 export async function createAuthenticatedSession(baseUrl: string, clientAddress: string) {
   const email = `integration-${clientAddress}@example.com`;
+  const locationToken = await createTestLocationVerification(email);
   const registrationResponse = await fetch(`${baseUrl}/api/auth/register`, {
     method: "POST",
     headers: {
@@ -247,7 +248,7 @@ export async function createAuthenticatedSession(baseUrl: string, clientAddress:
       "Content-Type": "application/json",
       "X-Forwarded-For": clientAddress,
     },
-    body: JSON.stringify({ email, password: "integration-test-password" }),
+    body: JSON.stringify({ email, password: "integration-test-password1", fullName: "Test Resident", locationToken }),
   });
 
   assert.equal(registrationResponse.status, 202);
@@ -264,4 +265,15 @@ export async function createAuthenticatedSession(baseUrl: string, clientAddress:
 
   assert.equal(verificationResponse.status, 200);
   return cookieFromResponse(verificationResponse);
+}
+
+export async function createTestLocationVerification(email: string) {
+  const { randomBytes } = await import("node:crypto");
+  const { prisma } = await import("@/lib/prisma");
+  const id = randomBytes(32).toString("hex");
+  await prisma.registrationLocationVerification.create({
+    data: { id, email, fullAddress: "Malolos, Bulacan, Philippines", cityMunicipality: "Malolos",
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+  });
+  return id;
 }

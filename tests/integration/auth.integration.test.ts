@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   cookieFromResponse,
+  createTestLocationVerification,
   createReportForm,
   integrationTest,
   startTestServer,
@@ -19,6 +20,7 @@ async function register(
   email: string,
   password: string,
 ) {
+  const locationToken = await createTestLocationVerification(email);
   const response = await fetch(`${baseUrl}/api/auth/register`, {
     method: "POST",
     headers: {
@@ -26,7 +28,7 @@ async function register(
       "Content-Type": "application/json",
       "X-Forwarded-For": address,
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, fullName: "Test Resident", locationToken }),
   });
   const payload = (await response.json()) as {
     data?: { verificationRequired: boolean; email: string };

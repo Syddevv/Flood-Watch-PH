@@ -13,10 +13,16 @@ export async function registerVerifiedTestUser(page: Page, prefix: string) {
   await page.goto("/incident-reports");
   const origin = new URL(page.url()).origin;
   const email = `${prefix}-${randomUUID()}@example.com`;
+  const { randomBytes } = await import("node:crypto");
+  const { prisma } = await import("@/lib/prisma");
+  const locationToken = randomBytes(32).toString("hex");
+  await prisma.registrationLocationVerification.create({ data: { id: locationToken, email,
+    fullAddress: "Malolos, Bulacan, Philippines", cityMunicipality: "Malolos",
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000) } });
   const headers = { Origin: origin, "Content-Type": "application/json" };
   const registration = await page.request.post("/api/auth/register", {
     headers,
-    data: { email, password: "correct-horse-battery" },
+    data: { email, password: "correct-horse-battery1", fullName: "Test Resident", locationToken },
   });
   expect(registration.status()).toBe(202);
   const verification = await page.request.post("/api/auth/verify-code", {

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 
 import { hashPassword } from "@/lib/password";
 
-import { integrationTest, startTestServer, stopServer } from "./test-server";
+import { createTestLocationVerification, integrationTest, startTestServer, stopServer } from "./test-server";
 
 function uniqueEmail(runId: string, label: string) {
   return `integration-verification-${label}-${runId}@example.com`;
@@ -32,10 +32,12 @@ async function postJson(
   return { response, payload };
 }
 
-const register = (baseUrl: string, address: string, email: string) =>
+const register = async (baseUrl: string, address: string, email: string) =>
   postJson(baseUrl, "/api/auth/register", address, {
     email,
     password: "correct-horse-battery-staple",
+    fullName: "Test Resident",
+    locationToken: await createTestLocationVerification(email),
   });
 
 const verify = (baseUrl: string, address: string, email: string, code: string) =>

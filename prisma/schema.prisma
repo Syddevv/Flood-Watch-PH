@@ -228,6 +228,16 @@ model User {
   email                   String               @unique
   passwordHash            String
   displayName             String?
+  fullName                String?
+  fullAddress             String?
+  streetAddress           String?
+  barangay                String?
+  cityMunicipality        String?
+  province                String?
+  postalCode              String?
+  country                 String?
+  locationVerificationStatus String?
+  locationVerifiedAt      DateTime?
   role                    String               @default("user")
   emailVerificationStatus String               @default("pending")
   emailVerifiedAt         DateTime?
@@ -247,6 +257,20 @@ model User {
 
   @@index([role])
   @@index([emailVerificationStatus])
+}
+
+model RegistrationLocationVerification {
+  id               String    @id
+  email            String
+  fullAddress      String
+  streetAddress    String?
+  barangay         String?
+  cityMunicipality String?
+  postalCode       String?
+  verifiedAt       DateTime  @default(now())
+  expiresAt        DateTime
+
+  @@index([expiresAt])
 }
 
 model RescueRequest {

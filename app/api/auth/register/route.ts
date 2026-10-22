@@ -1,18 +1,17 @@
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createPendingRegistration } from "@/lib/email-verification";
-import { hashPassword, isValidPasswordLength } from "@/lib/password";
+import { hashPassword } from "@/lib/password";
 import { isPrismaUniqueConstraintError } from "@/lib/prisma";
-import { getOptionalText, trimText } from "@/lib/report-api";
+import { isValidRegistrationPassword, normalizeFullName, registrationEmail } from "@/lib/registration-policy";
 import { protectApiRequest } from "@/lib/request-security";
 import { logApiError } from "@/lib/structured-logger";
-import { isValidEmail } from "@/lib/validations";
-
-const MAX_DISPLAY_NAME_LENGTH = 80;
 
 type RegisterPayload = {
   email?: unknown;
   password?: unknown;
-  displayName?: unknown;
+  fullName?: unknown;
+  locationToken?: unknown;
+  streetAddress?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -34,24 +33,23 @@ export async function POST(request: Request) {
       return errorResponse("Invalid request body.", 400);
     }
 
-    const email = trimText(payload.email).toLowerCase();
-    const password = typeof payload.password === "string" ? payload.password : "";
-    const displayName = getOptionalText(payload.displayName);
+    const email = registrationEmail(payload.email);
+    const password = payload.password;
+    const fullName = normalizeFullName(payload.fullName);
+    const locationToken = payload.locationToken;
+    const streetAddress = typeof payload.streetAddress === "string" ? payload.streetAddress.trim().replace(/\s+/gu, " ") : null;
 
-    if (!email || !isValidEmail(email)) {
+    if (!email) {
       return errorResponse("A valid email address is required.", 400);
     }
 
-    if (!isValidPasswordLength(password)) {
-      return errorResponse("Password must be between 10 and 200 characters.", 400);
+    if (!isValidRegistrationPassword(password)) {
+      return errorResponse("Password must be 10–200 characters and include letters plus a number or symbol.", 400);
     }
 
-    if (displayName && displayName.length > MAX_DISPLAY_NAME_LENGTH) {
-      return errorResponse(
-        `Display name must not exceed ${MAX_DISPLAY_NAME_LENGTH} characters.`,
-        400,
-      );
-    }
+    if (!fullName) return errorResponse("Enter your full name with at least two name components.", 400);
+    if (typeof locationToken !== "string" || !/^[a-f0-9]{64}$/.test(locationToken)) return errorResponse("Detect and verify your current location before creating an account.", 400);
+    if (streetAddress && (streetAddress.length > 120 || /[<>\r\n]/u.test(streetAddress))) return errorResponse("Street details must be 120 characters or fewer.", 400);
 
     const passwordHash = await hashPassword(password);
 
@@ -70,9 +68,14 @@ export async function POST(request: Request) {
       registration = await createPendingRegistration({
         email,
         passwordHash,
-        displayName: displayName ?? null,
+        fullName,
+        locationToken,
+        streetAddress: streetAddress || null,
       });
     } catch (error) {
+      if (error instanceof Error && error.message === "REGISTRATION_LOCATION_EXPIRED") {
+        return errorResponse("Location verification expired or was already used. Detect your location again.", 409);
+      }
       if (isPrismaUniqueConstraintError(error)) {
         return errorResponse(
           "This email is already registered. Log in or use a different email. If you still need to verify it, request a new code from the verification page.",

@@ -63,18 +63,41 @@ async function recordDeliveryFailure(
 export async function createPendingRegistration(input: {
   email: string;
   passwordHash: string;
-  displayName: string | null;
+  fullName: string;
+  locationToken: string;
+  streetAddress: string | null;
 }) {
   const keys = getEmailVerificationKeys();
   const now = new Date();
   const dates = codeDates(now);
 
   const created = await prisma.$transaction(async (tx) => {
+    const verificationNow = new Date();
+    const location = await tx.registrationLocationVerification.findUnique({ where: { id: input.locationToken } });
+    if (!location || location.email !== input.email || location.expiresAt <= verificationNow) {
+      throw new Error("REGISTRATION_LOCATION_EXPIRED");
+    }
+    const consumed = await tx.registrationLocationVerification.deleteMany({
+      where: { id: input.locationToken, email: input.email, expiresAt: { gt: verificationNow } },
+    });
+    if (consumed.count !== 1) throw new Error("REGISTRATION_LOCATION_EXPIRED");
+    const streetAddress = location.streetAddress ?? input.streetAddress;
+    const fullAddress = [streetAddress, location.barangay, location.cityMunicipality, "Bulacan", location.postalCode, "Philippines"].filter(Boolean).join(", ");
     const user = await tx.user.create({
       data: {
         email: input.email,
         passwordHash: input.passwordHash,
-        displayName: input.displayName,
+        displayName: input.fullName,
+        fullName: input.fullName,
+        fullAddress,
+        streetAddress,
+        barangay: location.barangay,
+        cityMunicipality: location.cityMunicipality,
+        province: "Bulacan",
+        postalCode: location.postalCode,
+        country: "Philippines",
+        locationVerificationStatus: "verified",
+        locationVerifiedAt: location.verifiedAt,
         emailVerificationStatus: "pending",
       },
     });

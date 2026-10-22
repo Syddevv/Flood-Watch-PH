@@ -78,7 +78,7 @@ test("requestNominatimReverse throws a distinct, JSON-escaped message for 429 re
   );
 });
 
-test("fetchNominatimReverse logs exactly once, with coordinate/zoom context, when the request fails", async (t) => {
+test("fetchNominatimReverse logs exactly once without exposing coordinates when the request fails", async (t) => {
   const errorCalls: unknown[][] = [];
   t.mock.method(console, "error", (...args: unknown[]) => {
     errorCalls.push(args);
@@ -91,8 +91,8 @@ test("fetchNominatimReverse logs exactly once, with coordinate/zoom context, whe
   assert.equal(errorCalls.length, 1, "expected exactly one console.error call (no double-logging)");
   assert.match(String(errorCalls[0][0]), /Nominatim reverse geocode failed/i);
   const context = errorCalls[0][1] as Record<string, unknown>;
-  assert.equal(context.latitude, 14.65);
-  assert.equal(context.longitude, 121.1);
+  assert.equal(context.latitude, undefined);
+  assert.equal(context.longitude, undefined);
   assert.equal(context.zoom, 18);
   assert.ok(context.error instanceof Error);
 });
