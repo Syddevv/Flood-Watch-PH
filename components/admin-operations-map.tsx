@@ -8,6 +8,6 @@ const Map = dynamic(() => import("@/components/admin-operations-map-leaflet").th
   loading: () => <div className="grid h-full place-items-center text-sm text-[var(--color-muted-foreground)]">Loading Bulacan map…</div>,
 });
 
-export function AdminOperationsMap({ reports, centers, selectedId }: { reports: OperationsReport[]; centers: OperationsCenter[]; selectedId?: string | null }) {
-  return <Map reports={reports} centers={centers} selectedId={selectedId} />;
+export function AdminOperationsMap({ reports, centers, selectedId, onSelectId, asOf }: { reports: OperationsReport[]; centers: OperationsCenter[]; selectedId?: string | null; onSelectId?: (id: string) => void; asOf: number }) {
+  return <Map reports={reports} centers={centers} selectedId={selectedId} onSelectId={onSelectId} asOf={asOf} />;
 }

@@ -1,10 +1,12 @@
 import "server-only";
 
+import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
+import { MONITORING_REPORT_STATUSES, RECENT_REPORT_WINDOW_MS } from "@/lib/admin-operations-policy";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 import { currentCenterOpeningStatus } from "@/lib/emergency-resources";
 import { prisma } from "@/lib/prisma";
 
-const activeStatuses = ["Needs More Confirmation", "Confirmed by Community"];
+const activeStatuses = [...MONITORING_REPORT_STATUSES];
 
 export type OperationsReport = {
   id: string;
@@ -30,6 +32,7 @@ export type OperationsCenter = {
   estimatedCapacity: number | null;
   latitude: number | null;
   longitude: number | null;
+  updatedAt: string;
 };
 
 export type OperationsSnapshot = {
@@ -41,8 +44,7 @@ export type OperationsSnapshot = {
     activeVerifiedConditions: number;
     activeVerifiedHigh: number;
     centers: number;
-    confirmedOpenCenters: number;
-    verifiedMappedCenters: number;
+    municipalitiesWithCenters: number;
   };
   reports: OperationsReport[];
   centers: OperationsCenter[];
@@ -75,22 +77,26 @@ function toReport(report: {
 
 export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> {
   const fetchedAt = new Date();
+  const recentSince = new Date(fetchedAt.getTime() - RECENT_REPORT_WINDOW_MS);
+  const recentReportWhere = { archivedAt: null, createdAt: { gte: recentSince, lte: fetchedAt }, status: { in: activeStatuses }, verificationStatus: { not: "rejected" } };
+  const pendingWhere = { ...recentReportWhere, verificationStatus: "unreviewed" };
   const [
     reports, awaitingVerification, verifiedReports, activeVerifiedConditions, activeVerifiedHigh,
-    centers, centerRows, reportRows, highPriority, olderPending, recentHigh, audits,
+    centers, centerRows, reportRows, criticalPending, highPending, otherPending, recentHigh, audits,
   ] = await Promise.all([
     prisma.floodReport.count(),
     prisma.floodReport.count({ where: { archivedAt: null, verificationStatus: "unreviewed" } }),
     prisma.floodReport.count({ where: { verificationStatus: "verified" } }),
-    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, reports: { some: { archivedAt: null, verificationStatus: "verified" } } } }),
-    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, severity: { in: ["High", "Critical"] }, reports: { some: { archivedAt: null, verificationStatus: "verified" } } } }),
+    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, reports: { some: { ...recentReportWhere, verificationStatus: "verified" } } } }),
+    prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, severity: { in: ["High", "Critical"] }, reports: { some: { ...recentReportWhere, verificationStatus: "verified" } } } }),
     prisma.evacuationCenter.count({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } } }),
-    prisma.evacuationCenter.findMany({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], select: { id: true, name: true, address: true, barangay: true, city: true, verificationStatus: true, status: true, availabilityConfirmedAt: true, estimatedCapacity: true, latitude: true, longitude: true } }),
-    prisma.floodReport.findMany({ where: { archivedAt: null }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 501, select: reportSelect }),
-    prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: "unreviewed", severity: { in: ["High", "Critical"] } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 6, select: reportSelect }),
-    prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: "unreviewed" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: 6, select: reportSelect }),
-    prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: "unreviewed", severity: { in: ["High", "Critical"] }, createdAt: { gte: new Date(fetchedAt.getTime() - 24 * 60 * 60 * 1000) } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 3, select: reportSelect }),
-    prisma.adminAuditLog.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 6, select: { id: true, action: true, targetType: true, targetId: true, createdAt: true, actor: { select: { fullName: true, email: true } } } }),
+    prisma.evacuationCenter.findMany({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], select: { id: true, name: true, address: true, barangay: true, city: true, verificationStatus: true, status: true, availabilityConfirmedAt: true, estimatedCapacity: true, latitude: true, longitude: true, updatedAt: true } }),
+    prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: { not: "rejected" } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 501, select: reportSelect }),
+    prisma.floodReport.findMany({ where: { ...pendingWhere, severity: "Critical" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
+    prisma.floodReport.findMany({ where: { ...pendingWhere, severity: "High" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
+    prisma.floodReport.findMany({ where: pendingWhere, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
+    prisma.floodReport.findMany({ where: { ...pendingWhere, severity: { in: ["High", "Critical"] } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 3, select: reportSelect }),
+    prisma.adminAuditLog.findMany({ where: { OR: [{ action: { startsWith: "ADMIN_REPORT_" } }, { action: { startsWith: "ADMIN_EVACUATION_CENTER_" } }, { action: { startsWith: "ADMIN_EMERGENCY_CONTACT_" } }] }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 5, select: { id: true, action: true, targetType: true, targetId: true, createdAt: true, actor: { select: { fullName: true, email: true } } } }),
   ]);
 
   const allCenters: OperationsCenter[] = centerRows.map((center) => ({
@@ -100,15 +106,21 @@ export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> 
     estimatedCapacity: center.estimatedCapacity,
     latitude: validPoint(center.latitude, center.longitude) ? center.latitude : null,
     longitude: validPoint(center.latitude, center.longitude) ? center.longitude : null,
+    updatedAt: center.updatedAt.toISOString(),
   }));
-  const attention = [...highPriority, ...olderPending].filter((report, index, all) => all.findIndex((other) => other.id === report.id) === index).slice(0, 6);
+  const attention = [...criticalPending, ...highPending, ...otherPending].filter((report, index, all) => all.findIndex((other) => other.id === report.id) === index).slice(0, 5);
+  const knownLocalities = new Set(BULACAN_LOCALITIES.map((locality) => locality.name.toLocaleLowerCase("en-PH")));
+  const municipalitiesWithCenters = new Set(centerRows.map((center) => center.city.toLocaleLowerCase("en-PH")).filter((city) => knownLocalities.has(city))).size;
+  allCenters.sort((left, right) => {
+    const priority = (center: OperationsCenter) => Number(center.openingStatus !== "unknown") * 2 + Number(center.verificationStatus === "verified" && center.latitude !== null);
+    return priority(right) - priority(left);
+  });
 
   return {
     fetchedAt: fetchedAt.toISOString(),
     summary: {
       reports, awaitingVerification, verifiedReports, activeVerifiedConditions, activeVerifiedHigh, centers,
-      confirmedOpenCenters: allCenters.filter((center) => center.openingStatus === "open").length,
-      verifiedMappedCenters: allCenters.filter((center) => center.verificationStatus === "verified" && center.latitude !== null).length,
+      municipalitiesWithCenters,
     },
     reports: reportRows.slice(0, 500).map(toReport),
     centers: allCenters.slice(0, 500),
