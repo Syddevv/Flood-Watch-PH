@@ -67,9 +67,9 @@ function RescueRequestDetailForSession({ id, user, authLoading }: { id: string; 
     {stale && record ? <p role="status" className="rounded-lg border border-[var(--color-warning)] p-3 text-sm">Showing last known information{lastChecked ? ` from ${lastChecked.toLocaleString("en-PH")}` : ""}.</p> : null}
     {!record ? <p>{error ? "Request details are unavailable." : "Loading request…"}</p> : <>
       <header className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <p className="font-mono text-sm">{record.reference}</p><h1 className="mt-2 text-2xl font-semibold">{rescueStatusLabel(record.status)}</h1>
+        <p className="font-mono text-sm">{record.reference}</p><h1 className="mt-2 text-2xl font-semibold">{rescueStatusLabel(record.status, record.workflowVersion)}</h1>
         <p className="mt-2 text-sm">Received {new Date(record.createdAt).toLocaleString("en-PH")}</p>
-        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">A request receipt does not confirm that a team has been dispatched.</p>
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">Status updates are admin-recorded for this simulation. They do not show live responder availability or location.</p>
       </header>
       <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h2 className="text-lg font-semibold">Request details</h2>
@@ -84,11 +84,11 @@ function RescueRequestDetailForSession({ id, user, authLoading }: { id: string; 
       </section>
       <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h2 className="text-lg font-semibold">Updates</h2>
-        <ol className="mt-3 space-y-3">{record.events?.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-semibold">{rescueEventLabel(event)}</p><p>{new Date(event.createdAt).toLocaleString("en-PH")}</p>{event.note ? <p className="mt-1">{event.note}</p> : null}</li>)}</ol>
+        <ol className="mt-3 space-y-3">{record.events?.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-primary)] pl-3 text-sm"><p className="font-semibold">{rescueEventLabel(event, record.workflowVersion)}</p><p>{new Date(event.createdAt).toLocaleString("en-PH")}</p>{event.note ? <p className="mt-1">{event.note}</p> : null}</li>)}</ol>
       </section>
       {!isTerminalRescue(record.status) ? <section className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <h2 className="text-lg font-semibold">Change this request</h2>
-        {["received", "triaged"].includes(record.status) ? <>
+        {(record.workflowVersion === 1 ? ["received", "triaged"] : ["received", "under_review"]).includes(record.status) ? <>
           <button type="button" onClick={() => { setContact(record.primaryContact); setDescription(record.description); setLocationName(record.locationName); setLocalityCode(record.localityCode); setBarangay(record.barangay); setEditing(!editing); }} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm">Correct request details</button>
           {editing ? <form onSubmit={(event) => { event.preventDefault(); const locationChanged = locationName !== record.locationName || localityCode !== record.localityCode || barangay !== record.barangay; void update({ primaryContact: contact, description, ...(locationChanged ? { locationName, localityCode, barangay, latitude: null, longitude: null, locationUncertainty: "manual" } : {}) }); }} className="space-y-3">
             <label className="block text-sm">Contact<input value={contact} onChange={(event) => setContact(event.target.value)} required maxLength={120} className="mt-1 w-full rounded-lg border border-[var(--color-border)] p-2.5" /></label>
@@ -100,7 +100,7 @@ function RescueRequestDetailForSession({ id, user, authLoading }: { id: string; 
             <button type="submit" disabled={saving} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white">Save correction</button>
           </form> : null}
         </> : <p className="text-sm">After assignment, contact an operator to correct details.</p>}
-        <div><button type="button" disabled={saving} onClick={() => { if (window.confirm(record.status === "received" || record.status === "triaged" ? "Cancel this request?" : "Ask an operator to confirm cancellation?")) void update({ action: "cancel" }); }} className="rounded-lg border border-[var(--color-danger-border)] px-3 py-2 text-sm">{["received", "triaged"].includes(record.status) ? "Cancel request" : "Request cancellation"}</button></div>
+        <div><button type="button" disabled={saving} onClick={() => { if (window.confirm((record.workflowVersion === 1 ? ["received", "triaged"] : ["received", "under_review"]).includes(record.status) ? "Cancel this request?" : "Ask an operator to confirm cancellation?")) void update({ action: "cancel" }); }} className="rounded-lg border border-[var(--color-danger-border)] px-3 py-2 text-sm">{(record.workflowVersion === 1 ? ["received", "triaged"] : ["received", "under_review"]).includes(record.status) ? "Cancel request" : "Request cancellation"}</button></div>
       </section> : null}
     </>}
   </main></div>;

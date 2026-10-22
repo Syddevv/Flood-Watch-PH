@@ -4,7 +4,8 @@ import { isRescueTriageOverdue, parseAdminRescueFilters } from "@/lib/rescue-que
 
 test("queue filters validate scope and never accept arbitrary status", () => {
   assert.equal(parseAdminRescueFilters(new URLSearchParams("status=received&priority=critical&sort=oldest")).sort, "oldest");
-  assert.throws(() => parseAdminRescueFilters(new URLSearchParams("status=dispatched")), /Invalid rescue queue filter/);
+  assert.equal(parseAdminRescueFilters(new URLSearchParams("status=dispatched")).status, "dispatched");
+  assert.throws(() => parseAdminRescueFilters(new URLSearchParams("status=teleported")), /Invalid rescue queue filter/);
   assert.throws(() => parseAdminRescueFilters(new URLSearchParams("localityCode=outside")), /Invalid rescue queue filter/);
 });
 

@@ -22,21 +22,27 @@ test("every assistance tag carries display copy", () => {
   }
 });
 
-test("statuses only claim dispatch after an en-route event", () => {
+test("new lifecycle labels distinguish recorded stages from legacy claims", () => {
   assert.equal(rescueStatusLabel("received"), "Request received");
-  assert.equal(rescueStatusLabel("assigned"), "Coordinator assigned");
-  assert.equal(rescueStatusLabel("en_route"), "Team en route");
+  assert.equal(rescueStatusLabel("assigned"), "Coordinator assigned (legacy)");
+  assert.equal(rescueStatusLabel("en_route"), "Previously marked en route (legacy)");
+  assert.equal(rescueStatusLabel("dispatched", 2), "Dispatch confirmation recorded by admin");
+  assert.equal(rescueStatusLabel("en_route", 2), "Departure reported to admin");
+  assert.equal(rescueStatusLabel("closed", 2), "Closed");
 });
 
 test("corrections and cancellation requests are not mislabeled as status changes", () => {
   const event = { id: "event", nextStatus: "assigned", createdAt: "2026-10-18T03:00:00.000Z", note: null };
   assert.equal(rescueEventLabel({ ...event, eventType: "requester_correction" }), "Details updated");
   assert.equal(rescueEventLabel({ ...event, eventType: "cancellation_requested" }), "Cancellation requested");
-  assert.equal(rescueEventLabel({ ...event, eventType: "assign" }), "Coordinator assigned");
+  assert.equal(rescueEventLabel({ ...event, eventType: "assign" }), "Coordinator assigned (legacy)");
+  assert.equal(rescueEventLabel({ ...event, eventType: "transition", nextStatus: "en_route" }, 2), "Previously marked en route (legacy)");
 });
 
 test("polling stops once every request is terminal", () => {
   assert.equal(isTerminalRescue("completed"), true);
+  assert.equal(isTerminalRescue("resolved"), false);
+  assert.equal(isTerminalRescue("closed"), true);
   assert.equal(shouldPollRescue([{ status: "completed" }, { status: "cancelled" }]), false);
   assert.equal(shouldPollRescue([{ status: "completed" }, { status: "triaged" }]), true);
 });

@@ -14,6 +14,7 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
   let requestId: string | undefined;
   let adminRequestId: string | undefined;
   let legacyAdminRequestId: string | undefined;
+  let organizationId: string | undefined;
   try {
     for (const [index, id] of ids.entries()) {
       await db.user.create({ data: { id, email: `rescue-${index}-${runId}@example.com`, passwordHash: "unused", role: index >= 2 ? "admin" : "user", emailVerificationStatus: "verified", emailVerifiedAt: new Date() } });
@@ -75,29 +76,45 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     assert.equal(otherCorrection.status, 404);
 
     const action = (body: unknown) => fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[2], "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    assert.equal((await fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[0], "Content-Type": "application/json" }, body: JSON.stringify({ expectedVersion: 2, action: "lifecycle", actionKey: randomUUID(), nextStatus: "under_review" }) })).status, 403);
     assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "en_route" })).status, 400);
-    assert.equal((await action({ expectedVersion: 2, action: "transition", nextStatus: "triaged" })).status, 200);
+    assert.equal((await action({ expectedVersion: 2, action: "lifecycle", actionKey: randomUUID(), nextStatus: "under_review" })).status, 200);
     assert.equal((await action({ expectedVersion: 1, action: "priority", priority: "critical" })).status, 409);
     const competingAction = await fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/actions`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[3], "Content-Type": "application/json" }, body: JSON.stringify({ expectedVersion: 2, action: "priority", priority: "critical" }) });
     assert.equal(competingAction.status, 409);
     assert.equal((await action({ expectedVersion: 3, action: "assign", caseOwnerUserId: ids[2] })).status, 200);
-    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route" })).status, 400);
-    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1" })).status, 400);
-    assert.equal((await action({ expectedVersion: 4, action: "transition", nextStatus: "en_route", confirmedTeamReference: "operator-confirmed-team-1", reason: "Team leader confirmed by phone" })).status, 200);
-    assert.equal((await correction({ expectedVersion: 5, action: "cancel" })).status, 200);
+    assert.equal((await action({ expectedVersion: 4, action: "lifecycle", actionKey: randomUUID(), nextStatus: "awaiting_responder", note: "Two people need boat transport." })).status, 200);
+    assert.equal((await action({ expectedVersion: 5, action: "transition", nextStatus: "en_route", confirmedTeamReference: "unverified" })).status, 400);
+    assert.equal((await action({ expectedVersion: 5, action: "lifecycle", actionKey: randomUUID(), nextStatus: "dispatched", dispatchMethod: "phone" })).status, 400);
+    const organization = await db.responderOrganization.create({ data: { name: `Test rescue unit ${runId}`, type: "municipal_office", homeLocalityCode: "0301407000", coverageLocalityCodes: ["0301407000"], officialPhone: "test-only-phone", availability: "available", lastContactVerifiedAt: new Date(), demo: true } });
+    organizationId = organization.id;
+    const coordinate = (body: unknown) => fetch(`${baseUrl}/api/admin/rescue-requests/${requestId}/coordination`, { method: "POST", headers: { Origin: baseUrl, Cookie: cookies[2], "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    assert.equal((await coordinate({ expectedVersion: 5, action: "select", organizationId })).status, 200);
+    assert.equal((await coordinate({ expectedVersion: 6, action: "contact", channel: "phone", note: "Called the recorded office number." })).status, 200);
+    assert.equal((await coordinate({ expectedVersion: 7, action: "acknowledge", outcome: "accepted", note: "Acceptance recorded from the call." })).status, 200);
+    assert.equal((await action({ expectedVersion: 8, action: "lifecycle", actionKey: randomUUID(), nextStatus: "responder_confirmed" })).status, 200);
+    const dispatchKey = randomUUID();
+    const dispatchAction = { expectedVersion: 9, action: "lifecycle", actionKey: dispatchKey, nextStatus: "dispatched", dispatchMethod: "phone" };
+    assert.equal((await action(dispatchAction)).status, 200);
+    assert.equal((await action(dispatchAction)).status, 200);
+    assert.equal(await db.rescueRequestEvent.count({ where: { requestId, actionKey: dispatchKey } }), 1);
+    assert.equal((await action({ ...dispatchAction, dispatchMethod: "radio" })).status, 409);
+    assert.equal((await action({ expectedVersion: 10, action: "lifecycle", actionKey: randomUUID(), nextStatus: "en_route" })).status, 200);
+    assert.equal((await action({ expectedVersion: 11, action: "lifecycle", actionKey: randomUUID(), nextStatus: "on_scene", occurredAt: "2020-01-01T00:00:00.000Z" })).status, 400);
+    assert.equal((await correction({ expectedVersion: 11, action: "cancel" })).status, 200);
     const updated = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     assert.equal((await updated.json()).data.status, "en_route");
-    assert.equal(await db.rescueRequestEvent.count({ where: { requestId } }), 6);
-    assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 6);
-    assert.equal((await action({ expectedVersion: 6, action: "note", note: "Private caller details", visibility: "internal" })).status, 200);
-    assert.equal((await action({ expectedVersion: 7, action: "note", note: "Operator is reviewing your request", visibility: "public" })).status, 200);
+    assert.equal((await db.rescueRequest.findUnique({ where: { id: requestId } }))?.version, 12);
+    assert.equal((await action({ expectedVersion: 12, action: "note", note: "Private caller details", visibility: "internal" })).status, 200);
+    assert.equal((await action({ expectedVersion: 13, action: "note", note: "Operator is reviewing your request", visibility: "public" })).status, 200);
     const ownerTimeline = await fetch(`${baseUrl}/api/rescue-requests/${requestId}`, { headers: { Cookie: cookies[0] } });
     const ownerEvents = (await ownerTimeline.json()).data.events;
     assert.equal(ownerEvents.some((event: { note: string | null }) => event.note === "Private caller details"), false);
     assert.equal(ownerEvents.some((event: { note: string | null }) => event.note === "Operator is reviewing your request"), true);
-    assert.equal((await action({ expectedVersion: 8, action: "transition", nextStatus: "on_scene" })).status, 200);
-    assert.equal((await action({ expectedVersion: 9, action: "transition", nextStatus: "completed", outcome: "Resident moved to agreed safe pickup point" })).status, 200);
-    assert.equal((await action({ expectedVersion: 10, action: "priority", priority: "urgent" })).status, 400);
+    assert.equal((await action({ expectedVersion: 14, action: "lifecycle", actionKey: randomUUID(), nextStatus: "on_scene" })).status, 200);
+    assert.equal((await action({ expectedVersion: 15, action: "lifecycle", actionKey: randomUUID(), nextStatus: "resolved", outcomeCode: "rescued", outcome: "Resident moved to agreed safe pickup point", occurredAt: new Date().toISOString() })).status, 200);
+    assert.equal((await action({ expectedVersion: 16, action: "lifecycle", actionKey: randomUUID(), nextStatus: "closed", reason: "Final case documentation was reviewed." })).status, 200);
+    assert.equal((await action({ expectedVersion: 17, action: "priority", priority: "urgent" })).status, 400);
 
     const assisted = { ...intake, intakeChannel: "admin_assisted", assistedIntakeMethod: "walk_in", priority: "critical", forWhom: "other", assistedPersonName: "Resident", relationship: "Neighbor" };
     const assistedKey = randomUUID();
@@ -131,8 +148,10 @@ integrationTest("rescue intake, idempotency, ownership, CAS and admin timeline",
     if (requestId) {
       await db.adminNotification.deleteMany({ where: { targetId: requestId } });
       await db.rescueRequestEvent.deleteMany({ where: { requestId } });
+      await db.rescueAssignment.deleteMany({ where: { requestId } });
       await db.rescueRequest.deleteMany({ where: { id: requestId } });
     }
+    if (organizationId) await db.responderOrganization.deleteMany({ where: { id: organizationId } });
     if (adminRequestId) {
       await db.adminNotification.deleteMany({ where: { targetId: adminRequestId } });
       await db.rescueRequestEvent.deleteMany({ where: { requestId: adminRequestId } });

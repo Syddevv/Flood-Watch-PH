@@ -1,6 +1,6 @@
 # Admin-managed rescue dispatch: citizen experience plan
 
-**Status:** Phase 1 foundation merged; Phase 2 coordination privacy implemented on `feat/rescue-dispatch-phase2-coordination`, with database-backed verification pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 3–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md) and [Phase 2 report](rescue-dispatch-phase2-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
+**Status:** Phase 1 foundation merged; Phase 2 coordination privacy and Phase 3 lifecycle labels/projection implemented, with database-backed verification pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 4–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md), [Phase 2 report](rescue-dispatch-phase2-report.md), and [Phase 3 report](rescue-dispatch-phase3-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.
 
 ## Current architecture and functionality to preserve
 
@@ -74,9 +74,9 @@ Each approved phase uses a new branch. After implementation, check its completed
 
 ### Phase 3 — Lifecycle contract
 
-- [ ] Add public labels and terminal/refresh rules in `lib/rescue-request-client.ts` for each new state and exception.
-- [ ] Define public event types and safe notes with the admin service; test legacy status mapping without changing stored values.
-- [ ] Ensure cancellation behavior and safe reports remain compatible with new transition guards.
+- [x] Add public labels and terminal/refresh rules in `lib/rescue-request-client.ts` for each new state and exception.
+- [x] Define public lifecycle events through the DTO allowlist; test legacy status mapping without changing stored values.
+- [ ] Verify cancellation and owner privacy against the migrated database. The code path and unit tests are updated; integration tests are unavailable without `TEST_DATABASE_URL`.
 
 **Acceptance:** Public labels match recorded evidence; old requests still render; `resolved` can progress to `closed`.
 

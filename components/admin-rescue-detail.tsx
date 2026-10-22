@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
-import { RESCUE_TRANSITIONS, TERMINAL_RESCUE_STATUSES, type RescueStatus } from "@/lib/rescue-contracts";
+import { EXCEPTIONAL_RESCUE_STATUSES, RESCUE_OUTCOMES, RESCUE_TRANSITIONS, TERMINAL_RESCUE_STATUSES, type RescueStatus } from "@/lib/rescue-contracts";
 import { AdminRescueCoordination, type CoordinationAssignment } from "@/components/admin-rescue-coordination";
 
-type Event = { id: string; eventType: string; previousStatus: string | null; nextStatus: string | null; previousPriority: string | null; nextPriority: string | null; createdAt: string; visibility: string; reason: string | null; note: string | null; actorUserId: string };
+type Event = { id: string; eventType: string; previousStatus: string | null; nextStatus: string | null; previousPriority: string | null; nextPriority: string | null; createdAt: string; occurredAt: string | null; visibility: string; reason: string | null; note: string | null; actorUserId: string; details?: { triageNote?: string; outcomeCode?: string } };
 type Detail = {
-  id: string; reference: string; version: number; status: RescueStatus; priority: string;
+  id: string; reference: string; version: number; workflowVersion: number; status: RescueStatus; priority: string;
   createdAt: string; updatedAt: string; requesterUserId: string | null; intakeChannel: string;
   assistedIntakeMethod: string | null; forWhom: string; assistedPersonName: string | null;
   relationship: string | null; primaryContact: string; alternateContact: string | null;
@@ -35,9 +35,13 @@ export function AdminRescueDetail({ id }: { id: string }) {
   const [caseOwnerUserId, setCaseOwnerUserId] = useState("");
   const [nextStatus, setNextStatus] = useState("");
   const [reason, setReason] = useState("");
-  const [teamReference, setTeamReference] = useState("");
-  const [dispatchConfirmed, setDispatchConfirmed] = useState(false);
+  const [triageNote, setTriageNote] = useState("");
+  const [dispatchMethod, setDispatchMethod] = useState("");
+  const [occurredAt, setOccurredAt] = useState("");
+  const [outcomeCode, setOutcomeCode] = useState("");
   const [outcome, setOutcome] = useState("");
+  const [duplicateRequestId, setDuplicateRequestId] = useState("");
+  const [referralDestination, setReferralDestination] = useState("");
   const [note, setNote] = useState("");
   const [visibility, setVisibility] = useState("internal");
   const draftVersion = useRef<number | null>(null);
@@ -93,7 +97,7 @@ export function AdminRescueDetail({ id }: { id: string }) {
         }
         throw new Error(body?.error || "Could not save this action.");
       }
-      setReason(""); setTeamReference(""); setDispatchConfirmed(false); setOutcome(""); setNote(""); setNextStatus("");
+      setReason(""); setTriageNote(""); setDispatchMethod(""); setOccurredAt(""); setOutcomeCode(""); setOutcome(""); setDuplicateRequestId(""); setReferralDestination(""); setNote(""); setNextStatus("");
       await refresh(true);
       setNotice("Action saved. Public updates are visible to the requester; internal notes remain private.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save this action."); }
@@ -103,11 +107,18 @@ export function AdminRescueDetail({ id }: { id: string }) {
   if (loading && !request) return <p role="status">Loading rescue request…</p>;
   if (!request) return <div role="alert">{error || "Rescue request unavailable."} <Link href="/admin/rescue-requests" className="underline">Back to queue</Link></div>;
   const terminal = TERMINAL_RESCUE_STATUSES.includes(request.status);
-  const allowed = RESCUE_TRANSITIONS[request.status] ?? [];
-  const triagedAt = request.events.find((event) => event.nextStatus === "triaged")?.createdAt;
-  const dispatchAt = request.events.find((event) => event.nextStatus === "en_route")?.createdAt;
-  const reasonRequired = nextStatus === "rejected" || nextStatus === "cancelled" || (nextStatus === "triaged" && request.status !== "received") || nextStatus === "en_route";
-  const transitionReady = nextStatus && (!reasonRequired || reason.trim()) && (nextStatus !== "en_route" || (teamReference.trim() && dispatchConfirmed)) && (nextStatus !== "completed" || outcome.trim());
+  const canAssignOwner = request.workflowVersion === 1 ? ["triaged", "assigned"].includes(request.status) : ["under_review", "awaiting_responder", "responder_confirmed", "dispatched", "en_route", "on_scene", "resolved"].includes(request.status);
+  const legacyReconciliation = request.workflowVersion === 1 && ["triaged", "assigned", "en_route", "on_scene"].includes(request.status);
+  const allowed = legacyReconciliation ? ["under_review", ...(RESCUE_TRANSITIONS[request.status] ?? []).filter((status) => EXCEPTIONAL_RESCUE_STATUSES.includes(status as typeof EXCEPTIONAL_RESCUE_STATUSES[number]))] : (RESCUE_TRANSITIONS[request.status] ?? []);
+  const triagedAt = request.events.find((event) => ["triaged", "awaiting_responder"].includes(event.nextStatus ?? ""))?.createdAt;
+  const dispatchAt = request.events.find((event) => event.nextStatus === "dispatched")?.createdAt;
+  const reasonRequired = ["cancelled", "duplicate", "referred", "unable_to_contact", "closed"].includes(nextStatus) || (legacyReconciliation && nextStatus === "under_review") || (nextStatus === "awaiting_responder" && !request.caseOwnerUserId && !caseOwnerUserId);
+  const transitionReady = nextStatus && (!reasonRequired || reason.trim().length >= 10) &&
+    (nextStatus !== "awaiting_responder" || triageNote.trim().length >= 10) &&
+    (nextStatus !== "dispatched" || dispatchMethod) &&
+    (nextStatus !== "resolved" || (outcomeCode && outcome.trim().length >= 10 && occurredAt)) &&
+    (nextStatus !== "duplicate" || duplicateRequestId.trim()) &&
+    (nextStatus !== "referred" || referralDestination.trim().length >= 3);
   const field = "mt-1 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 text-sm";
 
   return <div className="space-y-6">
@@ -119,9 +130,9 @@ export function AdminRescueDetail({ id }: { id: string }) {
     <div className="grid gap-5 lg:grid-cols-2">
       <section className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-lg font-semibold">Request details</h3>
         <p><strong>Received:</strong> {new Date(request.createdAt).toLocaleString("en-PH")} ({request.intakeChannel.replaceAll("_", " ")}{request.assistedIntakeMethod ? ` · ${request.assistedIntakeMethod.replaceAll("_", " ")}` : ""})</p>
-        <p><strong>First triage:</strong> {triagedAt ? new Date(triagedAt).toLocaleString("en-PH") : "Not yet"}</p><p><strong>Dispatch acknowledged:</strong> {dispatchAt ? new Date(dispatchAt).toLocaleString("en-PH") : "Not confirmed"}</p>
+        <p><strong>First triage:</strong> {triagedAt ? new Date(triagedAt).toLocaleString("en-PH") : "Not yet"}</p><p><strong>Dispatch recorded:</strong> {dispatchAt ? new Date(dispatchAt).toLocaleString("en-PH") : "Not recorded"}{request.workflowVersion === 1 && ["en_route", "on_scene", "completed"].includes(request.status) ? " · Legacy status has no separate dispatch evidence" : ""}</p>
         <p><strong>Case owner:</strong> {operators.find((operator) => operator.id === request.caseOwnerUserId)?.displayName ?? operators.find((operator) => operator.id === request.caseOwnerUserId)?.email ?? request.caseOwnerUserId ?? "Unassigned"}</p>
-        <p><strong>Confirmed responder/team:</strong> {request.confirmedTeamReference ?? "Not confirmed"}</p>
+        {request.confirmedTeamReference && <p><strong>Legacy team reference:</strong> {request.confirmedTeamReference}</p>}
         <p><strong>People:</strong> {request.peopleCount} · <strong>For:</strong> {request.forWhom}{request.assistedPersonName ? ` (${request.assistedPersonName})` : ""}</p>
         <p><strong>Contact:</strong> {request.primaryContact}{request.alternateContact ? ` · Alternate: ${request.alternateContact}` : ""}</p>
         <p><strong>Location:</strong> {request.locationName}, {request.barangay}, {BULACAN_LOCALITIES.find((place) => place.code === request.localityCode)?.name ?? "Bulacan"} ({request.locationUncertainty})</p>
@@ -131,18 +142,23 @@ export function AdminRescueDetail({ id }: { id: string }) {
       <section className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-lg font-semibold">Operational actions</h3>
         {terminal ? <p>This request is closed. No further actions are allowed.</p> : <>
           <div className="space-y-2 border-b border-[var(--color-border)] pb-4"><label className="block text-sm">Priority<select disabled={busy || needsReview} value={priority} onChange={(event) => setPriority(event.target.value)} className={field}>{["routine", "urgent", "critical"].map((value) => <option key={value}>{value}</option>)}</select></label><button disabled={busy || needsReview || priority === request.priority} onClick={() => void act({ action: "priority", priority })} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50">Update priority</button></div>
-          <div className="space-y-2 border-b border-[var(--color-border)] pb-4"><label className="block text-sm">Case owner (administrator, not responder)<select disabled={busy || needsReview} value={caseOwnerUserId} onChange={(event) => setCaseOwnerUserId(event.target.value)} className={field}><option value="">Choose administrator</option>{operators.map((operator) => <option key={operator.id} value={operator.id}>{operator.displayName ?? operator.email}</option>)}</select></label><button disabled={busy || needsReview || !caseOwnerUserId || request.status === "received" || !["triaged", "assigned"].includes(request.status) || caseOwnerUserId === request.caseOwnerUserId} onClick={() => void act({ action: "assign", caseOwnerUserId })} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50">{request.caseOwnerUserId ? "Reassign case owner" : "Assign case owner"}</button></div>
-          <div className="space-y-2 border-b border-[var(--color-border)] pb-4"><label className="block text-sm">Change status<select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} className={field}><option value="">Choose next status</option>{allowed.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
-            {reasonRequired && <label className="block text-sm">{nextStatus === "en_route" ? "How was dispatch acknowledged? (internal)" : "Reason (internal)"}<textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={1000} className={field} /></label>}
-            {nextStatus === "en_route" && <><label className="block text-sm">Confirmed responder/team reference<input value={teamReference} onChange={(event) => setTeamReference(event.target.value)} maxLength={160} className={field} /></label><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={dispatchConfirmed} onChange={(event) => setDispatchConfirmed(event.target.checked)} />I directly confirmed this team accepted the dispatch. This is not inferred from assigning a case owner.</label></>}
-            {nextStatus === "completed" && <label className="block text-sm">Recorded outcome<textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} maxLength={1000} className={field} /></label>}
-            <button disabled={busy || needsReview || !transitionReady} onClick={() => void act({ action: "transition", nextStatus, ...(reasonRequired ? { reason } : {}), ...(nextStatus === "en_route" ? { confirmedTeamReference: teamReference } : {}), ...(nextStatus === "completed" ? { outcome } : {}) })} className="rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Save status</button>
+          <div className="space-y-2 border-b border-[var(--color-border)] pb-4"><label className="block text-sm">Case owner (administrator, not responder)<select disabled={busy || needsReview} value={caseOwnerUserId} onChange={(event) => setCaseOwnerUserId(event.target.value)} className={field}><option value="">Choose administrator</option>{operators.map((operator) => <option key={operator.id} value={operator.id}>{operator.displayName ?? operator.email}</option>)}</select></label><button disabled={busy || needsReview || !caseOwnerUserId || !canAssignOwner || caseOwnerUserId === request.caseOwnerUserId} onClick={() => void act({ action: "assign", caseOwnerUserId })} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50">{request.caseOwnerUserId ? "Reassign case owner" : "Assign case owner"}</button></div>
+          <div className="space-y-2 border-b border-[var(--color-border)] pb-4"><label className="block text-sm">Lifecycle step<select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} className={field}><option value="">Choose next step</option>{allowed.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
+            {legacyReconciliation && <p className="text-xs text-[var(--color-muted-foreground)]">Legacy status is preserved in history. Reconcile it with a reason before recording new dispatch stages.</p>}
+            {nextStatus === "awaiting_responder" && <label className="block text-sm">Triage needs and notes<textarea value={triageNote} onChange={(event) => setTriageNote(event.target.value)} maxLength={2000} className={field} /></label>}
+            {reasonRequired && <label className="block text-sm">{nextStatus === "awaiting_responder" ? "Why the case is unassigned (internal)" : "Reason or final documentation (internal)"}<textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={1000} className={field} /></label>}
+            {nextStatus === "dispatched" && <label className="block text-sm">Admin-recorded dispatch confirmation method<select value={dispatchMethod} onChange={(event) => setDispatchMethod(event.target.value)} className={field}><option value="">Choose method</option>{["phone", "sms_logged", "radio", "other"].map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>}
+            {["en_route", "on_scene", "resolved"].includes(nextStatus) && <label className="block text-sm">Reported occurrence time{nextStatus === "resolved" ? " (required)" : " (optional)"}<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} className={field} /></label>}
+            {nextStatus === "resolved" && <><label className="block text-sm">Outcome code<select value={outcomeCode} onChange={(event) => setOutcomeCode(event.target.value)} className={field}><option value="">Choose outcome</option>{RESCUE_OUTCOMES.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label><label className="block text-sm">Resolution description<textarea value={outcome} onChange={(event) => setOutcome(event.target.value)} maxLength={1000} className={field} /></label></>}
+            {nextStatus === "duplicate" && <label className="block text-sm">Existing request ID<input value={duplicateRequestId} onChange={(event) => setDuplicateRequestId(event.target.value)} maxLength={100} className={field} /></label>}
+            {nextStatus === "referred" && <label className="block text-sm">Referral destination<input value={referralDestination} onChange={(event) => setReferralDestination(event.target.value)} maxLength={160} className={field} /></label>}
+            <button disabled={busy || needsReview || !transitionReady} onClick={() => { if (["dispatched", "resolved", "closed", "cancelled", "duplicate", "referred", "unable_to_contact"].includes(nextStatus) && !window.confirm(`Record ${nextStatus.replaceAll("_", " ")} for this request?`)) return; void act({ action: "lifecycle", actionKey: crypto.randomUUID(), nextStatus, ...(reasonRequired ? { reason } : {}), ...(nextStatus === "awaiting_responder" ? { note: triageNote, ...(caseOwnerUserId && caseOwnerUserId !== request.caseOwnerUserId ? { caseOwnerUserId } : {}) } : {}), ...(nextStatus === "dispatched" ? { dispatchMethod } : {}), ...(["en_route", "on_scene", "resolved"].includes(nextStatus) && occurredAt ? { occurredAt: new Date(occurredAt).toISOString() } : {}), ...(nextStatus === "resolved" ? { outcomeCode, outcome } : {}), ...(nextStatus === "duplicate" ? { duplicateRequestId } : {}), ...(nextStatus === "referred" ? { referralDestination } : {}) }); }} className="rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Record lifecycle step</button>
           </div>
           <div className="space-y-2"><label className="block text-sm">Note<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} className={field} /></label><label className="block text-sm">Visibility<select value={visibility} onChange={(event) => setVisibility(event.target.value)} className={field}><option value="internal">Internal only</option><option value="public">Visible to requester</option></select></label><button disabled={busy || needsReview || !note.trim()} onClick={() => void act({ action: "note", note, visibility })} className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50">Add note</button></div>
         </>}
       </section>
     </div>
     <AdminRescueCoordination requestId={request.id} version={request.version} status={request.status} localityCode={request.localityCode} assignments={request.assignments ?? []} disabled={busy || needsReview || stale} onSaved={() => refresh(true)} />
-    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-lg font-semibold">Event history</h3><ol className="mt-4 space-y-4">{request.events.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-border)] pl-4 text-sm"><p className="font-semibold">{event.eventType.replaceAll("_", " ")}{event.previousStatus !== event.nextStatus ? ` · ${event.previousStatus ?? "start"} → ${event.nextStatus ?? "unknown"}` : ""}</p><p className="text-xs text-[var(--color-muted-foreground)]">{new Date(event.createdAt).toLocaleString("en-PH")} · {event.visibility === "internal" ? "Internal only" : "Requester-visible"}</p>{event.reason && <p className="mt-1 whitespace-pre-wrap">Reason: {event.reason}</p>}{event.note && <p className="mt-1 whitespace-pre-wrap">{event.note}</p>}</li>)}</ol></section>
+    <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-lg font-semibold">Event history</h3><ol className="mt-4 space-y-4">{request.events.map((event) => <li key={event.id} className="border-l-2 border-[var(--color-border)] pl-4 text-sm"><p className="font-semibold">{event.eventType.replaceAll("_", " ")}{event.previousStatus !== event.nextStatus ? ` · ${event.previousStatus ?? "start"} → ${event.nextStatus ?? "unknown"}` : ""}</p><p className="text-xs text-[var(--color-muted-foreground)]">Recorded {new Date(event.createdAt).toLocaleString("en-PH")}{event.occurredAt ? ` · Reported occurrence ${new Date(event.occurredAt).toLocaleString("en-PH")}` : ""} · {event.visibility === "internal" ? "Internal only" : "Requester-visible"}</p>{event.reason && <p className="mt-1 whitespace-pre-wrap">Reason: {event.reason}</p>}{event.details?.triageNote && <p className="mt-1 whitespace-pre-wrap">Triage: {event.details.triageNote}</p>}{event.details?.outcomeCode && <p className="mt-1">Outcome: {event.details.outcomeCode.replaceAll("_", " ")}</p>}{event.note && <p className="mt-1 whitespace-pre-wrap">{event.note}</p>}</li>)}</ol></section>
   </div>;
 }

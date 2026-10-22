@@ -2,8 +2,9 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma, isPrismaUniqueConstraintError } from "@/lib/prisma";
-import { canTransitionRescue, parseRescueIntake, parseRescueCorrection, parseRescueAction, RescueError, TERMINAL_RESCUE_STATUSES } from "@/lib/rescue-contracts";
+import { parseRescueIntake, parseRescueCorrection, parseRescueAction, RescueError, RESCUE_STATUSES, TERMINAL_RESCUE_STATUSES } from "@/lib/rescue-contracts";
 import { toRescueDto } from "@/lib/rescue-dto";
+import { advanceRescueLifecycle } from "@/lib/rescue-lifecycle";
 import { createResponderOrganization as persistResponderOrganization, selectResponderAssignment as persistResponderAssignment } from "@/lib/rescue-dispatch-data";
 
 const events = { orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }] };
@@ -49,6 +50,7 @@ export async function createRescueRequest(actorId: string, raw: unknown, idempot
       const request = await tx.rescueRequest.create({ data: {
         ...input, reference: `RR-${randomBytes(8).toString("hex").toUpperCase()}`,
         creatorUserId: actorId, requesterUserId, intakeChannel: channel,
+        workflowVersion: 2,
         linkedReportConsentConfirmedAt: admin && input.linkedReportId ? new Date() : null,
         idempotencyKey, idempotencyHash: hash,
       } });
@@ -89,7 +91,7 @@ export async function listRescueRequests(userId: string, params: URLSearchParams
     if (!anchor) throw new RescueError("Page cursor is unavailable.", 400);
   }
   const status = params.get("status");
-  if (status && !["received", "triaged", "assigned", "en_route", "on_scene", "completed", "cancelled", "rejected"].includes(status)) throw new RescueError("Invalid status filter.", 400);
+  if (status && !RESCUE_STATUSES.includes(status as typeof RESCUE_STATUSES[number])) throw new RescueError("Invalid status filter.", 400);
   const where: Prisma.RescueRequestWhereInput = { ...(admin ? {} : { requesterUserId: userId }), ...(status ? { status } : {}) };
   const rows = await prisma.rescueRequest.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
@@ -109,8 +111,10 @@ export async function correctRescueRequest(id: string, userId: string, raw: unkn
     if (!record) throw new RescueError("Rescue request not found.", 404);
     if (record.version !== input.expectedVersion) throw new RescueError("This request changed. Refresh before trying again.", 409);
     if (terminal(record.status)) throw new RescueError("This request is closed.", 400);
-    const cancellationRequested = input.action === "cancel" && !["received", "triaged"].includes(record.status);
-    if (input.action === "correct" && !["received", "triaged"].includes(record.status)) throw new RescueError("Corrections are unavailable after assignment.", 400);
+    const early = record.workflowVersion === 1 ? ["received", "triaged"] : ["received", "under_review"];
+    const activeAssignment = input.action === "cancel" ? await tx.rescueAssignment.findFirst({ where: { requestId: id, endedAt: null }, select: { id: true } }) : null;
+    const cancellationRequested = input.action === "cancel" && (!early.includes(record.status) || Boolean(activeAssignment));
+    if (input.action === "correct" && !early.includes(record.status)) throw new RescueError("Corrections are unavailable after responder coordination begins.", 400);
     if (input.action === "correct") {
       const source = input.patch.locationUncertainty ?? record.locationUncertainty;
       const latitude = input.patch.latitude === undefined ? record.latitude : input.patch.latitude;
@@ -124,37 +128,39 @@ export async function correctRescueRequest(id: string, userId: string, raw: unkn
       eventType: cancellationRequested ? "cancellation_requested" : input.action === "cancel" ? "cancelled" : "requester_correction",
       previousStatus: record.status, nextStatus: input.action === "cancel" && !cancellationRequested ? "cancelled" : record.status,
       visibility: "public" } });
+    if (cancellationRequested) {
+      const administrators = await tx.user.findMany({ where: { role: "admin" }, select: { id: true } });
+      await tx.adminNotification.createMany({ data: administrators.map((admin) => ({
+        type: "rescue_cancellation_review", title: "Rescue cancellation needs review",
+        detail: `${record.reference} · requester asked to cancel`, targetType: "RescueRequest", targetId: id,
+        priority: record.priority === "critical" ? "urgent" : "normal", recipientUserId: admin.id,
+        dedupeKey: `rescue-cancellation:${id}:${input.expectedVersion + 1}`,
+      })), skipDuplicates: true });
+    }
     return toRescueDto((await tx.rescueRequest.findUniqueOrThrow({ where: { id } })));
   });
 }
 
 export async function actOnRescueRequest(id: string, actorId: string, raw: unknown) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).action === "lifecycle") return advanceRescueLifecycle(id, actorId, raw);
   const input = parseRescueAction(raw);
   return prisma.$transaction(async (tx) => {
+    const actor = await tx.user.findUnique({ where: { id: actorId }, select: { role: true } });
+    if (actor?.role !== "admin") throw new RescueError("Administrator access required.", 403);
     const record = await tx.rescueRequest.findUnique({ where: { id } });
     if (!record) throw new RescueError("Rescue request not found.", 404);
     if (record.version !== input.expectedVersion) throw new RescueError("This request changed. Refresh before trying again.", 409);
     if (terminal(record.status)) throw new RescueError("Terminal requests cannot be changed.", 400);
-    const nextStatus = input.action === "transition" ? input.nextStatus! : input.action === "assign" && record.status === "triaged" ? "assigned" : record.status;
-    if (input.action === "transition" && !canTransitionRescue(record.status, nextStatus)) throw new RescueError("That status transition is not allowed.", 400);
-    if (input.action === "assign" && !["triaged", "assigned"].includes(record.status)) throw new RescueError("Triage before assigning a case owner.", 400);
-    if (input.action === "transition" && input.caseOwnerUserId && nextStatus !== "assigned") throw new RescueError("A case owner can only be set during assignment.", 400);
-    if (input.confirmedTeamReference && nextStatus !== "en_route") throw new RescueError("A team reference belongs to a confirmed dispatch event.", 400);
-    if (input.outcome && nextStatus !== "completed") throw new RescueError("An outcome belongs to completion.", 400);
-    if (nextStatus === "assigned" && !(input.caseOwnerUserId ?? record.caseOwnerUserId)) throw new RescueError("A case owner is required for assignment.", 400);
-    if (input.action === "transition" && nextStatus === "en_route" && (!input.confirmedTeamReference || !input.reason)) throw new RescueError("Record the confirmed team reference and how dispatch was acknowledged.", 400);
-    if (input.action === "transition" && nextStatus === "completed" && !input.outcome) throw new RescueError("Record the rescue outcome.", 400);
-    if (input.action === "transition" && (["rejected", "cancelled"].includes(nextStatus) || (nextStatus === "triaged" && record.status !== "received")) && !input.reason) throw new RescueError("A reason is required.", 400);
+    if (input.action === "transition") throw new RescueError("Use the evidence-backed lifecycle action. Direct status changes are retired.", 400);
+    const nextStatus = record.status;
+    if (input.action === "assign" && !(record.workflowVersion === 1 ? ["triaged", "assigned"] : ["under_review", "awaiting_responder", "responder_confirmed", "dispatched", "en_route", "on_scene", "resolved"]).includes(record.status)) throw new RescueError("Review the request before assigning a case owner.", 400);
     if (input.caseOwnerUserId) {
       const owner = await tx.user.findUnique({ where: { id: input.caseOwnerUserId }, select: { role: true } });
       if (owner?.role !== "admin") throw new RescueError("Case owner must be an administrator.", 400);
     }
     const data: Prisma.RescueRequestUncheckedUpdateManyInput = { version: { increment: 1 } };
-    if (input.action === "transition" || input.action === "assign") data.status = nextStatus;
     if (input.action === "priority") data.priority = input.priority!;
-    if (input.action === "assign" || (input.action === "transition" && input.caseOwnerUserId)) data.caseOwnerUserId = input.caseOwnerUserId;
-    if (input.action === "transition" && nextStatus === "en_route") data.confirmedTeamReference = input.confirmedTeamReference;
-    if (input.action === "transition" && nextStatus === "completed") data.outcome = input.outcome;
+    if (input.action === "assign") data.caseOwnerUserId = input.caseOwnerUserId;
     const updated = await tx.rescueRequest.updateMany({ where: { id, version: input.expectedVersion }, data });
     if (updated.count !== 1) throw new RescueError("This request changed. Refresh before trying again.", 409);
     await tx.rescueRequestEvent.create({ data: { requestId: id, actorUserId: actorId, source: "admin", eventType: input.action,

@@ -30,7 +30,7 @@ const queueSelect = {
   createdAt: true, updatedAt: true, localityCode: true, barangay: true,
   peopleCount: true, caseOwnerUserId: true, confirmedTeamReference: true,
   intakeChannel: true,
-  events: { where: { nextStatus: "triaged" }, orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }], take: 1, select: { createdAt: true } },
+  events: { where: { nextStatus: { in: ["triaged", "awaiting_responder"] } }, orderBy: [{ createdAt: "asc" as const }, { id: "asc" as const }], take: 1, select: { createdAt: true } },
 } satisfies Prisma.RescueRequestSelect;
 
 export async function listAdminRescueQueue(params: URLSearchParams) {
@@ -45,7 +45,7 @@ export async function listAdminRescueQueue(params: URLSearchParams) {
       ...(filters.cursor ? { cursor: { id: filters.cursor }, skip: 1 } : {}) }),
     prisma.rescueRequest.count({ where }),
     prisma.rescueRequest.count({ where: { status: "received", createdAt: { lte: new Date(now.getTime() - TRIAGE_ATTENTION_MINUTES * 60_000) } } }),
-    prisma.rescueRequest.count({ where: { status: "triaged", caseOwnerUserId: null } }),
+    prisma.rescueRequest.count({ where: { status: { in: ["triaged", "under_review", "awaiting_responder"] }, caseOwnerUserId: null } }),
   ]);
   return {
     requests: rows.slice(0, PAGE_SIZE).map(({ events, ...row }) => ({

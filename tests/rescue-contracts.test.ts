@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canTransitionRescue, parseRescueIntake, parseRescueCorrection, parseRescueAction, RESCUE_TRANSITIONS } from "@/lib/rescue-contracts";
+import { canTransitionRescue, parseRescueIntake, parseRescueCorrection, parseRescueAction, parseRescueLifecycleAction, RESCUE_TRANSITIONS, TERMINAL_RESCUE_STATUSES } from "@/lib/rescue-contracts";
 import { toRescueDto } from "@/lib/rescue-dto";
 import type { RescueRequest, RescueRequestEvent } from "@prisma/client";
 
@@ -16,6 +16,21 @@ test("rescue lifecycle rejects every unsupported or terminal transition", () => 
     for (const to of Object.keys(RESCUE_TRANSITIONS)) assert.equal(canTransitionRescue(from, to), allowed.includes(to as never), `${from} → ${to}`);
   }
   assert.equal(canTransitionRescue("unknown", "received"), false);
+  assert.equal(canTransitionRescue("assigned", "en_route"), false);
+  assert.equal(canTransitionRescue("awaiting_responder", "dispatched"), false);
+  assert.equal(canTransitionRescue("responder_confirmed", "dispatched"), true);
+  assert.equal(canTransitionRescue("resolved", "closed"), true);
+  for (const status of TERMINAL_RESCUE_STATUSES) assert.deepEqual(RESCUE_TRANSITIONS[status as keyof typeof RESCUE_TRANSITIONS], []);
+});
+
+test("lifecycle actions require a replay key and allowlisted evidence", () => {
+  const validAction = { action: "lifecycle", expectedVersion: 3, actionKey: "phase3-action-key-123", nextStatus: "dispatched", dispatchMethod: "phone" };
+  assert.equal(parseRescueLifecycleAction(validAction).dispatchMethod, "phone");
+  assert.throws(() => parseRescueLifecycleAction({ ...validAction, actionKey: "short" }), /action key/);
+  assert.throws(() => parseRescueLifecycleAction({ ...validAction, nextStatus: "teleported" }), /status/);
+  assert.throws(() => parseRescueLifecycleAction({ ...validAction, dispatchMethod: "automated_sms" }), /dispatch method/);
+  assert.throws(() => parseRescueLifecycleAction({ ...validAction, spoofedActorId: "admin" }), /fields/);
+  assert.throws(() => parseRescueLifecycleAction({ ...validAction, occurredAt: "tomorrow" }), /occurrence time/);
 });
 
 test("intake accepts a manual Bulacan place and rejects outside GPS", () => {

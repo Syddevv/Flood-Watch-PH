@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
-import { RescueError } from "@/lib/rescue-contracts";
+import { RescueError, RESCUE_REASSIGNABLE_STATUSES } from "@/lib/rescue-contracts";
 
 const localityCodes = new Set<string>(BULACAN_LOCALITIES.map((place) => place.code));
 
@@ -162,10 +162,13 @@ export async function recordRescueCoordination(db: PrismaClient, actorId: string
   await requireAdmin(db, actorId);
   try {
     return await db.$transaction(async (tx) => {
-      const request = await tx.rescueRequest.findUnique({ where: { id: requestId }, select: { version: true, status: true, localityCode: true } });
+      const request = await tx.rescueRequest.findUnique({ where: { id: requestId }, select: { version: true, status: true, localityCode: true, workflowVersion: true } });
       if (!request) throw new RescueError("Rescue request not found.", 404);
       if (request.version !== input.expectedVersion) throw new RescueError("This request changed. Refresh before trying again.", 409);
-      if (!["triaged", "assigned"].includes(request.status)) throw new RescueError("Coordination is available after triage and before dispatch.", 400);
+      const legacyCoordination = request.workflowVersion === 1 && ["triaged", "assigned"].includes(request.status);
+      const newCoordination = request.workflowVersion === 2 && (request.status === "awaiting_responder" ||
+        (input.action === "reassign" && RESCUE_REASSIGNABLE_STATUSES.includes(request.status)));
+      if (!legacyCoordination && !newCoordination) throw new RescueError("Coordination is unavailable at this lifecycle stage.", 400);
       const active = await tx.rescueAssignment.findFirst({ where: { requestId, endedAt: null }, include: { organization: true } });
       let assignmentId: string;
       let eventType: string;
@@ -174,7 +177,6 @@ export async function recordRescueCoordination(db: PrismaClient, actorId: string
       if (input.action === "select" || input.action === "reassign") {
         if (input.action === "select" && active) throw new RescueError("This request already has an active organization.", 409);
         if (input.action === "reassign" && !active) throw new RescueError("No active organization to reassign.", 400);
-        if (active?.status === "accepted") throw new RescueError("An accepted assignment needs dispatch review before reassignment.", 400);
         const organization = await tx.responderOrganization.findUnique({ where: { id: input.organizationId } });
         if (!organization?.active || !organization.coverageLocalityCodes.includes(request.localityCode)) throw new RescueError("Organization is inactive or outside its recorded coverage.", 400);
         if (organization.availability === "unavailable") throw new RescueError("An unavailable organization cannot be selected.", 400);
@@ -202,10 +204,11 @@ export async function recordRescueCoordination(db: PrismaClient, actorId: string
           eventType = "contact_outcome_recorded";
         }
       }
-      const updated = await tx.rescueRequest.updateMany({ where: { id: requestId, version: input.expectedVersion }, data: { version: { increment: 1 } } });
+      const resetStatus = input.action === "reassign" && ["responder_confirmed", "dispatched", "en_route"].includes(request.status);
+      const updated = await tx.rescueRequest.updateMany({ where: { id: requestId, version: input.expectedVersion }, data: { version: { increment: 1 }, ...(resetStatus ? { status: "awaiting_responder" } : {}) } });
       if (updated.count !== 1) throw new RescueError("This request changed. Refresh before trying again.", 409);
-      await tx.rescueRequestEvent.create({ data: { requestId, assignmentId, actorUserId: actorId, source: "admin", eventType, previousStatus: request.status, nextStatus: request.status, visibility: "internal", note, reason,
-        details: input.action === "contact" ? { channel: input.channel } : input.action === "acknowledge" ? { outcome: input.outcome, adminRecorded: true } : undefined,
+      await tx.rescueRequestEvent.create({ data: { requestId, assignmentId, actorUserId: actorId, source: "admin", eventType, previousStatus: request.status, nextStatus: resetStatus ? "awaiting_responder" : request.status, visibility: resetStatus ? "public" : "internal", note, reason,
+        details: input.action === "contact" ? { channel: input.channel } : input.action === "acknowledge" ? { outcome: input.outcome, adminRecorded: true } : resetStatus ? { previousAssignmentStatus: active?.status } : undefined,
       } });
       return { version: input.expectedVersion + 1, assignmentId };
     });

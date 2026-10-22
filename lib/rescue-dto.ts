@@ -4,7 +4,7 @@ type RecordWithEvents = RescueRequest & { events?: RescueRequestEvent[] };
 
 export function toRescueDto(record: RecordWithEvents, admin = false) {
   return {
-    id: record.id, reference: record.reference, status: record.status, priority: record.priority,
+    id: record.id, reference: record.reference, status: record.status, priority: record.priority, workflowVersion: record.workflowVersion,
     version: record.version, createdAt: record.createdAt, updatedAt: record.updatedAt,
     forWhom: record.forWhom, assistedPersonName: record.assistedPersonName, relationship: record.relationship,
     primaryContact: record.primaryContact, alternateContact: record.alternateContact,
@@ -28,6 +28,7 @@ export function toRescueDto(record: RecordWithEvents, admin = false) {
       reason: admin ? event.reason : null,
       note: admin || event.visibility === "public" ? event.note : null,
       ...(admin ? { actorUserId: event.actorUserId, visibility: event.visibility,
+        details: event.details, occurredAt: event.occurredAt,
         previousCaseOwnerUserId: event.previousCaseOwnerUserId,
         nextCaseOwnerUserId: event.nextCaseOwnerUserId } : {}),
     })),

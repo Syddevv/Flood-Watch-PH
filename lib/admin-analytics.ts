@@ -1,6 +1,7 @@
 import "server-only";
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { prisma } from "@/lib/prisma";
+import { TERMINAL_RESCUE_STATUSES } from "@/lib/rescue-contracts";
 import { ANALYTICS_ROW_LIMIT, bucketIndex, makeBuckets, percentileMinutes, type AnalyticsData, type AnalyticsFilters, type SourceState } from "@/lib/admin-analytics-policy";
 
 const ACTIVE = ["Needs More Confirmation", "Confirmed by Community"];
@@ -25,7 +26,7 @@ export async function loadAdminAnalytics(filters: AnalyticsFilters): Promise<Ana
     filters.localityId ? Promise.resolve(null) : prisma.floodReport.count({ where: { archivedAt: null, status: { in: ACTIVE }, verificationStatus: { in: ["unreviewed", "disputed"] } } }),
     filters.localityId ? Promise.resolve(null) : prisma.floodReport.findFirst({ where: { archivedAt: null, status: { in: ACTIVE }, verificationStatus: { in: ["unreviewed", "disputed"] } }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
     filters.localityId ? Promise.resolve(null) : prisma.incident.count({ where: { archivedAt: null, status: { in: ACTIVE } } }),
-    prisma.rescueRequest.count({ where: { priority: "critical", status: { notIn: ["completed", "cancelled", "rejected"] }, ...(filters.localityId ? { localityCode: filters.localityId } : {}) } }),
+    prisma.rescueRequest.count({ where: { priority: "critical", status: { notIn: [...TERMINAL_RESCUE_STATUSES] }, ...(filters.localityId ? { localityCode: filters.localityId } : {}) } }),
   ]);
   const usable = <T>(result: PromiseSettledResult<T | null>) => result.status === "fulfilled" ? result.value : null;
   const reports = usable(reportResult);
@@ -62,7 +63,7 @@ export async function loadAdminAnalytics(filters: AnalyticsFilters): Promise<Ana
   }
   let responseTimes: AnalyticsData["responseTimes"] = null;
   if (sources.rescues === "complete") {
-    const events = rescues!.length ? await prisma.rescueRequestEvent.findMany({ where: { requestId: { in: rescues!.map((row) => row.id) }, nextStatus: { in: ["received", "triaged", "en_route", "completed"] } }, select: { requestId: true, nextStatus: true, createdAt: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: ANALYTICS_ROW_LIMIT * 4 + 1 }).catch(() => null) : [];
+    const events = rescues!.length ? await prisma.rescueRequestEvent.findMany({ where: { requestId: { in: rescues!.map((row) => row.id) }, nextStatus: { in: ["received", "triaged", "awaiting_responder", "dispatched", "resolved", "completed"] } }, select: { requestId: true, nextStatus: true, createdAt: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: ANALYTICS_ROW_LIMIT * 4 + 1 }).catch(() => null) : [];
     if (events && events.length <= ANALYTICS_ROW_LIMIT * 4) {
       sources.responseTimes = "complete";
       const received = new Map<string, number>();
@@ -71,7 +72,7 @@ export async function loadAdminAnalytics(filters: AnalyticsFilters): Promise<Ana
       const seen = new Set<string>();
       for (const event of events) {
         if (event.nextStatus === "received") continue;
-        const stage = event.nextStatus === "triaged" ? "first triage" : event.nextStatus === "en_route" ? "confirmed dispatch" : "completion";
+        const stage = ["triaged", "awaiting_responder"].includes(event.nextStatus ?? "") ? "first triage" : event.nextStatus === "dispatched" ? "confirmed dispatch" : "completion";
         const key = `${event.requestId}:${stage}`;
         const start = received.get(event.requestId);
         if (seen.has(key) || start === undefined || event.createdAt.getTime() < start) continue;

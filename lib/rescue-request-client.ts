@@ -12,6 +12,7 @@ export type RescueRecord = {
   id: string;
   reference: string;
   status: string;
+  workflowVersion: number;
   priority: string;
   version: number;
   createdAt: string;
@@ -31,20 +32,25 @@ export type RescueRecord = {
 };
 
 export const RESCUE_STATUS_LABELS: Record<string, string> = {
-  received: "Request received", triaged: "Under review", assigned: "Coordinator assigned",
-  en_route: "Team en route", on_scene: "Team on scene", completed: "Completed",
-  cancelled: "Cancelled", rejected: "Not accepted",
+  received: "Request received", under_review: "Under review", awaiting_responder: "Awaiting responder confirmation",
+  responder_confirmed: "Responder acceptance recorded by admin", dispatched: "Dispatch confirmation recorded by admin",
+  en_route: "Departure reported to admin", on_scene: "Arrival reported to admin", resolved: "Resolution recorded by admin", closed: "Closed",
+  cancelled: "Cancelled", duplicate: "Marked as duplicate", referred: "Referred", unable_to_contact: "Unable to contact",
+  triaged: "Under review (legacy)", assigned: "Coordinator assigned (legacy)",
+  completed: "Completed (legacy)", rejected: "Not accepted (legacy)",
 };
 
-export function rescueStatusLabel(status: string) {
+export function rescueStatusLabel(status: string, workflowVersion = 1) {
+  if (workflowVersion === 1 && status === "en_route") return "Previously marked en route (legacy)";
+  if (workflowVersion === 1 && status === "on_scene") return "Previously marked on scene (legacy)";
   return RESCUE_STATUS_LABELS[status] ?? "Status unavailable";
 }
 
-export function rescueEventLabel(event: RescueEvent) {
+export function rescueEventLabel(event: RescueEvent, workflowVersion = 1) {
   if (event.eventType === "cancellation_requested") return "Cancellation requested";
   if (event.eventType === "requester_correction") return "Details updated";
   if (event.eventType === "note") return "Update from operations";
-  return event.nextStatus ? rescueStatusLabel(event.nextStatus) : "Request updated";
+  return event.nextStatus ? rescueStatusLabel(event.nextStatus, event.eventType === "transition" ? 1 : workflowVersion) : "Request updated";
 }
 
 export function isTerminalRescue(status: string) {

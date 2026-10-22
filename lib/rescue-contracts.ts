@@ -1,19 +1,28 @@
 import { BULACAN_LOCALITIES } from "@/data/bulacan-localities";
 import { isWithinBulacan } from "@/lib/bulacan-scope";
 
-export const RESCUE_STATUSES = ["received", "triaged", "assigned", "en_route", "on_scene", "completed", "cancelled", "rejected"] as const;
+export const RESCUE_STATUSES = ["received", "under_review", "awaiting_responder", "responder_confirmed", "dispatched", "en_route", "on_scene", "resolved", "closed", "cancelled", "duplicate", "referred", "unable_to_contact", "triaged", "assigned", "completed", "rejected"] as const;
 export type RescueStatus = (typeof RESCUE_STATUSES)[number];
 export type RescuePriority = "routine" | "urgent" | "critical";
-export const TERMINAL_RESCUE_STATUSES: readonly string[] = ["completed", "cancelled", "rejected"];
+export const TERMINAL_RESCUE_STATUSES: readonly string[] = ["closed", "cancelled", "duplicate", "referred", "unable_to_contact", "completed", "rejected"];
+
+export const EXCEPTIONAL_RESCUE_STATUSES = ["cancelled", "duplicate", "referred", "unable_to_contact"] as const;
 
 export const RESCUE_TRANSITIONS: Record<RescueStatus, readonly RescueStatus[]> = {
-  received: ["triaged", "rejected", "cancelled"],
-  triaged: ["assigned", "rejected", "cancelled"],
-  assigned: ["en_route", "triaged", "cancelled"],
-  en_route: ["on_scene", "triaged"],
-  on_scene: ["completed", "triaged"],
-  completed: [], cancelled: [], rejected: [],
+  received: ["under_review", "cancelled", "duplicate", "referred"],
+  under_review: ["awaiting_responder", "cancelled", "duplicate", "referred"],
+  awaiting_responder: ["responder_confirmed", ...EXCEPTIONAL_RESCUE_STATUSES],
+  responder_confirmed: ["dispatched", "cancelled", "referred"],
+  dispatched: ["en_route", "cancelled", "referred"],
+  en_route: ["on_scene", "cancelled", "referred"],
+  on_scene: ["resolved", "referred"],
+  resolved: ["closed"],
+  triaged: ["under_review", "cancelled", "duplicate", "referred"],
+  assigned: ["under_review", "cancelled", "duplicate", "referred"],
+  completed: [], rejected: [], closed: [], cancelled: [], duplicate: [], referred: [], unable_to_contact: [],
 };
+
+export const RESCUE_REASSIGNABLE_STATUSES: readonly string[] = ["triaged", "assigned", "awaiting_responder", "responder_confirmed", "dispatched", "en_route"];
 
 export function canTransitionRescue(current: string, next: string) {
   return current in RESCUE_TRANSITIONS && RESCUE_TRANSITIONS[current as RescueStatus].includes(next as RescueStatus);
@@ -132,4 +141,30 @@ export function parseRescueAction(value: unknown) {
       (action === "priority" && caseOwnerUserId) ||
       (action !== "note" && note)) throw new RescueError("Action fields do not match the selected action.", 400);
   return { expectedVersion: input.expectedVersion as number, action, nextStatus, priority, caseOwnerUserId, confirmedTeamReference, outcome, reason, note, visibility };
+}
+
+export const RESCUE_OUTCOMES = ["rescued", "assisted", "no_rescue_needed", "referred", "unable_to_complete"] as const;
+
+export function parseRescueLifecycleAction(value: unknown) {
+  const input = object(value);
+  const allowed = ["action", "expectedVersion", "actionKey", "nextStatus", "reason", "note", "caseOwnerUserId", "dispatchMethod", "occurredAt", "outcomeCode", "outcome", "duplicateRequestId", "referralDestination"];
+  if (input.action !== "lifecycle" || Object.keys(input).some((key) => !allowed.includes(key))) throw new RescueError("Invalid lifecycle action fields.", 400);
+  if (!Number.isInteger(input.expectedVersion) || (input.expectedVersion as number) < 1) throw new RescueError("Expected version is required.", 400);
+  if (typeof input.actionKey !== "string" || !/^[A-Za-z0-9_-]{16,128}$/.test(input.actionKey)) throw new RescueError("A valid action key is required.", 400);
+  const nextStatus = text(input.nextStatus, 30, true)!;
+  if (!RESCUE_STATUSES.includes(nextStatus as RescueStatus)) throw new RescueError("Invalid rescue status.", 400);
+  const dispatchMethod = text(input.dispatchMethod, 20);
+  if (dispatchMethod && !["phone", "sms_logged", "radio", "other"].includes(dispatchMethod)) throw new RescueError("Invalid dispatch method.", 400);
+  const outcomeCode = text(input.outcomeCode, 40);
+  if (outcomeCode && !RESCUE_OUTCOMES.includes(outcomeCode as typeof RESCUE_OUTCOMES[number])) throw new RescueError("Invalid rescue outcome code.", 400);
+  const occurredAtText = text(input.occurredAt, 40);
+  if (occurredAtText && (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?(?:Z|[+-]\d\d:\d\d)$/.test(occurredAtText) || Number.isNaN(Date.parse(occurredAtText)))) throw new RescueError("Invalid reported occurrence time.", 400);
+  return {
+    action: "lifecycle" as const, expectedVersion: input.expectedVersion as number, actionKey: input.actionKey,
+    nextStatus: nextStatus as RescueStatus, reason: text(input.reason, 1000), note: text(input.note, 2000),
+    caseOwnerUserId: text(input.caseOwnerUserId, 100), dispatchMethod,
+    occurredAt: occurredAtText ? new Date(occurredAtText) : null,
+    outcomeCode, outcome: text(input.outcome, 1000), duplicateRequestId: text(input.duplicateRequestId, 100),
+    referralDestination: text(input.referralDestination, 160),
+  };
 }
