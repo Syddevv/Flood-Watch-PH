@@ -14,8 +14,6 @@ import { EvacuationCentersContent } from "@/components/evacuation-centers-conten
 import { IncidentReportsContent } from "@/components/incident-reports-content";
 import { LiveAlertsPanel } from "@/components/live-alerts-panel";
 import { MobileLiveInfoSheet } from "@/components/mobile-live-info-sheet";
-import { RescueRequestContent } from "@/components/rescue-request-content";
-import { RescueRequestDetail } from "@/components/rescue-request-detail";
 import { RightInfoPanel } from "@/components/right-info-panel";
 import { useAuthSession } from "@/components/auth-session-provider";
 import { useReportSessionReady } from "@/components/report-session-provider";
@@ -98,13 +96,11 @@ type LiveAlertSummary = {
 type UserLocationStatus = "idle" | "loading" | "available" | "denied" | "unavailable" | "error";
 
 type DashboardShellProps = {
-  rescueRequestId?: string;
   pageMode?:
     | "flood-map"
     | "weather-monitoring"
     | "evacuation-centers"
     | "incident-reports"
-    | "rescue-request"
     | "emergency-hotlines"
     | "about";
 };
@@ -229,8 +225,6 @@ function getActiveItemFromPageMode(
         ? "evacuation-centers"
         : pageMode === "incident-reports"
           ? "incident-reports"
-          : pageMode === "rescue-request"
-            ? "rescue-request"
             : pageMode === "emergency-hotlines"
               ? "emergency-hotlines"
               : pageMode === "about"
@@ -240,7 +234,6 @@ function getActiveItemFromPageMode(
 
 export function DashboardShell({
   pageMode = "flood-map",
-  rescueRequestId,
 }: DashboardShellProps) {
   const router = useRouter();
   const reportSessionReady = useReportSessionReady();
@@ -264,14 +257,12 @@ export function DashboardShell({
   const isWeatherMonitoringView = pageMode === "weather-monitoring";
   const isEvacuationCentersView = pageMode === "evacuation-centers";
   const isIncidentReportsView = pageMode === "incident-reports";
-  const isRescueRequestView = pageMode === "rescue-request";
   const isEmergencyHotlinesView = pageMode === "emergency-hotlines";
   const isAboutView = pageMode === "about";
   const isContentOnlyView =
     isWeatherMonitoringView ||
     isEvacuationCentersView ||
     isIncidentReportsView ||
-    isRescueRequestView ||
     isEmergencyHotlinesView ||
     isAboutView;
   const [floodMapReports, setFloodMapReports] = useState<IncidentReport[]>([]);
@@ -957,11 +948,6 @@ export function DashboardShell({
       return;
     }
 
-    if (id === "rescue-request") {
-      router.push("/rescue-request");
-      return;
-    }
-
     if (id === "emergency-hotlines") {
       router.push("/emergency-hotlines");
       return;
@@ -1446,8 +1432,6 @@ export function DashboardShell({
               </Suspense>
             ) : isIncidentReportsView ? (
               <IncidentReportsContent />
-            ) : isRescueRequestView ? (
-              rescueRequestId ? <RescueRequestDetail key={`${authUser?.id ?? "guest"}:${rescueRequestId}`} id={rescueRequestId} /> : <RescueRequestContent key={authUser?.id ?? "guest"} />
             ) : isEmergencyHotlinesView ? (
               <EmergencyHotlinesContent />
             ) : isAboutView ? (

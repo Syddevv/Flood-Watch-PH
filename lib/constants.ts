@@ -4,7 +4,6 @@ import {
   CloudRain,
   Flag,
   Info,
-  LifeBuoy,
   Map,
   MapPin,
   PhoneCall,
@@ -16,7 +15,6 @@ import type {
   CommunityActivityStat,
   IncidentReport,
   LegendItem,
-  MapMarker,
   NavItem,
   RiskPolygon,
   SafetyChecklistItem,
@@ -35,7 +33,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "weather-monitoring", label: "Weather Monitoring", icon: CloudRain },
   { id: "evacuation-centers", label: "Evacuation Centers", icon: Building2 },
   { id: "incident-reports", label: "Incident Reports", icon: AlertCircle },
-  { id: "rescue-request", label: "Request Rescue", icon: LifeBuoy },
   { id: "emergency-hotlines", label: "Emergency Hotlines", icon: PhoneCall },
   { id: "about", label: "About / How It Works", icon: Info },
 ];
@@ -89,75 +86,6 @@ export const COMMUNITY_VERIFICATION_THRESHOLD = 3;
 export const RESOLVED_CONFIRMATION_THRESHOLD = 3;
 
 export const INCIDENT_REPORTS: IncidentReport[] = [];
-
-export const MAP_MARKERS: MapMarker[] = [
-  {
-    id: "marker-severe-1",
-    label: "1",
-    category: "alert",
-    severity: "severe",
-    coordinates: [14.651, 121.093],
-    title: "Severe Flood Alert",
-  },
-  {
-    id: "marker-alert-2",
-    label: "F",
-    category: "alert",
-    severity: "high",
-    coordinates: [14.5995, 121.0736],
-    title: "High Flood Risk",
-  },
-  {
-    id: "marker-alert-3",
-    label: "F",
-    category: "alert",
-    severity: "moderate",
-    coordinates: [14.6268, 121.0422],
-    title: "Moderate Flood Watch",
-  },
-  {
-    id: "marker-center-1",
-    label: "P",
-    category: "center",
-    coordinates: [14.6353, 121.1016],
-    title: "Marikina Sports Complex",
-  },
-  {
-    id: "marker-center-2",
-    label: "H",
-    category: "center",
-    coordinates: [14.5767, 121.0857],
-    title: "Pasig Elementary School",
-  },
-  {
-    id: "marker-center-3",
-    label: "H",
-    category: "center",
-    coordinates: [14.6536, 121.0518],
-    title: "Quezon City Memorial Circle",
-  },
-  {
-    id: "marker-hotline-1",
-    label: "E",
-    category: "hotline",
-    coordinates: [14.5608, 121.0551],
-    title: "Emergency Hotline",
-  },
-  {
-    id: "marker-hotline-2",
-    label: "E",
-    category: "hotline",
-    coordinates: [14.6784, 121.0447],
-    title: "Rescue Coordination",
-  },
-  {
-    id: "marker-hotline-3",
-    label: "E",
-    category: "hotline",
-    coordinates: [14.5942, 121.1235],
-    title: "Hotline Dispatch",
-  },
-];
 
 // Risk overlays are intentionally empty until a real Calumpit hazard layer is
 // available. The type, prop plumbing, and "risk overlays" toggle are kept so a

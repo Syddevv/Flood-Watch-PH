@@ -1,3 +1,5 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](rescue-retirement.md).
+
 # A0 rescue foundation rollout
 
 The additive `20261019_rescue_foundation` migration creates `RescueRequest` and append-only `RescueRequestEvent` tables. It does not rewrite or convert flood reports. Apply only after a database backup and reviewed `npx prisma migrate status`, then deploy the matching API version. Existing application versions continue to use flood reports during a rolling rollout; the new API must not receive traffic before the migration. Rollback the application to the previous version if needed. Leave the new tables intact on rollback to preserve already-received emergencies; do not drop or truncate them. Reconcile them with operators before any later contraction.

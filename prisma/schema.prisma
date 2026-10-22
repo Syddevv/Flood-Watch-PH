@@ -304,6 +304,8 @@ model RescueRequestEvent {
   requestId               String
   actorUserId             String?
   assignmentId            String?
+  actionKey               String?
+  actionHash              String?
   source                  String?
   details                 Json?
   occurredAt              DateTime?
@@ -324,6 +326,7 @@ model RescueRequestEvent {
 
   @@index([requestId, createdAt, id])
   @@index([assignmentId, createdAt])
+  @@unique([requestId, actionKey])
 }
 
 model ResponderOrganization {

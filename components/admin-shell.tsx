@@ -13,7 +13,7 @@ type NavItem = readonly [label: string, href: string, icon: typeof LayoutDashboa
 type NavGroup = readonly [label: string, items: readonly NavItem[]];
 const groups: readonly NavGroup[] = [
   ["COMMAND", [["Overview", "/admin", LayoutDashboard], ["Live Operations Map", "/admin/map", Map]]],
-  ["MONITORING", [["Flood Reports", "/admin/reports", FileText], ["Rescue Requests", "/admin/rescue-requests", LifeBuoy], ["Responders", "/admin/responders", Users]]],
+  ["MONITORING", [["Flood Reports", "/admin/reports", FileText]]],
   ["DATA MANAGEMENT", [["Evacuation Centers", "/admin/data", Building2], ["Emergency Contacts", "/admin/emergency-contacts", LifeBuoy], ["Covered Areas", "/admin/covered-areas", MapPinned], ["Users & Roles", "/admin/users", Users]]],
   ["INTELLIGENCE", [["Analytics", "/admin/analytics", BarChart3]]],
   ["SYSTEM", [["Notifications", "/admin/notifications", Radio], ["Audit Logs", "/admin/audit-logs", ScrollText], ["Settings", "/admin/settings", Settings]]],

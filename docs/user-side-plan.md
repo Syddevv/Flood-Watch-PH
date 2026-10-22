@@ -1,3 +1,5 @@
+> Rescue Request and Responder Dispatch sections are retired; other guidance in this document may still apply. See [retirement status](rescue-retirement.md).
+
 # Flood Watch — user-side implementation plan
 
 ## Objective and scope

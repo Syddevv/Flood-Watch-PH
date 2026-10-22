@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyticsToCsv, bucketIndex, csvCell, makeBuckets, parseAnalyticsFilters, percentileMinutes, type AnalyticsData } from "@/lib/admin-analytics-policy";
+import { analyticsToCsv, bucketIndex, csvCell, makeBuckets, parseAnalyticsFilters, type AnalyticsData } from "@/lib/admin-analytics-policy";
 
 test("Manila dates use fixed UTC+8 boundaries and reject oversized or invalid ranges", () => {
   const filters = parseAnalyticsFilters(new URLSearchParams("from=2026-10-17&to=2026-10-18&grain=hour"), new Date("2026-10-18T12:00:00Z"));
@@ -14,9 +14,7 @@ test("Manila dates use fixed UTC+8 boundaries and reject oversized or invalid ra
   assert.throws(() => parseAnalyticsFilters(new URLSearchParams("localityId=not-bulacan")), /locality/);
 });
 
-test("zero samples and CSV fields remain safe", () => {
-  assert.equal(percentileMinutes([], 0.5), null);
-  assert.equal(percentileMinutes([60_000, 120_000, 300_000], 0.5), 2);
+test("CSV fields remain safe", () => {
   assert.equal(csvCell('  =HYPERLINK("x")'), '"\'  =HYPERLINK(""x"")"');
   assert.equal(csvCell("a,b\nc"), '"a,b\nc"');
   const filters = parseAnalyticsFilters(new URLSearchParams("from=2026-10-18&to=2026-10-18"), new Date("2026-10-18T12:00:00Z"));
@@ -25,9 +23,10 @@ test("zero samples and CSV fields remain safe", () => {
   assert.equal(buckets[0].reports, 0);
   const data: AnalyticsData = {
     filters: { from: filters.from, to: filters.to, grain: filters.grain, localityId: "" }, asOf: "2026-10-18T12:00:00.000Z",
-    sources: { reports: "complete", incidents: "complete", rescues: "complete", responseTimes: "complete" },
-    totals: { reportIntake: 0, visibleReports: 0, incidents: 0, rescues: 0, cancelledRescues: 0, rejectedRescues: 0 }, buckets,
-    severity: [], geography: [], responseTimes: [], snapshots: { verificationBacklog: 0, oldestUnreviewedMinutes: null, activeIncidents: 0, criticalRescues: 0, shelterOccupancy: null },
+    sources: { reports: "complete", incidents: "complete" },
+    totals: { reportIntake: 0, visibleReports: 0, incidents: 0 }, buckets,
+    severity: [], snapshots: { verificationBacklog: 0, oldestUnreviewedMinutes: null, activeIncidents: 0, shelterOccupancy: null },
   };
   assert.match(analyticsToCsv(data), /"range","2026-10-18 to 2026-10-18","report intake","0","complete"/);
+  assert.doesNotMatch(analyticsToCsv(data), /rescue|dispatch|response duration/i);
 });

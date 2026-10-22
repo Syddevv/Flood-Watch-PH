@@ -1,4 +1,4 @@
-> Historical implementation log. Current Bulacan scope and Flood Watch branding are documented in [docs/bulacan-scope.md](docs/bulacan-scope.md).
+> Historical implementation log. Rescue Request and Responder Dispatch work described below is retired; see [retirement status](docs/rescue-retirement.md). Current Bulacan scope and Flood Watch branding are documented in [docs/bulacan-scope.md](docs/bulacan-scope.md).
 
 # FloodWatch PH — Additional Features TODO
 

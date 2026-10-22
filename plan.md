@@ -1,3 +1,5 @@
+> Historical plan: Rescue Request and Responder Dispatch work described below is retired. See [retirement status](docs/rescue-retirement.md).
+
 # FloodWatch PH Admin Backend Integration To-Do List
 
 ## Goal

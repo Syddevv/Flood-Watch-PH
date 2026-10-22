@@ -4,14 +4,9 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 type SettingsTab = "general" | "notifications";
-type NotificationSetting = "criticalRescue" | "verificationReminders" | "capacityWarnings";
+type NotificationSetting = "verificationReminders" | "capacityWarnings";
 
 const notificationOptions: Array<{ key: NotificationSetting; label: string; detail: string }> = [
-  {
-    key: "criticalRescue",
-    label: "Critical rescue alerts",
-    detail: "Enabled for Municipal DRRMO administrators.",
-  },
   {
     key: "verificationReminders",
     label: "Report verification reminders",
@@ -46,7 +41,6 @@ export function AdminSettings() {
   const [operationsCenter, setOperationsCenter] = useState("Flood Watch operations");
   const [advisoryFooter, setAdvisoryFooter] = useState("Follow official PAGASA and local DRRMO advisories.");
   const [notificationSettings, setNotificationSettings] = useState<Record<NotificationSetting, boolean>>({
-    criticalRescue: true,
     verificationReminders: true,
     capacityWarnings: true,
   });

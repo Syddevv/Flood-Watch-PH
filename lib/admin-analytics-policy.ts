@@ -36,13 +36,11 @@ export type SourceState = "complete" | "unavailable" | "locality_unavailable";
 export type AnalyticsData = {
   filters: { from: string; to: string; grain: "day" | "hour"; localityId: string };
   asOf: string;
-  sources: { reports: SourceState; incidents: SourceState; rescues: SourceState; responseTimes: SourceState };
-  totals: { reportIntake: number | null; visibleReports: number | null; incidents: number | null; rescues: number | null; cancelledRescues: number | null; rejectedRescues: number | null };
-  buckets: { start: string; label: string; reports: number | null; visibleReports: number | null; incidents: number | null; rescues: number | null }[];
+  sources: { reports: SourceState; incidents: SourceState };
+  totals: { reportIntake: number | null; visibleReports: number | null; incidents: number | null };
+  buckets: { start: string; label: string; reports: number | null; visibleReports: number | null; incidents: number | null }[];
   severity: { label: string; count: number }[] | null;
-  geography: { localityId: string; label: string; rescues: number }[] | null;
-  responseTimes: { stage: string; sampleSize: number; medianMinutes: number | null; p90Minutes: number | null }[] | null;
-  snapshots: { verificationBacklog: number | null; oldestUnreviewedMinutes: number | null; activeIncidents: number | null; criticalRescues: number | null; shelterOccupancy: null };
+  snapshots: { verificationBacklog: number | null; oldestUnreviewedMinutes: number | null; activeIncidents: number | null; shelterOccupancy: null };
 };
 
 export function makeBuckets(filters: AnalyticsFilters) {
@@ -50,7 +48,7 @@ export function makeBuckets(filters: AnalyticsFilters) {
   const buckets: AnalyticsData["buckets"] = [];
   for (let time = filters.start.getTime(); time < filters.end.getTime(); time += step) {
     const local = new Date(time + MANILA_OFFSET_MS).toISOString();
-    buckets.push({ start: new Date(time).toISOString(), label: filters.grain === "hour" ? `${local.slice(0, 10)} ${local.slice(11, 16)}` : local.slice(0, 10), reports: 0, visibleReports: 0, incidents: 0, rescues: 0 });
+    buckets.push({ start: new Date(time).toISOString(), label: filters.grain === "hour" ? `${local.slice(0, 10)} ${local.slice(11, 16)}` : local.slice(0, 10), reports: 0, visibleReports: 0, incidents: 0 });
   }
   return buckets;
 }
@@ -58,15 +56,6 @@ export function makeBuckets(filters: AnalyticsFilters) {
 export function bucketIndex(date: Date, filters: AnalyticsFilters) {
   const step = filters.grain === "hour" ? 60 * 60 * 1000 : DAY_MS;
   return Math.floor((date.getTime() - filters.start.getTime()) / step);
-}
-
-export function percentileMinutes(values: number[], percentile: number) {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const position = (sorted.length - 1) * percentile;
-  const lower = Math.floor(position), upper = Math.ceil(position);
-  const duration = sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
-  return Math.round(duration / 60_000 * 10) / 10;
 }
 
 export function csvCell(value: string | number | null) {
@@ -82,21 +71,11 @@ export function analyticsToCsv(data: AnalyticsData) {
   add("range", period, "report intake", data.totals.reportIntake, data.sources.reports);
   add("range", period, "visible reports", data.totals.visibleReports, data.sources.reports);
   add("range", period, "distinct incidents", data.totals.incidents, data.sources.incidents);
-  add("range", period, "rescue requests", data.totals.rescues, data.sources.rescues);
-  add("range", period, "cancelled rescues", data.totals.cancelledRescues, data.sources.rescues);
-  add("range", period, "rejected rescues", data.totals.rejectedRescues, data.sources.rescues);
-  for (const bucket of data.buckets) for (const [metric, value, state] of [["report intake", bucket.reports, data.sources.reports], ["visible reports", bucket.visibleReports, data.sources.reports], ["distinct incidents", bucket.incidents, data.sources.incidents], ["rescue requests", bucket.rescues, data.sources.rescues]] as const) add("bucket", bucket.label, metric, value, state);
+  for (const bucket of data.buckets) for (const [metric, value, state] of [["report intake", bucket.reports, data.sources.reports], ["visible reports", bucket.visibleReports, data.sources.reports], ["distinct incidents", bucket.incidents, data.sources.incidents]] as const) add("bucket", bucket.label, metric, value, state);
   for (const item of data.severity ?? []) add("severity", period, item.label, item.count, data.sources.reports);
-  for (const item of data.geography ?? []) add("rescue locality", period, `${item.label} (${item.localityId})`, item.rescues, data.sources.rescues);
-  for (const item of data.responseTimes ?? []) {
-    add("response", period, `${item.stage} sample size`, item.sampleSize, data.sources.responseTimes);
-    add("response", period, `${item.stage} median minutes`, item.medianMinutes, data.sources.responseTimes);
-    add("response", period, `${item.stage} p90 minutes`, item.p90Minutes, data.sources.responseTimes);
-  }
   add("snapshot", data.asOf, "verification backlog", data.snapshots.verificationBacklog, data.sources.reports === "complete" ? "snapshot" : data.sources.reports);
   add("snapshot", data.asOf, "oldest unreviewed minutes", data.snapshots.oldestUnreviewedMinutes, data.sources.reports === "complete" ? "snapshot" : data.sources.reports);
   add("snapshot", data.asOf, "active incidents", data.snapshots.activeIncidents, data.sources.incidents === "complete" ? "snapshot" : data.sources.incidents);
-  add("snapshot", data.asOf, "critical rescues", data.snapshots.criticalRescues, data.sources.rescues === "complete" ? "snapshot" : data.sources.rescues);
   add("snapshot", data.asOf, "shelter occupancy", null, "unavailable");
   return rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
 }

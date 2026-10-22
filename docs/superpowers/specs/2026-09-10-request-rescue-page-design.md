@@ -1,3 +1,5 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](../../rescue-retirement.md).
+
 # Request Rescue page — design
 
 Date: 2026-09-10

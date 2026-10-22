@@ -1,6 +1,6 @@
 # Bulacan emergency-contact rollout
 
-The public hotline page, dashboard panels, and rescue aside read the bounded
+The public hotline page and dashboard panels read the bounded
 `/api/emergency-contacts` endpoint. A row is public only when it is unarchived,
 verified, has an official HTTPS source URL and source-check date, and is either
 marked national or belongs to Bulacan. The public response omits import keys

@@ -13,7 +13,7 @@ type ReportCameraCaptureProps = {
   open: boolean;
   onClose: () => void;
   onCapture: (file: File, capturedAt: Date) => void;
-  /** Rescue intake remains optional-evidence and can still offer file upload. */
+  /** Offer the existing file picker if the user cannot use the camera. */
   onUploadInstead?: () => void;
 };
 

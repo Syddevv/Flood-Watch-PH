@@ -1,6 +1,8 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](../rescue-retirement.md).
+
 # Admin-managed rescue dispatch: admin and shared-data plan
 
-**Status:** Phase 1 merged. Phase 2 implemented on `feat/rescue-dispatch-phase2-coordination`; database-backed verification pending. Phases 3–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md) and [Phase 2 report](rescue-dispatch-phase2-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
+**Status:** Phase 1 merged. Phase 2 implemented with database-backed verification pending. Phase 3 implemented on `feat/rescue-dispatch-phase3-lifecycle`; database-backed verification and migration replay remain pending. Phases 4–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md), [Phase 2 report](rescue-dispatch-phase2-report.md), and [Phase 3 report](rescue-dispatch-phase3-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.
 
 ## Current architecture and invariants
 
@@ -61,7 +63,7 @@ Use a new branch for each approved phase, as requested for earlier phased work. 
 
 **Acceptance:** Admin can manage and select organizations; contact and acknowledgement are separate persisted facts; reassignment retains old attempts; the request remains active after a failed attempt. No service is contacted by the app.
 
-**Directory UI refinement (22 October 2026):** `/admin/responders` now uses a compact card list and a shared add/edit modal with labeled capability choices and searchable multi-municipality coverage. The configured database currently lacks `20261024_rescue_dispatch_foundation`; the directory API returns a specific setup error until that additive migration is reviewed and deployed. No migration was run against the configured database during this UI change. Phase 3 remains unstarted.
+**Directory UI refinement (22 October 2026):** `/admin/responders` now uses a compact card list and a shared add/edit modal with labeled capability choices and searchable multi-municipality coverage. The configured database currently lacks `20261024_rescue_dispatch_foundation`; the directory API returns a specific setup error until that additive migration is reviewed and deployed. No migration was run against the configured database during this UI change. Phase 3 is implemented on a separate branch; see its report for verification limits.
 
 ## Phase 3 — Lifecycle and dispatch management
 
@@ -82,10 +84,10 @@ Exceptional transitions require admin role, reason and a policy-allowed source s
 
 **Atomicity:** One transaction changes request status/version, assignment, event and alert intent. Compare-and-swap on `RescueRequest.version`; stale writes return 409 and do not leave partial changes. Make consequential actions replay-safe with an action idempotency key or uniqueness constraint. A repeated dispatch confirmation must not create a second event. Notification failure must not roll back a committed rescue transition or report it as unsaved; persist notice intent in the transaction and retry delivery/view separately.
 
-- [ ] Expand status DB check and shared status/terminal/transition maps; add legacy compatibility mapping and direct-action deprecation.
-- [ ] Implement all evidence gates, exceptional reasons, resolution outcome validation and close documentation.
-- [ ] Add transaction/CAS/idempotency and race tests for status, assignment, event and notification consistency.
-- [ ] Verify every legal transition and reject skips, stale versions, repeated dispatch, unauthorized actors and impossible timestamp order.
+- [x] Expand status DB check and shared status/terminal/transition maps; add legacy compatibility mapping and direct-action deprecation.
+- [x] Implement evidence gates, exceptional reasons, resolution outcome validation and close documentation.
+- [ ] Run database-backed transaction/CAS/idempotency and race tests for status, assignment, event and notification consistency. Focused integration coverage is written but `TEST_DATABASE_URL` is unavailable.
+- [ ] Verify every legal transition against a migrated database, including skips, stale versions, repeated dispatch, unauthorized actors and impossible timestamp order. The unit transition matrix passes; the integration suite is skipped without a test database.
 
 **Acceptance:** Every new state survives reload; selection, acceptance, dispatch, departure and arrival are distinct; invalid skips fail server-side; every committed state change has one ordered event; historical records remain intelligible.
 
