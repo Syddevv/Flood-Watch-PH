@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getRateLimitIdentity } from "@/lib/rate-limit-identity";
 import { getReportSessionHashFromRequest } from "@/lib/report-session";
 import { consumeInMemoryRateLimit } from "@/lib/in-memory-rate-limit";
+import { isTrustedOrigin } from "@/lib/trusted-origin";
 
 type RateLimitRow = {
   count: number;
@@ -64,43 +65,6 @@ function createRateLimitKey(request: Request, scope: string, identityOverride?: 
     .digest("hex");
 
   return `${scope}:${addressHash}`;
-}
-
-function isTrustedOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-
-  if (!origin) {
-    return process.env.NODE_ENV !== "production";
-  }
-
-  const requestHost = request.headers.get("host");
-
-  if (requestHost) {
-    const requestProtocol =
-      request.headers.get("x-forwarded-proto") ?? new URL(request.url).protocol.replace(":", "");
-
-    try {
-      const parsedOrigin = new URL(origin);
-
-      if (parsedOrigin.host === requestHost && parsedOrigin.protocol.replace(":", "") === requestProtocol) {
-        return true;
-      }
-    } catch {
-      return false;
-    }
-  }
-
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
-
-  if (!configuredOrigin) {
-    return false;
-  }
-
-  try {
-    return origin === new URL(configuredOrigin).origin;
-  } catch {
-    return false;
-  }
 }
 
 async function consumeRateLimit(
@@ -173,7 +137,10 @@ export async function protectApiRequest(
   request: Request,
   options: ApiProtectionOptions,
 ) {
-  if (options.requireTrustedOrigin && !isTrustedOrigin(request)) {
+  if (options.requireTrustedOrigin && !isTrustedOrigin(request, {
+    production: process.env.NODE_ENV === "production",
+    configuredOrigin: process.env.NEXT_PUBLIC_APP_URL,
+  })) {
     return errorResponse("This request origin is not allowed.", 403);
   }
 
