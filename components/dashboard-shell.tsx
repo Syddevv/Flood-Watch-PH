@@ -1485,31 +1485,6 @@ export function DashboardShell({
               </div>
             )}
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[var(--layer-mobile-fab)] flex items-end justify-between px-4 md:hidden">
-              {!isContentOnlyView || isFloodMapView ? (
-                <button
-                  type="button"
-                  onClick={() => setSheetOpen(true)}
-                  className="floodwatch-primary-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
-                >
-                  <SquareStack className="h-4 w-4" />
-                  <span>Live Info</span>
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {!isIncidentReportsView ? (
-                <button
-                  type="button"
-                  onClick={() => router.push("/incident-reports")}
-                  className="floodwatch-accent-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
-                </button>
-              ) : null}
-            </div>
           </main>
 
           {!isContentOnlyView || isFloodMapView ? (
@@ -1544,6 +1519,32 @@ export function DashboardShell({
             />
           ) : null}
         </div>
+      </div>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] z-[var(--layer-mobile-fab)] flex items-end justify-between px-4 md:hidden">
+        {!isContentOnlyView || isFloodMapView ? (
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="floodwatch-primary-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+          >
+            <SquareStack className="h-4 w-4" />
+            <span>Live Info</span>
+          </button>
+        ) : (
+          <div />
+        )}
+
+        {!isIncidentReportsView ? (
+          <button
+            type="button"
+            onClick={() => router.push("/incident-reports")}
+            className="floodwatch-accent-action pointer-events-auto flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{REPORT_LABEL.replace("Incident", "").trim()}</span>
+          </button>
+        ) : null}
       </div>
 
       {!isContentOnlyView || isFloodMapView ? (
