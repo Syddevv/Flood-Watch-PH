@@ -214,7 +214,7 @@ not stored in the user profile or verification table. Existing accounts and
 public browsing are unaffected. Browser geolocation works on localhost and
 production HTTPS; device coordinates can be spoofed, so this is an eligibility
 check rather than proof of physical presence. No new environment variables are
-required. Apply `20261025_registration_location_verification` before deploying
+required. Apply `20261022_registration_location_verification` before deploying
 the new registration endpoints.
 
 For staging or production rollout, follow the [A6 rollout and handover checklist](docs/a6-rollout-runbook.md) before running a migration. It records the backup, dry run, feature gates, rollback, and operator sign-offs.
