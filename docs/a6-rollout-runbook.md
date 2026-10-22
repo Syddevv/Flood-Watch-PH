@@ -1,3 +1,5 @@
+> Rescue Request and Responder Dispatch sections are retired; other guidance in this document may still apply. See [retirement status](rescue-retirement.md).
+
 # A6 rollout and handover
 
 Prepared 2026-10-21. This is a controlled release checklist, not authorization to deploy or a claim that an emergency response desk is operating. Use the [U6 acceptance record](u6-acceptance-record.md) for the pending operator sign-offs.
@@ -18,19 +20,17 @@ All flags accept exactly `on` or `off`; unset means current behavior (`on`). A d
 | --- | --- | --- |
 | `REGISTRATION_INTAKE_ENABLED` | New account registration returns 503. | Sign-in and email-code verification. |
 | `ONSITE_REPORT_INTAKE_ENABLED` | New public flood reports return 503. | Existing reports and authorized updates. |
-| `PUBLIC_RESCUE_INTAKE_ENABLED` | New public rescue requests return 503. | Owner history, detail, and corrections; admin-assisted intake. |
-| `ADMIN_RESCUE_ACTIONS_ENABLED` | Admin rescue action writes return 503. | Admin queue/detail and existing event history. Use manual operator handover for active cases. |
 | `PUBLIC_CENTER_FEED_ENABLED` | Public center list/detail return 503; map omits center markers. | Admin center management and other map data. |
 
-The disabled response has `code: FEATURE_PAUSED`, HTTP 503, a request ID, and `Cache-Control: no-store`. Turn off public rescue intake before a period without staffed triage. Never assume a toggle contacts a responder, acknowledges dispatch, or resolves cases already received.
+The disabled response has `code: FEATURE_PAUSED`, HTTP 503, a request ID, and `Cache-Control: no-store`. Retired rescue flags are inert; see [retirement status](rescue-retirement.md).
 
 ## Migration and rollback sequence
 
 1. Identify the target environment, app revision, `DATABASE_URL`, and `DIRECT_URL`. Record who confirmed both URLs address the same intended database. Collect a provider snapshot and prove a restore to an isolated database; record snapshot time and restore location outside this repository. Preserve rescue requests and audit history.
-2. Keep new intake and dispatch controls paused if staffing or source sign-offs are incomplete. On the restored database, run `npx prisma migrate status`, then `npx prisma migrate deploy`. Migrations are additive through U0 scope, U3 email/onsite evidence, U4 resources, A0 rescue, A1 review, A2 locality, and the review-feedback constraint. There is no A5 index migration. Verify no pending migrations, inspect counts/IDs for reports, incidents, rescue requests/events, centers, contacts, and review actions, then run isolated integration and browser suites.
+2. On the restored database, run `npx prisma migrate status`, then `npx prisma migrate deploy` only if reviewed migrations are pending. The rescue schema remains for historical compatibility. Verify no pending migrations, inspect counts/IDs for reports, incidents, centers, contacts, review actions, and retained rescue history, then run isolated integration and browser suites.
 3. Review A2 dry-run matches and the five contact duplicate candidates. Run `--apply` only on an approved target after snapshot and source review; it preserves admin edits and uses one transaction. Repeat the dry run and compare before/after counts, source keys, archive states, and public DTOs. Never run `prisma db push` or the demo `db:seed` on production.
-4. Deploy code built against the migrated schema. Check health, admin authentication, one safe read for each public API, protected access failures, notification visibility, and request ID logs. Enable public intake only after technical and operational gates below pass. Monitor errors, latency, rejected review actions, mail delivery, and stale resources.
-5. If code must roll back, pause new writes and center feed, retain the additive schema and every already received case, and redeploy the previous compatible app revision. Assign an operator to reconcile open requests outside the app while actions are paused. Restore a database backup only after a separate data-loss review; prefer a forward fix when new records exist. Never drop rescue/review tables or clear audit history as a routine rollback.
+4. Deploy code built against the retained schema. Check health, admin authentication, one safe read for each active public API, protected access failures, notification visibility, retired-route 404 responses, and request ID logs. Enable remaining public intakes only after technical and operational gates below pass. Monitor errors, latency, rejected review actions, mail delivery, and stale resources.
+5. If code must roll back, pause new writes and center feed, retain the additive schema and every historical record, and redeploy the previous compatible app revision. Restore a database backup only after a separate data-loss review; prefer a forward fix when new records exist. Never drop rescue/review tables or clear audit history as a routine rollback.
 
 ## Operator handover record
 
@@ -40,11 +40,10 @@ Fill each item with a named owner, effective time, evidence link, and backup con
 | --- | --- | --- |
 | Resource provenance | Official center/contact sources, research dates, field verification, opening-status owner and cadence. | Pending; five contact duplicate candidates and ten center locality gaps. |
 | Email | Verified sender, credential owner, successful inbox test, quota/bounce monitoring and escalation. | Pending. |
-| Triage coverage | Desk hours, primary/backup operators, first-review target, out-of-hours procedure. | Pending. |
-| Dispatch | Authorized confirmer, team contact channel, acceptance reference, cancellation and escalation procedure. | Pending. Case-owner assignment alone is not dispatch. |
+| Flood report review coverage | Desk hours, primary/backup reviewers, first-review target, out-of-hours procedure. | Pending. |
 | Privacy | Retention period, legal hold/deletion process, access review, backup encryption and restore permissions. | Pending. |
 | Outages | On-call owner for database, weather, geocoding, image upload, email and center-source failures; fallback phone instructions. | Pending. |
-| Audit and handover | Daily review of new requests, unresolved incidents, failed notifications, conflicts, and next-shift acknowledgment. | Pending. |
+| Audit and handover | Daily review of new flood reports, unresolved incidents, failed notifications, conflicts, and next-shift acknowledgment. | Pending. |
 
 ## Release decision
 

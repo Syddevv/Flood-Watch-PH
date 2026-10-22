@@ -1,3 +1,5 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](../rescue-retirement.md).
+
 # Admin-managed rescue dispatch: citizen experience plan
 
 **Status:** Phase 1 foundation merged; Phase 2 coordination privacy and Phase 3 lifecycle labels/projection implemented, with database-backed verification pending. This plan depends on the [admin and shared-data plan](rescue-dispatch-admin-plan.md). Phases 4–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md), [Phase 2 report](rescue-dispatch-phase2-report.md), and [Phase 3 report](rescue-dispatch-phase3-report.md). Flood Watch is a capstone simulation, not an emergency dispatch service. Public copy must state that status is an admin-recorded simulation and must not promise actual responder availability or arrival.

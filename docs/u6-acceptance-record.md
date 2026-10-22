@@ -1,3 +1,5 @@
+> Rescue Request and Responder Dispatch sections are retired; other guidance in this document may still apply. See [retirement status](rescue-retirement.md).
+
 # U6 acceptance and operator sign-off record
 
 Prepared 2026-10-21 on `feat/u6-user-admin-acceptance`. This record is a release gate, not approval to provide emergency dispatch. No operator has signed it.

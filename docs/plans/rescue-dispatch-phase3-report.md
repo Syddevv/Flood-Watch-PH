@@ -1,3 +1,5 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](../rescue-retirement.md).
+
 # Rescue dispatch Phase 3 review record
 
 **Branch:** `feat/rescue-dispatch-phase3-lifecycle`  

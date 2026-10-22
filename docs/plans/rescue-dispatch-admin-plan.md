@@ -1,3 +1,5 @@
+> Retired — Rescue Request and Responder Dispatch features removed from active scope. Historical planning or rollout notes below are retained for reference; see [retirement status](../rescue-retirement.md).
+
 # Admin-managed rescue dispatch: admin and shared-data plan
 
 **Status:** Phase 1 merged. Phase 2 implemented with database-backed verification pending. Phase 3 implemented on `feat/rescue-dispatch-phase3-lifecycle`; database-backed verification and migration replay remain pending. Phases 4–6 have not started. See the [Phase 1 report](rescue-dispatch-phase1-report.md), [Phase 2 report](rescue-dispatch-phase2-report.md), and [Phase 3 report](rescue-dispatch-phase3-report.md). This plan and the [citizen plan](rescue-dispatch-citizen-plan.md) extend the implemented rescue foundation. Older `docs/admin-side-plan.md` and `docs/user-side-plan.md` contain historical proposals; inspect current code and migrations before each phase. Responder coordination is a **simulation recorded by admins**. It must never contact an emergency service automatically or imply a live dispatch.

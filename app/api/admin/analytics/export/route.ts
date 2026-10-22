@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   if (auth.response) return auth.response;
   try {
     const data = await loadAdminAnalytics(parseAnalyticsFilters(new URL(request.url).searchParams));
-    if (data.sources.reports === "unavailable" && data.sources.incidents === "unavailable" && data.sources.rescues === "unavailable") return adminErrorResponse(request, "Analytics sources are temporarily unavailable.", 503);
+    if (data.sources.reports === "unavailable" && data.sources.incidents === "unavailable") return adminErrorResponse(request, "Analytics sources are temporarily unavailable.", 503);
     return new Response(analyticsToCsv(data), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="floodwatch-analytics.csv"', "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
   } catch (error) {
     if (error instanceof AnalyticsFilterError) return adminErrorResponse(request, error.message, 400);

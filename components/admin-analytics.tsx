@@ -8,7 +8,6 @@ const initial = parseAnalyticsFilters(new URLSearchParams());
 const series = [
   { key: "reports", label: "Reports received", color: "bg-blue-500" },
   { key: "incidents", label: "Distinct incidents", color: "bg-amber-500" },
-  { key: "rescues", label: "Rescue requests", color: "bg-red-500" },
 ] as const;
 
 function display(value: number | null) { return value === null ? "Unavailable" : value.toLocaleString("en-PH"); }
@@ -78,19 +77,17 @@ export function AdminAnalytics() {
     {data && <>
       <p className="text-xs text-[var(--color-muted-foreground)]">Showing {data.filters.from} to {data.filters.to}{data.filters.localityId ? ` · ${BULACAN_LOCALITIES.find((place) => place.code === data.filters.localityId)?.name ?? "selected municipality"}` : " · all Bulacan"}. Data checked {new Date(data.asOf).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} (Manila time). Range counts use creation dates; current-state cards are snapshots.</p>
       {sourceIssues.length > 0 && <div role="status" className="rounded-lg border border-[var(--color-warning-border)] p-3 text-sm">Partial data: {sourceIssues.map(([name, state]) => `${name}: ${stateLabel(state)}`).join("; ")}. Unavailable values are never shown as zero.</div>}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[
         ["Reports received", data.totals.reportIntake, "Range · includes all intake"],
         ["Visible reports", data.totals.visibleReports, "Range · excludes rejected and archived"],
         ["Distinct incidents", data.totals.incidents, "Range · one per incident"],
-        ["Rescue requests", data.totals.rescues, `Range · ${data.totals.cancelledRescues ?? "—"} cancelled, ${data.totals.rejectedRescues ?? "—"} rejected`],
       ].map(([label, value, detail]) => <section key={label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="text-sm font-semibold">{label}</h3><p className="mt-2 text-3xl font-bold tabular-nums">{display(value as number | null)}</p><p className="mt-2 text-xs text-[var(--color-muted-foreground)]">{detail}</p></section>)}</div>
       <VolumeChart data={data} />
-      <div className="grid gap-4 lg:grid-cols-2"><CountBars title="Visible reports by severity" items={data.severity} /><CountBars title="Rescue requests by municipality" items={data.geography?.map((item) => ({ label: item.label, count: item.rescues })) ?? null} /></div>
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Current-state snapshot</h3><div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
+      <CountBars title="Visible reports by severity" items={data.severity} />
+      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Current-state snapshot</h3><div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[
         ["Verification backlog", data.snapshots.verificationBacklog], ["Oldest pending review (minutes)", data.snapshots.oldestUnreviewedMinutes],
-        ["Active incidents", data.snapshots.activeIncidents], ["Critical rescue requests", data.snapshots.criticalRescues],
+        ["Active incidents", data.snapshots.activeIncidents],
       ].map(([label, value]) => <div key={label}><p className="text-sm">{label}</p><strong className="text-xl">{display(value as number | null)}</strong></div>)}</div><p className="mt-4 text-sm">Shelter occupancy: Unavailable. Capacity is not a live headcount.</p></section>
-      <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5"><h3 className="font-semibold">Recorded response intervals</h3><p className="mt-1 text-sm text-[var(--color-muted-foreground)]">From request receipt to the first recorded event of each type. Missing stages are excluded; no response time is inferred.</p>{data.responseTimes ? <div className="mt-3 grid gap-3 sm:grid-cols-3">{data.responseTimes.map((item) => <div key={item.stage} className="rounded-lg border border-[var(--color-border)] p-3"><h4 className="font-semibold capitalize">{item.stage}</h4><p className="text-sm">Samples: {item.sampleSize}</p><p className="text-sm">Median: {item.medianMinutes === null ? "—" : `${item.medianMinutes} min`}</p><p className="text-sm">90th percentile: {item.p90Minutes === null ? "—" : `${item.p90Minutes} min`}</p></div>)}</div> : <p className="mt-3 text-sm">Unavailable for these filters.</p>}</section>
     </>}
   </div>;
 }

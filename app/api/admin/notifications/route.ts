@@ -1,31 +1,63 @@
-import { adminSuccessResponse } from "@/lib/admin-api-response";
+import { adminErrorResponse, adminSuccessResponse } from "@/lib/admin-api-response";
 import { requireProtectedAdminApi } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { readRescueJson, rescueApiError } from "@/lib/rescue-api";
-import { RescueError } from "@/lib/rescue-contracts";
+import type { Prisma } from "@prisma/client";
+
+// Keep historical notices in the database, but omit retired rescue notices from active views and counts.
+const activeNotice: Prisma.AdminNotificationWhereInput = {
+  AND: [
+    { OR: [{ targetType: null }, { targetType: { not: "RescueRequest" } }] },
+    { NOT: { type: { startsWith: "rescue_" } } },
+  ],
+};
+
+async function readNotificationBody(request: Request) {
+  if (!request.headers.get("content-type")?.startsWith("application/json")) return null;
+  const reader = request.body?.getReader();
+  if (!reader) return null;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 16_384) return null;
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  try { return JSON.parse(new TextDecoder().decode(Buffer.concat(chunks))) as unknown; }
+  catch { return null; }
+}
 
 export async function GET(request: Request) {
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-notifications-list", limit: 120, windowMs: 60_000 });
+  if (auth.response) return auth.response;
   try {
-    const auth = await requireProtectedAdminApi(request, { scope: "admin-notifications-list", limit: 120, windowMs: 60_000 });
-    if (auth.response) return auth.response;
     const [notifications, unreadCount] = await Promise.all([
-      prisma.adminNotification.findMany({ where: { recipientUserId: auth.user.id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
+      prisma.adminNotification.findMany({ where: { recipientUserId: auth.user.id, ...activeNotice }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
         select: { id: true, title: true, detail: true, type: true, targetType: true, targetId: true, priority: true, readAt: true, createdAt: true } }),
-      prisma.adminNotification.count({ where: { recipientUserId: auth.user.id, readAt: null } }),
+      prisma.adminNotification.count({ where: { recipientUserId: auth.user.id, readAt: null, ...activeNotice } }),
     ]);
     return adminSuccessResponse(request, { notifications, unreadCount });
-  } catch (error) { return rescueApiError(request, error); }
+  } catch (error) {
+    console.error("Admin notifications failed", error instanceof Error ? error.name : "unknown");
+    return adminErrorResponse(request, "Notifications are temporarily unavailable.", 503);
+  }
 }
 
 export async function PATCH(request: Request) {
+  const auth = await requireProtectedAdminApi(request, { scope: "admin-notifications-read", limit: 60, windowMs: 60_000 });
+  if (auth.response) return auth.response;
+  const body = await readNotificationBody(request) as Record<string, unknown> | null;
+  if (!body || typeof body !== "object" || Array.isArray(body) ||
+      ("all" in body ? body.all !== true : !("id" in body) || typeof body.id !== "string" || !/^[a-zA-Z0-9_-]{10,100}$/.test(body.id)) ||
+      Object.keys(body).some((key) => !["id", "all"].includes(key))) return adminErrorResponse(request, "Choose a notification to mark as read.", 400);
   try {
-    const auth = await requireProtectedAdminApi(request, { scope: "admin-notifications-read", limit: 60, windowMs: 60_000 });
-    if (auth.response) return auth.response;
-    const body = await readRescueJson(request) as { id?: unknown; all?: unknown };
-    if (!body || typeof body !== "object" || Array.isArray(body) ||
-        (body.all !== true && (typeof body.id !== "string" || !/^[a-zA-Z0-9_-]{10,100}$/.test(body.id))) ||
-        Object.keys(body).some((key) => !["id", "all"].includes(key))) throw new RescueError("Choose a notification to mark as read.", 400);
-    await prisma.adminNotification.updateMany({ where: { recipientUserId: auth.user.id, readAt: null, ...(body.all === true ? {} : { id: body.id as string }) }, data: { readAt: new Date() } });
-    return adminSuccessResponse(request, { unreadCount: await prisma.adminNotification.count({ where: { recipientUserId: auth.user.id, readAt: null } }) });
-  } catch (error) { return rescueApiError(request, error); }
+    await prisma.adminNotification.updateMany({ where: { recipientUserId: auth.user.id, readAt: null, ...activeNotice, ...("all" in body ? {} : { id: body.id as string }) }, data: { readAt: new Date() } });
+    return adminSuccessResponse(request, { unreadCount: await prisma.adminNotification.count({ where: { recipientUserId: auth.user.id, readAt: null, ...activeNotice } }) });
+  } catch (error) {
+    console.error("Admin notification update failed", error instanceof Error ? error.name : "unknown");
+    return adminErrorResponse(request, "Notifications are temporarily unavailable.", 503);
+  }
 }

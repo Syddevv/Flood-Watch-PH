@@ -1,8 +1,10 @@
 # 🌊 Flood Watch
 
-A community-powered flood monitoring and reporting platform for Bulacan, Philippines.
+A Bulacan flood monitoring, reporting, and emergency information platform.
 
 Flood Watch enables the public to report flood incidents, verify existing reports, monitor flood conditions through an interactive map, locate nearby evacuation centers, and stay informed with weather updates—all through a mobile-friendly web application.
+
+The active application also provides emergency contacts and administrator tools for flood report review, center management, notifications, and analytics. Rescue Request and Responder Dispatch were retired from the active product; [historical data and migration notes](docs/rescue-retirement.md) describe what remains stored.
 
 ---
 

@@ -29,7 +29,6 @@ U2 does not add a server capture challenge. A short-lived, session-bound, single
 - `POST /api/reports/[id]/updates`: allows owner text and severity updates only. Images are rejected.
 - `DELETE /api/reports/[id]`: remains an owner deletion and needs no new evidence.
 - `POST /api/admin/reports`: remains a protected human-review/admin path, uses `locationSource: "admin"`, and is not labelled onsite eligible.
-- Rescue intake remains separate: its photos are optional and it may retain upload/manual-location recovery paths.
 
 ## Release follow-up
 
