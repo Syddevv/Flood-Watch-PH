@@ -5,7 +5,7 @@ import { getPublicEvacuationCenters } from "@/lib/public-evacuation-query";
 import { BULACAN_SCOPE_VERSION } from "@/lib/bulacan-scope";
 import {
   deriveReportLifecycleStatus,
-  isEligiblePublicReport,
+  isEligiblePublicMapReport,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
@@ -136,14 +136,13 @@ export async function GET(request: Request) {
 
     const filteredReports = reconciledReports
       .filter((report: MapReportRecord) => {
-        if (report.verificationStatus !== "verified") return false;
         if (!isWithinBulacan(report.latitude, report.longitude)) {
           return false;
         }
 
         const lifecycleStatus = report.status as ReportLifecycleStatus;
 
-        if (!isEligiblePublicReport(report, now, settings)) {
+        if (!isEligiblePublicMapReport(report, now, settings)) {
           return false;
         }
 

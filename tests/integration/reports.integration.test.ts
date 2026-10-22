@@ -101,13 +101,26 @@ integrationTest(
         body: createReportForm(),
       });
       const reportPayload = (await reportResponse.json()) as {
-        data?: { id?: string; isOwner?: boolean };
+        data?: { id?: string; incidentId?: string; isOwner?: boolean };
       };
 
       assert.equal(reportResponse.status, 201);
       assert.equal(reportPayload.data?.isOwner, true);
       assert.ok(reportPayload.data?.id);
       reportId = reportPayload.data.id;
+      const incidentId = reportPayload.data.incidentId;
+      assert.ok(incidentId);
+      const mapListResponse = await fetch(`${baseUrl}/api/reports?surface=map&incidentId=${encodeURIComponent(incidentId)}`, { headers: { Cookie: otherCookie } });
+      assert.equal(mapListResponse.status, 200);
+      assert.ok(((await mapListResponse.json()) as { data: Array<{ id: string; verificationStatus: string }> }).data.some((report) => report.id === reportId && report.verificationStatus === "unreviewed"));
+      const standardListResponse = await fetch(`${baseUrl}/api/reports?incidentId=${encodeURIComponent(incidentId)}`, { headers: { Cookie: otherCookie } });
+      assert.equal(standardListResponse.status, 200);
+      assert.ok(!((await standardListResponse.json()) as { data: Array<{ id: string }> }).data.some((report) => report.id === reportId));
+      assert.equal((await fetch(`${baseUrl}/api/reports/${reportId}`, { headers: { Cookie: otherCookie } })).status, 200);
+      await db.floodReport.update({ where: { id: reportId }, data: { verificationStatus: "rejected" } });
+      const rejectedMapResponse = await fetch(`${baseUrl}/api/reports?surface=map&incidentId=${encodeURIComponent(incidentId)}`, { headers: { Cookie: otherCookie } });
+      assert.ok(!((await rejectedMapResponse.json()) as { data: Array<{ id: string }> }).data.some((report) => report.id === reportId));
+      assert.equal((await fetch(`${baseUrl}/api/reports/${reportId}`, { headers: { Cookie: otherCookie } })).status, 404);
       await db.floodReport.update({ where: { id: reportId }, data: { verificationStatus: "verified" } });
       const otherAuthCookie = await createAuthenticatedSession(baseUrl, `integration-confirm-${runId}`);
       const thirdAuthCookie = await createAuthenticatedSession(baseUrl, `integration-third-confirm-${runId}`);

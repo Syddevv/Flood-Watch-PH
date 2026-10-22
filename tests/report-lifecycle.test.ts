@@ -8,6 +8,7 @@ import {
   matchesLifecycleFilter,
   hasReportVisibilityExpired,
   isEligiblePublicReport,
+  isEligiblePublicMapReport,
 } from "@/lib/report-lifecycle";
 
 const NOW = new Date("2026-08-16T12:00:00.000Z");
@@ -60,6 +61,17 @@ test("authorization and visibility settings are independent", () => {
   for (const verificationStatus of ["unreviewed", "disputed", "rejected"]) assert.equal(isEligiblePublicReport(createReport({ verificationStatus }), NOW), false);
   const expired = createReport({ createdAt: new Date(NOW.getTime() - 25 * 3_600_000), verificationStatus: "verified" });
   assert.equal(isEligiblePublicReport(expired, NOW, { publicReportVisibilityHours: 24, showLikelyRecededReports: true, autoArchiveExpiredReports: false }), false);
+});
+
+test("public map labels recent unreviewed reports without exposing rejected or disputed reports", () => {
+  const unreviewed = createReport({ verificationStatus: "unreviewed" });
+  assert.equal(isEligiblePublicMapReport(unreviewed, NOW), true);
+  assert.equal(isEligiblePublicReport(unreviewed, NOW), false);
+  for (const verificationStatus of ["rejected", "disputed"]) {
+    assert.equal(isEligiblePublicMapReport(createReport({ verificationStatus }), NOW), false);
+  }
+  assert.equal(isEligiblePublicMapReport(createReport({ ...unreviewed, createdAt: new Date(NOW.getTime() - 25 * 3_600_000) }), NOW), false);
+  assert.equal(isEligiblePublicMapReport(createReport({ ...unreviewed, resolvedCount: 2 }), NOW, { publicReportVisibilityHours: 24, showLikelyRecededReports: false, autoArchiveExpiredReports: true }), false);
 });
 
 test("lifecycle updates set missing transition timestamps", () => {

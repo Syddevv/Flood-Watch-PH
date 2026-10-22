@@ -182,7 +182,10 @@ function isMobileViewport() {
 }
 
 function iconForReportMarker(marker: ReportMapMarker, selected: boolean, mobilePerformanceMode: boolean) {
-  const markerStyle = reportMarkerStatusStyles[marker.status];
+  const unreviewed = marker.report.verificationStatus === "unreviewed";
+  const markerStyle = unreviewed
+    ? reportMarkerStatusStyles["Needs More Confirmation"]
+    : reportMarkerStatusStyles[marker.status];
   const markerClassName = mobilePerformanceMode
     ? `floodwatch-marker-mobile${selected ? " floodwatch-marker-mobile--selected" : ""}`
     : `floodwatch-marker${selected ? " floodwatch-marker--selected" : ""}`;
@@ -197,7 +200,7 @@ function iconForReportMarker(marker: ReportMapMarker, selected: boolean, mobileP
 
   return L.divIcon({
     className: "floodwatch-marker-shell",
-    html: `<div class="${markerClassName}" style="--marker-color:${markerStyle.color};--marker-ring:${markerStyle.ring};--marker-border:${markerStyle.border};opacity:${markerStyle.opacity}">R</div>`,
+    html: `<div class="${markerClassName}" style="--marker-color:${markerStyle.color};--marker-ring:${markerStyle.ring};--marker-border:${markerStyle.border};opacity:${markerStyle.opacity}">${unreviewed ? "?" : "R"}</div>`,
     iconSize,
     iconAnchor,
   });
@@ -450,6 +453,11 @@ const ReportPopupContent = memo(function ReportPopupContent({
       </div>
 
       <div className="flex flex-wrap gap-1.5">
+        {marker.report.verificationStatus === "unreviewed" ? (
+          <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[0.66rem] font-semibold text-amber-800">
+            Not admin verified
+          </span>
+        ) : null}
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold",
@@ -547,10 +555,10 @@ const ReportPopupContent = memo(function ReportPopupContent({
         <button
           type="button"
           onClick={() => onConfirmReport(marker.reportId)}
-          disabled={!authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor}
+          disabled={!authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor || marker.report.verificationStatus !== "verified"}
           className={cn(
             "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] px-2 text-[0.7rem] font-semibold",
-            !authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor
+            !authUser || actionBusy || hasConfirmed || isResolved || marker.report.isOriginalAuthor || marker.report.verificationStatus !== "verified"
               ? "bg-slate-100 text-slate-500"
               : "bg-blue-600 text-white",
           )}

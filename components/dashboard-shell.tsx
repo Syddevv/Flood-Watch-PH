@@ -498,7 +498,7 @@ export function DashboardShell({
       setFloodMapReportLoadError(null);
 
       try {
-        const response = await fetch("/api/reports?limit=50", {
+        const response = await fetch("/api/reports?limit=50&surface=map", {
           cache: "no-store",
         });
         const payload = (await response.json()) as ReportsResponse | { error: string };
@@ -513,7 +513,7 @@ export function DashboardShell({
           return;
         }
 
-        const nextReports = payload.data.filter((report: ReportRecord) => report.verificationStatus === "verified").map(mapReportToIncident);
+        const nextReports = payload.data.map(mapReportToIncident);
         setFloodMapReports(nextReports);
 
         if (typeof window !== "undefined") {
@@ -727,7 +727,7 @@ export function DashboardShell({
         severity: report.severity,
         status: report.status,
         coordinates: report.coordinates as [number, number],
-        title: report.title,
+        title: report.verificationStatus === "unreviewed" ? `Not admin verified · ${report.title}` : report.title,
         reportId: report.id,
         report,
       })),
@@ -1531,7 +1531,7 @@ export function DashboardShell({
               communityReportsError={floodMapReportLoadError}
               onViewCommunityReport={openFloodMapReportDetails}
               onViewAlert={openWeatherAlertViewer}
-              communityReportsDisclaimer="Community reports shown here are admin verified."
+              communityReportsDisclaimer="Reports awaiting admin review are labeled and may not be verified."
               className="hidden md:flex"
             />
           ) : null}
@@ -1593,7 +1593,7 @@ export function DashboardShell({
           communityReportsError={floodMapReportLoadError}
           onViewCommunityReport={openFloodMapReportDetails}
           onViewAlert={openWeatherAlertViewer}
-          communityReportsDisclaimer="Community reports shown here are admin verified."
+          communityReportsDisclaimer="Reports awaiting admin review are labeled and may not be verified."
         />
       ) : null}
 

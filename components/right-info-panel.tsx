@@ -100,6 +100,11 @@ function CommunityReportPanelItem({
 
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {report.verificationStatus === "unreviewed" ? (
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.66rem] font-semibold text-amber-700 dark:text-amber-300">
+                Not admin verified
+              </span>
+            ) : null}
             <span
               className={cn(
                 "rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold",
@@ -329,7 +334,7 @@ export function RightInfoPanel({
   communityReportsError = null,
   onViewCommunityReport,
   onViewAlert,
-  communityReportsDisclaimer = "Community reports shown here are admin verified.",
+  communityReportsDisclaimer = "Reports awaiting admin review are labeled and may not be verified.",
   className,
 }: RightInfoPanelProps) {
   return (

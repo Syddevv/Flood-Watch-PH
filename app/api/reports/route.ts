@@ -12,6 +12,7 @@ import { createBoundingBox } from "@/lib/report-geo";
 import {
   deriveReportLifecycleStatus,
   isEligiblePublicReport,
+  isEligiblePublicMapReport,
   matchesLifecycleFilter,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
@@ -199,6 +200,7 @@ export async function GET(request: Request) {
     }
 
     const includeArchived = searchParams.get("includeArchived") === "true";
+    const forPublicMap = searchParams.get("surface") === "map";
     const page = parsePositiveInteger(searchParams.get("page"), 1);
     const limit = clampLimit(
       parsePositiveInteger(searchParams.get("limit"), DEFAULT_LIMIT),
@@ -270,6 +272,10 @@ export async function GET(request: Request) {
     const filteredReports = reconciledReports.filter((report: ReportListRecord) => {
       if (!isWithinBulacan(report.latitude, report.longitude)) {
         return false;
+      }
+      if (forPublicMap) {
+        return isEligiblePublicMapReport(report, now, settings) &&
+          matchesLifecycleFilter(report.status as ReportLifecycleStatus, parsedFilters.filters.status);
       }
       if (report.verificationStatus !== "verified") return isReportOwner(report, identity);
 

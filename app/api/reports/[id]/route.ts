@@ -5,6 +5,7 @@ import {
   getLifecyclePersistencePatch,
   hasReportVisibilityExpired,
   isEligiblePublicReport,
+  isEligiblePublicMapReport,
   type ReportLifecycleStatus,
 } from "@/lib/report-lifecycle";
 import { prisma } from "@/lib/prisma";
@@ -52,7 +53,7 @@ export async function GET(request: Request, context: RouteContext) {
       return errorResponse("Flood report not found.", 404);
     }
 
-    if (report.verificationStatus !== "verified" && !isReportOwner(report, identity)) {
+    if (report.verificationStatus !== "verified" && report.verificationStatus !== "unreviewed" && !isReportOwner(report, identity)) {
       return errorResponse("Flood report not found.", 404);
     }
 
@@ -68,7 +69,8 @@ export async function GET(request: Request, context: RouteContext) {
 
     const ownerCanView = isReportOwner(reconciledReport, identity) &&
       (includeArchived || ((reconciledReport.status as ReportLifecycleStatus) !== "Archived" && !hasReportVisibilityExpired(reconciledReport, new Date(), settings)));
-    if (!isEligiblePublicReport(reconciledReport, new Date(), settings) && !ownerCanView) {
+    if (!isEligiblePublicReport(reconciledReport, new Date(), settings) &&
+        !isEligiblePublicMapReport(reconciledReport, new Date(), settings) && !ownerCanView) {
       return errorResponse("Flood report not found.", 404);
     }
 

@@ -375,7 +375,7 @@ export function IncidentReportModal({
   const confirmLoading = isReportActionLoading(actionLoading, report.id, "confirmed");
   const resolveLoading = isReportActionLoading(actionLoading, report.id, "resolved");
   const actionBusy = isReportActionLoading(actionLoading, report.id);
-  const confirmDisabled = !authUser || actionBusy || hasConfirmed || isResolved || report.isOriginalAuthor;
+  const confirmDisabled = !authUser || actionBusy || hasConfirmed || isResolved || report.isOriginalAuthor || report.verificationStatus !== "verified";
   const resolveDisabled = !authUser || actionBusy || hasResolved || isResolved || report.isOriginalAuthor;
   const directionsUrl = buildReportDirectionsUrl(report);
   const evacuationCentersHref = buildReportEvacuationCentersHref(report);
@@ -494,7 +494,7 @@ export function IncidentReportModal({
                     {report.verificationStatus === "verified"
                       ? "Admin Verified"
                       : report.verificationStatus === "unreviewed"
-                        ? "Awaiting Admin Review"
+                        ? "Not admin verified"
                         : report.verificationStatus === "disputed"
                           ? "Admin Review Disputed"
                           : "Rejected by Admin"}

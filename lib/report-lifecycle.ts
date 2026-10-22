@@ -143,12 +143,20 @@ export function isVisiblePublicLifecycleStatus(status: ReportLifecycleStatus) {
   return status !== "Archived";
 }
 
-export function isEligiblePublicReport(report: ReportLifecycleInput & { verificationStatus?: string | null }, now = new Date(), settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS) {
+function isWithinPublicReportWindow(report: ReportLifecycleInput, now: Date, settings: ReportVisibilitySettings) {
   const status = deriveReportLifecycleStatus(report, now, settings);
-  return report.verificationStatus === "verified" &&
-    !hasReportVisibilityExpired(report, now, settings) &&
+  return !hasReportVisibilityExpired(report, now, settings) &&
     isVisiblePublicLifecycleStatus(status) &&
     (settings.showLikelyRecededReports || status !== "Likely Receded");
+}
+
+export function isEligiblePublicReport(report: ReportLifecycleInput & { verificationStatus?: string | null }, now = new Date(), settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS) {
+  return report.verificationStatus === "verified" && isWithinPublicReportWindow(report, now, settings);
+}
+
+export function isEligiblePublicMapReport(report: ReportLifecycleInput & { verificationStatus?: string | null }, now = new Date(), settings: ReportVisibilitySettings = DEFAULT_REPORT_VISIBILITY_SETTINGS) {
+  return (report.verificationStatus === "verified" || report.verificationStatus === "unreviewed") &&
+    isWithinPublicReportWindow(report, now, settings);
 }
 
 export function matchesLifecycleFilter(
