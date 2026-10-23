@@ -8,6 +8,7 @@ type AuthInputProps = {
   type?: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   autoComplete?: string;
   required?: boolean;
@@ -26,6 +27,7 @@ export function AuthInput({
   type = "text",
   value,
   onChange,
+  onBlur,
   placeholder,
   autoComplete,
   required,
@@ -62,6 +64,7 @@ export function AuthInput({
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           autoComplete={autoComplete}
           required={required}

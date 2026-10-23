@@ -10,6 +10,7 @@ type PasswordInputProps = {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   autoComplete?: string;
   required?: boolean;
   error?: string;
@@ -22,6 +23,7 @@ export function PasswordInput({
   label,
   value,
   onChange,
+  onBlur,
   autoComplete = "current-password",
   required,
   error,
@@ -37,6 +39,7 @@ export function PasswordInput({
       type={visible ? "text" : "password"}
       value={value}
       onChange={onChange}
+      onBlur={onBlur}
       autoComplete={autoComplete}
       required={required}
       error={error}

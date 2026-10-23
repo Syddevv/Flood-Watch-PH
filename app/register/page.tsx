@@ -27,18 +27,35 @@ function RegisterForm() {
   const [locationState, setLocationState] = useState<"idle" | "loading" | "verified" | "outside" | "denied" | "unavailable">("idle");
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [touched, setTouched] = useState({ fullName: false, email: false, password: false, confirmPassword: false });
   const [submitting, setSubmitting] = useState(false);
   const locationRequest = useRef(0);
+
+  function touch(field: keyof typeof touched) {
+    setTouched((current) => ({ ...current, [field]: true }));
+  }
+
+  const fullNameError = (touched.fullName || attemptedSubmit) && !normalizeFullName(fullName)
+    ? "Enter a given name and family name using letters, spaces, apostrophes, periods, or hyphens." : undefined;
+  const emailError = (touched.email || attemptedSubmit) && !registrationEmail(email)
+    ? "Enter a valid email address." : undefined;
+  const passwordError = (touched.password || attemptedSubmit) && !isValidRegistrationPassword(password)
+    ? "Use 10–200 characters with letters and a number or symbol." : undefined;
+  const confirmPasswordError = (touched.confirmPassword || attemptedSubmit) && !confirmPassword
+    ? "Confirm your password." : confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined;
 
   function changeEmail(value: string) {
     locationRequest.current += 1;
     setEmail(value);
+    setError(null);
     setLocation(null);
     setLocationState("idle");
   }
 
   function detectLocation() {
     const requestId = ++locationRequest.current;
+    setError(null);
     setLocation(null);
     setLocationMessage(null);
     setLocationState("loading");
@@ -74,7 +91,12 @@ function RegisterForm() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (submitting || !location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password) || password !== confirmPassword) return;
+    if (submitting) return;
+    setAttemptedSubmit(true);
+    if (!location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password) || password !== confirmPassword) {
+      setError(!location ? "Detect and verify your current location before creating an account." : null);
+      return;
+    }
     setError(null);
     setSubmitting(true);
 
@@ -140,7 +162,7 @@ function RegisterForm() {
         <div className="space-y-4">
           <h2 className="border-b border-[var(--color-border)] pb-2 text-sm font-semibold text-[var(--color-foreground)]">Account information</h2>
         <AuthInput id="fullName" label="Full Name" autoComplete="name" required value={fullName}
-          onChange={setFullName} placeholder="e.g. Juan Dela Cruz" maxLength={80}
+          onChange={setFullName} onBlur={() => touch("fullName")} error={fullNameError} placeholder="e.g. Juan Dela Cruz" maxLength={80}
           hint="Enter at least your given name and family name." />
         <AuthInput
           id="email"
@@ -150,6 +172,8 @@ function RegisterForm() {
           required
           value={email}
           onChange={changeEmail}
+          onBlur={() => touch("email")}
+          error={emailError}
           placeholder="name@example.com"
         />
         <PasswordInput
@@ -160,6 +184,8 @@ function RegisterForm() {
           minLength={MIN_PASSWORD_LENGTH}
           value={password}
           onChange={setPassword}
+          onBlur={() => touch("password")}
+          error={passwordError}
           hint="Use 10–200 characters with letters and a number or symbol."
         />
         <PasswordInput
@@ -169,7 +195,8 @@ function RegisterForm() {
           required
           value={confirmPassword}
           onChange={setConfirmPassword}
-          error={confirmPassword && password !== confirmPassword ? "Passwords do not match." : undefined}
+          onBlur={() => touch("confirmPassword")}
+          error={confirmPasswordError}
           hint={confirmPassword && password === confirmPassword ? "Passwords match." : undefined}
         />
         </div>
@@ -203,7 +230,7 @@ function RegisterForm() {
 
         {error ? <AuthAlert title="Unable to create your account" message={error} /> : null}
 
-        <AuthButton loading={submitting} disabled={!location || !normalizeFullName(fullName) || !registrationEmail(email) || !isValidRegistrationPassword(password) || password !== confirmPassword} loadingLabel="Creating account...">
+        <AuthButton loading={submitting} disabled={!location} loadingLabel="Creating account...">
           Create account
         </AuthButton>
       </form>
