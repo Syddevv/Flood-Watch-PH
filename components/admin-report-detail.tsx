@@ -24,7 +24,7 @@ type Detail = {
   confirmations: Array<{ id: string; confirmationType: string; createdAt: string }>;
   actions: Action[];
 };
-type Scope = "verification" | "status" | "notes";
+type Scope = "verification" | "status";
 type Feedback = { scope: Scope; kind: "success" | "error"; message: string };
 
 const panelClass = "min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6";
@@ -53,8 +53,6 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
   const [operationState, setOperationState] = useState("");
   const [reason, setReason] = useState("");
   const [publicMessage, setPublicMessage] = useState("");
-  const [note, setNote] = useState("");
-  const [visibility, setVisibility] = useState<"internal" | "public">("internal");
   const [saving, setSaving] = useState<Scope | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -90,7 +88,7 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
     setFeedback(null);
     try {
       const response = await fetch("/api/admin/reports/" + reportId + "/" + path, {
-        method: path === "notes" ? "POST" : "PATCH",
+        method: "PATCH",
         headers: { "Content-Type": "application/json", Origin: window.location.origin },
         body: JSON.stringify(body),
       });
@@ -100,7 +98,6 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
         throw new Error(payload.error ?? "Unable to save changes. Review the form and try again.");
       }
       if (!await load()) throw new Error("Changes were saved, but the report could not be refreshed. Use Refresh to load the latest state.");
-      if (path === "notes") setNote("");
       if (path === "verification") {
         setReason("");
         setPublicMessage("");
@@ -123,7 +120,6 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
   const reasonTooShort = reason.trim().length < MIN_REVIEW_REASON_LENGTH;
   const publicError = !reasonTooShort && reviewResult.error && !reviewResult.error.includes("review change") ? reviewResult.error : null;
   const statusDisabledReason = operationState === report.adminStatus ? "Choose a different operational status to save." : !allowedOperations.some((status) => status === operationState) ? "Choose an allowed status transition." : null;
-  const noteDisabledReason = !note.trim() ? "Enter a note before saving." : null;
   const relatedReports = report.incident.reports.filter((entry) => entry.id !== reportId);
 
   return <main className="min-w-0 bg-[var(--color-background)] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
@@ -223,15 +219,6 @@ export function AdminReportDetail({ reportId }: { reportId: string }) {
             <ActionFeedback feedback={feedback} scope="status" />
           </section>
 
-          <section className={panelClass} aria-labelledby="operational-note-title">
-            <h2 id="operational-note-title" className="text-sm font-semibold">Add operational note</h2>
-            <label className="mt-3 block text-sm font-medium">Note<textarea disabled={Boolean(saving)} value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={2000} className={fieldClass} placeholder="Record an operational update" /></label>
-            <label className="mt-3 block text-sm font-medium">Visibility<select disabled={Boolean(saving)} value={visibility} onChange={(event) => setVisibility(event.target.value as "internal" | "public")} className={fieldClass}><option value="internal">Internal</option><option value="public">Public</option></select></label>
-            <p className={"mt-1 text-xs " + mutedClass}>{visibility === "public" ? "Public notes may be shown to citizens. Do not include private details." : "Internal notes stay in the admin review history."}</p>
-            <button type="button" disabled={Boolean(saving) || Boolean(noteDisabledReason)} onClick={() => void mutate("notes", { note: note.trim(), visibility }, "Note saved.")} className="mt-3 min-h-11 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--color-panel)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]">{saving === "notes" ? "Saving note…" : "Save note"}</button>
-            {!saving && noteDisabledReason ? <p className={"mt-2 text-xs " + mutedClass}>{noteDisabledReason}</p> : null}
-            <ActionFeedback feedback={feedback} scope="notes" />
-          </section>
         </aside>
       </div>
 
