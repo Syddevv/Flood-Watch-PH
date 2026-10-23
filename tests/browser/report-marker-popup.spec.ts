@@ -13,7 +13,8 @@ import { expect, test } from "@playwright/test";
  * marker from the map, and took its popup with it.
  */
 test.describe("report marker popup", () => {
-  test("stays open after the fly-to settles, including for clustered pins", async ({ page }) => {
+  for (const [scenario, coordinateOffset] of [["nearby pins", 0.0003], ["same-coordinate pins", 0]] as const) {
+  test(`stays open after selecting ${scenario}`, async ({ page }) => {
     if (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL !== process.env.DATABASE_URL) {
       throw new Error("Map marker fixtures require an isolated TEST_DATABASE_URL matching DATABASE_URL.");
     }
@@ -22,8 +23,8 @@ test.describe("report marker popup", () => {
     const reportIds = [randomUUID(), randomUUID()];
     try {
       for (const [index, incidentId] of incidentIds.entries()) {
-        const latitude = 14.916 + index * 0.0003;
-        const longitude = 120.766 + index * 0.0003;
+        const latitude = 14.916 + index * coordinateOffset;
+        const longitude = 120.766 + index * coordinateOffset;
         await db.incident.create({ data: { id: incidentId, representativeLatitude: latitude, representativeLongitude: longitude, locationName: `Popup fixture ${index}`, severity: "Moderate" } });
         await db.floodReport.create({ data: { id: reportIds[index], incidentId, title: `Popup fixture ${index}`, description: "Map popup regression fixture", category: "Flooding", severity: "Moderate", locationName: `Popup fixture ${index}`, latitude, longitude } });
       }
@@ -45,13 +46,18 @@ test.describe("report marker popup", () => {
 
       const popup = page.locator(".leaflet-popup");
       await expect(popup).toBeVisible();
-      // The fly-to runs for ~0.9 s; the popup must survive clustering on zoomend.
+      // A map flight must not collapse spiderfied same-coordinate markers.
       await page.waitForTimeout(2500);
       await expect(popup).toBeVisible();
+      if (coordinateOffset === 0) {
+        await popup.getByRole("button", { name: "View Details" }).click();
+        await expect(page.getByRole("button", { name: "Close report details" })).toBeVisible();
+      }
     } finally {
       await db.floodReport.deleteMany({ where: { id: { in: reportIds } } });
       await db.incident.deleteMany({ where: { id: { in: incidentIds } } });
       await db.$disconnect();
     }
   });
+  }
 });

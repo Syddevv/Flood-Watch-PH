@@ -16,7 +16,12 @@ export type FocusableLeafletMarker = {
   openPopup: () => void;
   getLatLng: () => LeafletLatLng;
   _map?: FocusableLeafletMap;
+  _preSpiderfyLatlng?: LeafletLatLng;
 };
+
+export function isSpiderfiedReportMarker(marker: FocusableLeafletMarker): boolean {
+  return Boolean(marker._preSpiderfyLatlng);
+}
 
 export type ReportMarkerFocusReason = "marker-click" | "external";
 
@@ -98,6 +103,9 @@ export function panToReportWithOffset(
   const reason = options.reason ?? "external";
 
   marker.openPopup();
+
+  // Moving the map collapses a spiderfied cluster and detaches its popup.
+  if (isSpiderfiedReportMarker(marker)) return;
 
   if (marker._map) {
     flyToWithOffset(

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getOffsetTargetCenter, getReportFocusZoom } from "@/lib/map-focus";
+import { getOffsetTargetCenter, getReportFocusZoom, isSpiderfiedReportMarker, panToReportWithOffset } from "@/lib/map-focus";
 
 // A fake Leaflet map whose projection is a plain linear scale, so pixel
 // offsets translate into predictable lat/lng deltas: 1 px = 0.001 deg.
@@ -63,4 +63,23 @@ test("focusing a marker zooms in when the user is further out", () => {
 test("an unknown current zoom falls back to the preferred zoom", () => {
   assert.equal(getReportFocusZoom(Number.NaN, 13), 13);
   assert.equal(getReportFocusZoom(undefined, 13), 13);
+});
+
+test("a spiderfied marker opens its popup without moving the map", () => {
+  let popupOpened = false;
+  let mapMoved = false;
+  const marker = {
+    getLatLng: () => ({ lat: 14.9, lng: 120.7 }),
+    openPopup: () => { popupOpened = true; },
+    _preSpiderfyLatlng: { lat: 14.9, lng: 120.7 },
+    _map: {
+      ...fakeMap,
+      flyTo: () => { mapMoved = true; },
+    },
+  };
+
+  assert.equal(isSpiderfiedReportMarker(marker), true);
+  panToReportWithOffset(marker);
+  assert.equal(popupOpened, true);
+  assert.equal(mapMoved, false);
 });

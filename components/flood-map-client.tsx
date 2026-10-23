@@ -40,6 +40,7 @@ import {
 import {
   flyToWithOffset,
   getReportFocusZoom,
+  isSpiderfiedReportMarker,
   panToReportWithOffset,
   type FocusableLeafletMarker,
 } from "@/lib/map-focus";
@@ -151,6 +152,8 @@ function openReportMarkerCentered(
   const targetLatLng = marker.getLatLng();
 
   marker.openPopup();
+
+  if (isSpiderfiedReportMarker(marker)) return;
 
   // Single fly-to with the downward offset folded into the target. A
   // follow-up animated panBy while the fly-to is still running made the
@@ -996,16 +999,16 @@ export function FloodMapClient({
 
                     onSelectReport(marker.reportId);
                     selectedReportOpenReasonRef.current = "marker-click";
-                    targetMarker._map?.flyTo(
-                      targetMarker.getLatLng(),
-                      getReportFocusZoom(
-                        targetMarker._map.getZoom?.(),
-                        mobilePerformanceMode ? MOBILE_SELECTED_REPORT_ZOOM : 13,
-                      ),
-                      {
-                      duration: mobilePerformanceMode ? 0.45 : 0.9,
-                      },
-                    );
+                    if (!isSpiderfiedReportMarker(targetMarker)) {
+                      targetMarker._map?.flyTo(
+                        targetMarker.getLatLng(),
+                        getReportFocusZoom(
+                          targetMarker._map.getZoom?.(),
+                          mobilePerformanceMode ? MOBILE_SELECTED_REPORT_ZOOM : 13,
+                        ),
+                        { duration: mobilePerformanceMode ? 0.45 : 0.9 },
+                      );
+                    }
                   },
                 }}
               >
