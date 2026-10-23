@@ -1,14 +1,29 @@
 export const RECENT_REPORT_WINDOW_MS = 72 * 60 * 60 * 1000;
 export const MONITORING_REPORT_STATUSES = ["Needs More Confirmation", "Confirmed by Community"] as const;
 
+export function isRecentOperationalReport(report: { createdAt: string }, now: number, windowMs = RECENT_REPORT_WINDOW_MS) {
+  const submittedAt = Date.parse(report.createdAt);
+  return Number.isFinite(submittedAt) && submittedAt <= now && submittedAt >= now - windowMs;
+}
+
+export function matchesOperationsReportView(
+  report: { createdAt: string; verificationStatus: string },
+  view: "recent" | "pending" | "verified" | "all",
+  now: number,
+  windowMs = RECENT_REPORT_WINDOW_MS,
+) {
+  if (view === "recent") return isRecentOperationalReport(report, now, windowMs);
+  if (view === "pending") return report.verificationStatus === "unreviewed";
+  if (view === "verified") return report.verificationStatus === "verified";
+  return true;
+}
+
 export function isRecentMonitoringReport(
   report: { createdAt: string; status: string; verificationStatus: string },
   now: number,
   windowMs = RECENT_REPORT_WINDOW_MS,
 ) {
-  const submittedAt = Date.parse(report.createdAt);
-  return Number.isFinite(submittedAt) && submittedAt <= now &&
-    submittedAt >= now - windowMs &&
+  return isRecentOperationalReport(report, now, windowMs) &&
     report.verificationStatus !== "rejected" &&
     MONITORING_REPORT_STATUSES.some((status) => status === report.status);
 }

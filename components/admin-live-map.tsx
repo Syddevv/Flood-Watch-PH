@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, RefreshCw, Search } from "lucide-react";
 import { AdminOperationsMap } from "@/components/admin-operations-map";
 import { useAdminOperations } from "@/components/use-admin-operations";
-import { compactBulacanPlace, isRecentMonitoringReport, relativeOperationalTime } from "@/lib/admin-operations-policy";
+import { compactBulacanPlace, isRecentOperationalReport, matchesOperationsReportView, relativeOperationalTime } from "@/lib/admin-operations-policy";
 import { centerOpeningLabel, formatOperationalUpdate } from "@/lib/emergency-resources";
 import { formatUiLabel } from "@/lib/ui-labels";
 
@@ -29,10 +29,7 @@ export function AdminLiveMap() {
   const visible = useMemo(() => {
     const reports = (data?.reports ?? []).filter((report) => {
       if (!showReports || type === "center") return false;
-      const recent = isRecentMonitoringReport(report, now, recentReportWindowMs);
-      if (view !== "all" && !recent) return false;
-      if (view === "pending" && report.verificationStatus !== "unreviewed") return false;
-      if (view === "verified" && report.verificationStatus !== "verified") return false;
+      if (!matchesOperationsReportView(report, view, now, recentReportWindowMs)) return false;
       if (status !== "all" && status !== `report:${report.verificationStatus}`) return false;
       return !query || [report.id, report.title, report.description, report.locationName].some((part) => part.toLocaleLowerCase("en-PH").includes(query));
     });
@@ -74,8 +71,8 @@ export function AdminLiveMap() {
           const place = item.kind === "report" ? compactBulacanPlace(item.record.locationName) : `${item.record.barangay ? `${item.record.barangay}, ` : ""}${item.record.city}`;
           const report = item.kind === "report" ? item.record : null;
           const label = item.kind === "report" ? formatUiLabel(item.record.verificationStatus === "unreviewed" ? "pending_review" : item.record.verificationStatus) : centerOpeningLabel(item.record);
-          const historical = report && !isRecentMonitoringReport(report, now, recentReportWindowMs);
-          return <div key={key} className={`px-4 py-3 transition-colors ${activeSelection === key ? "bg-[var(--color-primary-soft)]" : "hover:bg-[var(--color-panel)]"}`}><button type="button" onClick={() => { if (item.mapped) { setSelectedId(key); setPanelOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) window.requestAnimationFrame(() => document.getElementById("operations-map")?.scrollIntoView({ behavior: "smooth", block: "start" })); } }} disabled={!item.mapped} className="w-full min-w-0 text-left disabled:cursor-default"><span className="block truncate text-sm font-semibold" title={title}>{title}</span><span className="mt-1 block truncate text-xs text-[var(--color-muted-foreground)]">{place}</span><span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"><span className={report?.severity === "Critical" || report?.severity === "High" ? "font-semibold text-[var(--color-high)]" : "font-medium"}>{report ? report.severity : "Center"}</span><span>{historical ? "Historical" : label}</span><time dateTime={item.updatedAt} title={formatOperationalUpdate(item.updatedAt)} className="text-[var(--color-muted-foreground)]">{relativeOperationalTime(item.updatedAt, now)}</time></span>{!item.mapped ? <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">Map location unavailable</span> : null}</button>{!item.mapped ? <Link href={report ? `/admin/reports/${report.id}` : `/admin/data/${item.record.id}`} className="mt-1 inline-block text-xs font-semibold text-[var(--color-primary)] hover:underline">View record</Link> : null}</div>;
+          const historical = report && !isRecentOperationalReport(report, now, recentReportWindowMs);
+          return <div key={key} className={`px-4 py-3 transition-colors ${activeSelection === key ? "bg-[var(--color-primary-soft)]" : "hover:bg-[var(--color-panel)]"}`}><button type="button" onClick={() => { if (item.mapped) { setSelectedId(key); setPanelOpen(false); if (window.matchMedia("(max-width: 1023px)").matches) window.requestAnimationFrame(() => document.getElementById("operations-map")?.scrollIntoView({ behavior: "smooth", block: "start" })); } }} disabled={!item.mapped} className="w-full min-w-0 text-left disabled:cursor-default"><span className="block truncate text-sm font-semibold" title={title}>{title}</span><span className="mt-1 block truncate text-xs text-[var(--color-muted-foreground)]">{place}</span><span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"><span className={report?.severity === "Critical" || report?.severity === "High" ? "font-semibold text-[var(--color-high)]" : "font-medium"}>{report ? report.severity : "Center"}</span><span>{report?.archivedAt ? "Archived" : historical ? "Historical" : label}</span><time dateTime={item.updatedAt} title={formatOperationalUpdate(item.updatedAt)} className="text-[var(--color-muted-foreground)]">{relativeOperationalTime(item.updatedAt, now)}</time></span>{!item.mapped ? <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">Map location unavailable</span> : null}</button>{!item.mapped ? <Link href={report ? `/admin/reports/${report.id}` : `/admin/data/${item.record.id}`} className="mt-1 inline-block text-xs font-semibold text-[var(--color-primary)] hover:underline">View record</Link> : null}</div>;
         }) : <p className="p-5 text-sm text-[var(--color-muted-foreground)]">{loading ? "Loading records…" : view === "recent" ? "No recent reports or matching centers. Select All / Historical to review older reports." : "No records match these filters."}</p>}</div>
       </aside>
       <section id="operations-map" aria-label="Bulacan operations map" className="order-1 h-[62dvh] min-h-[420px] min-w-0 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-map-shell)] lg:order-2 lg:h-full">{data ? <AdminOperationsMap reports={mappedReports} centers={mappedCenters} selectedId={activeSelection} onSelectId={setSelectedId} asOf={now} recentReportWindowMs={recentReportWindowMs} /> : <div className="grid h-full place-items-center text-sm text-[var(--color-muted-foreground)]">{loading ? "Loading Bulacan map…" : "Map unavailable"}</div>}</section>

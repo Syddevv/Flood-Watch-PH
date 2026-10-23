@@ -10,7 +10,7 @@ import L from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import { MapContainer, Marker, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
 import { BULACAN_BOUNDARY_PATH_OPTIONS, BULACAN_BOUNDS, BULACAN_CENTER, BULACAN_MAP_MAX_BOUNDS, BULACAN_POLYGONS } from "@/lib/bulacan-scope";
-import { compactBulacanPlace, isRecentMonitoringReport, relativeOperationalTime } from "@/lib/admin-operations-policy";
+import { compactBulacanPlace, isRecentMonitoringReport, isRecentOperationalReport, relativeOperationalTime } from "@/lib/admin-operations-policy";
 import { centerOpeningLabel, formatOperationalUpdate } from "@/lib/emergency-resources";
 import { formatUiLabel } from "@/lib/ui-labels";
 import type { OperationsCenter, OperationsReport } from "@/lib/admin-operations-data";
@@ -25,7 +25,7 @@ function markerIcon(color: string, label: string, selected: boolean, center = fa
 }
 
 function reportColor(report: OperationsReport, asOf: number, recentReportWindowMs: number) {
-  if (!isRecentMonitoringReport(report, asOf, recentReportWindowMs)) return "#64748b";
+  if (report.archivedAt || !isRecentMonitoringReport(report, asOf, recentReportWindowMs)) return "#64748b";
   if (report.verificationStatus !== "verified") return "#d97706";
   return report.severity === "Critical" || report.severity === "High" ? "#dc2626" : "#2563eb";
 }
@@ -71,8 +71,8 @@ function ReportMarker({ report, selected, asOf, recentReportWindowMs, onSelect }
     return () => window.clearTimeout(timer);
   }, [map, report.latitude, report.longitude, selected]);
   if (report.latitude === null || report.longitude === null) return null;
-  const recent = isRecentMonitoringReport(report, asOf, recentReportWindowMs);
-  return <Marker ref={(instance: { openPopup: () => void } | null) => { marker.current = instance; }} position={[report.latitude, report.longitude]} icon={icon} title={report.title} eventHandlers={{ click: onSelect }}><Popup><div className="min-w-48 max-w-64 text-slate-900"><p className="text-xs font-semibold text-slate-500">{recent ? "Recent flood report" : "Historical flood report"}</p><p className="mt-1 font-semibold">{report.title}</p><p className="mt-1 text-xs text-slate-600">{compactBulacanPlace(report.locationName)}</p><p className="mt-2 text-xs">{report.severity} · {formatUiLabel(report.verificationStatus === "unreviewed" ? "pending_review" : report.verificationStatus)}</p><p className="mt-1 text-xs text-slate-500"><time dateTime={report.createdAt} title={formatOperationalUpdate(report.createdAt)}>{relativeOperationalTime(report.createdAt, asOf)}</time></p><Link href={`/admin/reports/${report.id}`} className="mt-3 inline-block font-semibold text-blue-700">Review Report →</Link></div></Popup></Marker>;
+  const recent = isRecentOperationalReport(report, asOf, recentReportWindowMs);
+  return <Marker ref={(instance: { openPopup: () => void } | null) => { marker.current = instance; }} position={[report.latitude, report.longitude]} icon={icon} title={report.title} eventHandlers={{ click: onSelect }}><Popup><div className="min-w-48 max-w-64 text-slate-900"><p className="text-xs font-semibold text-slate-500">{report.archivedAt ? "Archived flood report" : recent ? "Recent flood report" : "Historical flood report"}</p><p className="mt-1 font-semibold">{report.title}</p><p className="mt-1 text-xs text-slate-600">{compactBulacanPlace(report.locationName)}</p><p className="mt-2 text-xs">{report.severity} · {formatUiLabel(report.verificationStatus === "unreviewed" ? "pending_review" : report.verificationStatus)} · {formatUiLabel(report.status)}</p><p className="mt-1 text-xs text-slate-500"><time dateTime={report.createdAt} title={formatOperationalUpdate(report.createdAt)}>{relativeOperationalTime(report.createdAt, asOf)}</time></p><Link href={`/admin/reports/${report.id}`} className="mt-3 inline-block font-semibold text-blue-700">Review Report →</Link></div></Popup></Marker>;
 }
 
 function CenterMarker({ center, selected, asOf, onSelect }: { center: OperationsCenter; selected: boolean; asOf: number; onSelect: () => void }) {
@@ -96,10 +96,10 @@ export function AdminOperationsMapLeaflet({ reports, centers, selectedId, onSele
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const activeSelection = selectedId === undefined ? localSelectedId : selectedId;
   const selectMarker = (id: string) => { setLocalSelectedId(id); onSelectId?.(id); };
-  const hasHistorical = reports.some((report) => !isRecentMonitoringReport(report, asOf, recentReportWindowMs));
-  const hasPending = reports.some((report) => isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus !== "verified");
-  const hasVerifiedHigh = reports.some((report) => isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus === "verified" && ["High", "Critical"].includes(report.severity));
-  const hasVerified = reports.some((report) => isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus === "verified" && !["High", "Critical"].includes(report.severity));
+  const hasHistorical = reports.some((report) => Boolean(report.archivedAt) || !isRecentMonitoringReport(report, asOf, recentReportWindowMs));
+  const hasPending = reports.some((report) => !report.archivedAt && isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus === "unreviewed");
+  const hasVerifiedHigh = reports.some((report) => !report.archivedAt && isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus === "verified" && ["High", "Critical"].includes(report.severity));
+  const hasVerified = reports.some((report) => !report.archivedAt && isRecentMonitoringReport(report, asOf, recentReportWindowMs) && report.verificationStatus === "verified" && !["High", "Critical"].includes(report.severity));
   const hasOpenCenter = centers.some((center) => center.openingStatus === "open");
   const hasOtherCenter = centers.some((center) => center.openingStatus !== "open");
   return <div className="flex h-full min-h-0 w-full flex-col">
@@ -120,7 +120,7 @@ export function AdminOperationsMapLeaflet({ reports, centers, selectedId, onSele
       {hasPending ? <span><span className="text-amber-600">●</span> Pending review</span> : null}
       {hasVerifiedHigh ? <span><span className="text-red-600">●</span> Verified high</span> : null}
       {hasVerified ? <span><span className="text-blue-600">●</span> Verified report</span> : null}
-      {hasHistorical ? <span><span className="text-slate-500">●</span> Historical report</span> : null}
+      {hasHistorical ? <span><span className="text-slate-500">●</span> Historical or inactive report</span> : null}
       {hasOpenCenter ? <span><span className="text-green-600">■</span> Confirmed open center</span> : null}
       {hasOtherCenter ? <span><span className="text-slate-500">■</span> Other center</span> : null}
       {!reports.length && !centers.length ? <span>No mapped records for these filters</span> : null}

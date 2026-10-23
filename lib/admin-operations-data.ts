@@ -17,6 +17,7 @@ export type OperationsReport = {
   severity: string;
   status: string;
   verificationStatus: string;
+  archivedAt: string | null;
   latitude: number | null;
   longitude: number | null;
   createdAt: string;
@@ -62,18 +63,19 @@ function validPoint(latitude: number | null, longitude: number | null) {
 
 const reportSelect = {
   id: true, title: true, description: true, locationName: true, severity: true,
-  status: true, verificationStatus: true, latitude: true, longitude: true, createdAt: true,
+  status: true, verificationStatus: true, archivedAt: true, latitude: true, longitude: true, createdAt: true,
 } as const;
 
 function toReport(report: {
   id: string; title: string; description: string; locationName: string; severity: string;
-  status: string; verificationStatus: string; latitude: number; longitude: number; createdAt: Date;
+  status: string; verificationStatus: string; archivedAt: Date | null; latitude: number; longitude: number; createdAt: Date;
 }): OperationsReport {
   return {
     ...report,
     latitude: validPoint(report.latitude, report.longitude) ? report.latitude : null,
     longitude: validPoint(report.latitude, report.longitude) ? report.longitude : null,
     createdAt: report.createdAt.toISOString(),
+    archivedAt: report.archivedAt?.toISOString() ?? null,
   };
 }
 
@@ -95,7 +97,7 @@ export async function getAdminOperationsSnapshot(): Promise<OperationsSnapshot> 
     prisma.incident.count({ where: { archivedAt: null, status: { in: activeStatuses }, severity: { in: ["High", "Critical"] }, reports: { some: verifiedConditionWhere } } }),
     prisma.evacuationCenter.count({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } } }),
     prisma.evacuationCenter.findMany({ where: { isArchived: false, province: { equals: "Bulacan", mode: "insensitive" } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], select: { id: true, name: true, address: true, barangay: true, city: true, verificationStatus: true, status: true, availabilityConfirmedAt: true, estimatedCapacity: true, latitude: true, longitude: true, updatedAt: true } }),
-    prisma.floodReport.findMany({ where: { archivedAt: null, verificationStatus: { not: "rejected" } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 501, select: reportSelect }),
+    prisma.floodReport.findMany({ orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 501, select: reportSelect }),
     prisma.floodReport.findMany({ where: { ...pendingWhere, severity: "Critical" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
     prisma.floodReport.findMany({ where: { ...pendingWhere, severity: "High" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
     prisma.floodReport.findMany({ where: pendingWhere, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 5, select: reportSelect }),
