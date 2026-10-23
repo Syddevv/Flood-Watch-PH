@@ -721,7 +721,7 @@ export function FloodMapClient({
       maxClusterRadius: mobilePerformanceMode ? 88 : 56,
       removeOutsideVisibleBounds: true,
       showCoverageOnHover: false,
-      spiderfyOnMaxZoom: !mobilePerformanceMode,
+      spiderfyOnMaxZoom: true,
     }),
     [mobilePerformanceMode],
   );

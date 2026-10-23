@@ -13,7 +13,11 @@ import { expect, test } from "@playwright/test";
  * marker from the map, and took its popup with it.
  */
 test.describe("report marker popup", () => {
-  for (const [scenario, coordinateOffset] of [["nearby pins", 0.0003], ["same-coordinate pins", 0]] as const) {
+  for (const [scenario, coordinateOffset, mobile] of [
+    ["nearby pins", 0.0003, false],
+    ["same-coordinate pins", 0, false],
+    ["same-coordinate pins on mobile", 0, true],
+  ] as const) {
   test(`stays open after selecting ${scenario}`, async ({ page }) => {
     if (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_URL !== process.env.DATABASE_URL) {
       throw new Error("Map marker fixtures require an isolated TEST_DATABASE_URL matching DATABASE_URL.");
@@ -29,9 +33,9 @@ test.describe("report marker popup", () => {
         await db.floodReport.create({ data: { id: reportIds[index], incidentId, title: `Popup fixture ${index}`, description: "Map popup regression fixture", category: "Flooding", severity: "Moderate", locationName: `Popup fixture ${index}`, latitude, longitude } });
       }
 
-      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
       await page.goto("/flood-map");
-      await page.getByRole("button", { name: "Collapse map layers panel" }).click();
+      if (!mobile) await page.getByRole("button", { name: "Collapse map layers panel" }).click();
       await expect(page.locator(".marker-cluster").first()).toBeVisible({ timeout: 15_000 });
       const reportMarker = page.locator(".leaflet-marker-icon").filter({ hasText: "R" }).first();
       // Near pins may remain clustered after the first zoom; keep drilling in.
