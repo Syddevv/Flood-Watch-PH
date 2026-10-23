@@ -5,6 +5,7 @@ import {
   LogOut,
   Menu,
   Plus,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -103,7 +104,16 @@ export function AppHeader({
             <span className="xl:hidden">Report</span>
           </button>
 
-          {authUser ? (
+          {authUser?.role === "admin" ? (
+            <Link
+              href="/admin"
+              title={`Administrator: ${authUser.displayName ?? authUser.email}`}
+              className="flex h-9 items-center gap-1.5 rounded-[11px] border border-[color:color-mix(in_srgb,var(--color-border)_76%,transparent)] bg-[var(--color-surface)] px-2.5 text-[0.76rem] font-medium text-[var(--color-foreground)] transition hover:brightness-95 sm:px-3"
+            >
+              <ShieldCheck className="h-[13px] w-[13px]" />
+              <span>Admin workspace</span>
+            </Link>
+          ) : authUser ? (
             <button
               type="button"
               onClick={onLogout}
